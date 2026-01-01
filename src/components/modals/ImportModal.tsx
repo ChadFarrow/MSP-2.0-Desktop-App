@@ -166,7 +166,7 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
           <button className="btn btn-icon" onClick={onClose}>&#10005;</button>
         </div>
         <div className="modal-content">
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+          <div className="import-mode-buttons" style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
             <button
               className={`btn ${mode === 'file' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setMode('file')}
