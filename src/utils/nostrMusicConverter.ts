@@ -1,7 +1,10 @@
 import type { Album, Track, ValueRecipient, ValueBlock, Person } from '../types/feed';
-import type { NostrMusicTrackInfo, NostrMusicAlbumGroup, NostrZapSplit } from '../types/nostr';
+import type { NostrMusicTrackInfo, NostrMusicAlbumGroup, NostrZapSplit, NostrEvent } from '../types/nostr';
 import { createEmptyAlbum, createEmptyTrack } from '../types/feed';
 import { fetchNostrProfile } from './nostrSync';
+
+// Kind 36787 for Nostr music tracks
+const MUSIC_TRACK_KIND = 36787;
 
 // Parse released date (format: "DD/MM/YYYY" or various formats)
 function parseReleasedDate(released: string): string {
@@ -252,4 +255,114 @@ export async function convertNostrMusicToAlbum(
   );
 
   return album;
+}
+
+// Parse content field for lyrics, credits, license
+function parseNostrMusicContent(content: string): { lyrics?: string; credits?: string; license?: string } {
+  const result: { lyrics?: string; credits?: string; license?: string } = {};
+
+  if (!content || !content.trim()) return result;
+
+  // Split by known section headers
+  const sections = content.split(/\n\n(?=Lyrics:|Credits:|License:)/i);
+
+  for (const section of sections) {
+    const trimmed = section.trim();
+
+    if (trimmed.toLowerCase().startsWith('lyrics:')) {
+      result.lyrics = trimmed.substring(7).trim();
+    } else if (trimmed.toLowerCase().startsWith('credits:')) {
+      result.credits = trimmed.substring(8).trim();
+    } else if (trimmed.toLowerCase().startsWith('license:')) {
+      result.license = trimmed.substring(8).trim();
+    } else if (!result.lyrics && trimmed) {
+      // If no section header and no lyrics yet, treat as lyrics
+      result.lyrics = trimmed;
+    }
+  }
+
+  return result;
+}
+
+// Parse a raw kind 36787 Nostr event into NostrMusicTrackInfo
+function parseNostrMusicEvent(event: NostrEvent): NostrMusicTrackInfo | null {
+  const getTag = (name: string): string | undefined =>
+    event.tags.find(t => t[0] === name)?.[1];
+
+  const dTag = getTag('d');
+  const title = getTag('title');
+  const url = getTag('url');
+
+  // Required fields
+  if (!dTag || !title || !url) return null;
+
+  // Parse genres from 't' tags
+  const genres = event.tags
+    .filter(t => t[0] === 't')
+    .map(t => t[1])
+    .filter(Boolean);
+
+  // Parse zap splits from 'zap' tags
+  const zapSplits: NostrZapSplit[] = event.tags
+    .filter(t => t[0] === 'zap')
+    .map(t => ({
+      pubkey: t[1] || '',
+      relay: t[2] || undefined,
+      splitPercentage: parseInt(t[3]) || 0
+    }))
+    .filter(z => z.pubkey && z.splitPercentage > 0);
+
+  // Parse content for lyrics, credits, license
+  const parsedContent = parseNostrMusicContent(event.content);
+
+  return {
+    id: event.id || '',
+    dTag,
+    title,
+    artist: getTag('artist') || 'Unknown Artist',
+    album: getTag('album') || 'Singles',
+    trackNumber: parseInt(getTag('track_number') || '1') || 1,
+    url,
+    imageUrl: getTag('image'),
+    released: getTag('released'),
+    language: getTag('language'),
+    genres,
+    zapSplits,
+    content: parsedContent,
+    createdAt: event.created_at
+  };
+}
+
+// Parse raw Nostr event JSON and convert to Album
+export async function parseNostrEventJson(
+  jsonString: string,
+  fetchProfiles = true
+): Promise<Album> {
+  let event: NostrEvent;
+
+  try {
+    event = JSON.parse(jsonString);
+  } catch {
+    throw new Error('Invalid JSON format');
+  }
+
+  // Validate it's a music track event
+  if (event.kind !== MUSIC_TRACK_KIND) {
+    throw new Error(`Invalid event kind: expected ${MUSIC_TRACK_KIND}, got ${event.kind}`);
+  }
+
+  const trackInfo = parseNostrMusicEvent(event);
+  if (!trackInfo) {
+    throw new Error('Failed to parse music track event: missing required tags (d, title, url)');
+  }
+
+  // Create an album group with a single track
+  const albumGroup: NostrMusicAlbumGroup = {
+    albumName: trackInfo.album,
+    artist: trackInfo.artist,
+    imageUrl: trackInfo.imageUrl,
+    tracks: [trackInfo]
+  };
+
+  return convertNostrMusicToAlbum(albumGroup, fetchProfiles);
 }

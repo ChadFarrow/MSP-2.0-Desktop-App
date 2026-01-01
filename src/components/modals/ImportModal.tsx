@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { fetchFeedFromUrl } from '../../utils/xmlParser';
 import { loadAlbumsFromNostr, loadAlbumByDTag, fetchNostrMusicTracks, groupTracksByAlbum } from '../../utils/nostrSync';
-import { convertNostrMusicToAlbum } from '../../utils/nostrMusicConverter';
+import { convertNostrMusicToAlbum, parseNostrEventJson } from '../../utils/nostrMusicConverter';
 import type { SavedAlbumInfo, NostrMusicAlbumGroup } from '../../types/nostr';
 import type { Album } from '../../types/feed';
 
@@ -13,8 +13,9 @@ interface ImportModalProps {
 }
 
 export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: ImportModalProps) {
-  const [mode, setMode] = useState<'file' | 'paste' | 'url' | 'nostr' | 'nostrMusic'>('file');
+  const [mode, setMode] = useState<'file' | 'paste' | 'url' | 'nostr' | 'nostrMusic' | 'nostrEvent'>('file');
   const [xmlContent, setXmlContent] = useState('');
+  const [jsonContent, setJsonContent] = useState('');
   const [feedUrl, setFeedUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -97,6 +98,24 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
     }
   };
 
+  const handleImportNostrEvent = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      if (!jsonContent.trim()) {
+        throw new Error('No JSON content provided');
+      }
+
+      const album = await parseNostrEventJson(jsonContent, true);
+      onLoadAlbum(album);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to parse Nostr event');
+      setLoading(false);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -165,6 +184,12 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
               onClick={() => setMode('url')}
             >
               From URL
+            </button>
+            <button
+              className={`btn ${mode === 'nostrEvent' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setMode('nostrEvent')}
+            >
+              Nostr Event
             </button>
             {isLoggedIn && (
               <>
@@ -277,6 +302,17 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
                 onChange={e => setXmlContent(e.target.value)}
               />
             </div>
+          ) : mode === 'nostrEvent' ? (
+            <div className="form-group">
+              <label className="form-label">Paste Nostr Event JSON (kind 36787)</label>
+              <textarea
+                className="form-textarea"
+                style={{ minHeight: '200px', fontFamily: 'monospace', fontSize: '0.75rem' }}
+                placeholder='{"kind": 36787, "content": "...", "tags": [...], ...}'
+                value={jsonContent}
+                onChange={e => setJsonContent(e.target.value)}
+              />
+            </div>
           ) : (
             <div className="form-group">
               <label className="form-label">Feed URL</label>
@@ -305,6 +341,10 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
           ) : mode === 'nostr' ? (
             <button className="btn btn-secondary" onClick={fetchSavedAlbums} disabled={loadingAlbums}>
               {loadingAlbums ? 'Loading...' : 'Refresh'}
+            </button>
+          ) : mode === 'nostrEvent' ? (
+            <button className="btn btn-primary" onClick={handleImportNostrEvent} disabled={loading}>
+              {loading ? 'Importing...' : 'Import Event'}
             </button>
           ) : (
             <button className="btn btn-primary" onClick={handleImport} disabled={loading}>
