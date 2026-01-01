@@ -8,11 +8,30 @@ import './App.css';
 
 // Import Modal Component
 function ImportModal({ onClose, onImport }: { onClose: () => void; onImport: (xml: string) => void }) {
-  const [mode, setMode] = useState<'paste' | 'url'>('paste');
+  const [mode, setMode] = useState<'file' | 'paste' | 'url'>('file');
   const [xmlContent, setXmlContent] = useState('');
   const [feedUrl, setFeedUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fileName, setFileName] = useState('');
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFileName(file.name);
+    setError('');
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      setXmlContent(content);
+    };
+    reader.onerror = () => {
+      setError('Failed to read file');
+    };
+    reader.readAsText(file);
+  };
 
   const handleImport = async () => {
     setError('');
@@ -48,6 +67,12 @@ function ImportModal({ onClose, onImport }: { onClose: () => void; onImport: (xm
         <div className="modal-content">
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
             <button
+              className={`btn ${mode === 'file' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setMode('file')}
+            >
+              Upload File
+            </button>
+            <button
               className={`btn ${mode === 'paste' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setMode('paste')}
             >
@@ -61,7 +86,22 @@ function ImportModal({ onClose, onImport }: { onClose: () => void; onImport: (xm
             </button>
           </div>
 
-          {mode === 'paste' ? (
+          {mode === 'file' ? (
+            <div className="form-group">
+              <label className="form-label">Select XML File</label>
+              <input
+                type="file"
+                accept=".xml,application/xml,text/xml"
+                onChange={handleFileChange}
+                style={{ marginBottom: '12px' }}
+              />
+              {fileName && (
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                  Selected: {fileName}
+                </div>
+              )}
+            </div>
+          ) : mode === 'paste' ? (
             <div className="form-group">
               <label className="form-label">Paste RSS XML</label>
               <textarea
