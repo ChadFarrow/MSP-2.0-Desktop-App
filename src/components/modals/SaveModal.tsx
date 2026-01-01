@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { generateRssFeed, downloadXml, copyToClipboard } from '../../utils/xmlGenerator';
-import { saveAlbumToNostr } from '../../utils/nostrSync';
+import { saveAlbumToNostr, publishNostrMusicTracks, uploadToBlossom } from '../../utils/nostrSync';
+import type { PublishProgress } from '../../utils/nostrSync';
 import type { Album } from '../../types/feed';
+
+const DEFAULT_BLOSSOM_SERVER = 'https://podtards.com';
 
 interface SaveModalProps {
   onClose: () => void;
@@ -11,13 +14,17 @@ interface SaveModalProps {
 }
 
 export function SaveModal({ onClose, album, isDirty, isLoggedIn }: SaveModalProps) {
-  const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr'>('local');
+  const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom'>('local');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [progress, setProgress] = useState<PublishProgress | null>(null);
+  const [blossomServer, setBlossomServer] = useState(DEFAULT_BLOSSOM_SERVER);
+  const [feedUrl, setFeedUrl] = useState<string | null>(null);
 
   const handleSave = async () => {
     setLoading(true);
     setMessage(null);
+    setProgress(null);
 
     try {
       switch (mode) {
@@ -43,11 +50,30 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn }: SaveModalProp
             text: result.message
           });
           break;
+        case 'nostrMusic':
+          const musicResult = await publishNostrMusicTracks(album, undefined, setProgress);
+          setProgress(null);
+          setMessage({
+            type: musicResult.success ? 'success' : 'error',
+            text: musicResult.message
+          });
+          break;
+        case 'blossom':
+          const blossomResult = await uploadToBlossom(album, blossomServer);
+          if (blossomResult.success && blossomResult.url) {
+            setFeedUrl(blossomResult.url);
+          }
+          setMessage({
+            type: blossomResult.success ? 'success' : 'error',
+            text: blossomResult.message
+          });
+          break;
       }
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Save failed' });
     } finally {
       setLoading(false);
+      setProgress(null);
     }
   };
 
@@ -86,6 +112,22 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn }: SaveModalProp
                 Save to Nostr
               </button>
             )}
+            {isLoggedIn && (
+              <button
+                className={`btn ${mode === 'nostrMusic' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setMode('nostrMusic')}
+              >
+                Publish Nostr Music
+              </button>
+            )}
+            {isLoggedIn && (
+              <button
+                className={`btn ${mode === 'blossom' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setMode('blossom')}
+              >
+                Publish to Blossom
+              </button>
+            )}
           </div>
 
           <div className="nostr-album-preview">
@@ -115,6 +157,74 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn }: SaveModalProp
               Publish your feed to Nostr relays. Load it later on any device with your Nostr key.
             </p>
           )}
+          {mode === 'nostrMusic' && (
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '16px' }}>
+              Publish each track as a Nostr Music event (kind 36787). Compatible with Nostr music clients.
+            </p>
+          )}
+          {mode === 'blossom' && (
+            <div style={{ marginTop: '16px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '12px' }}>
+                Upload your RSS feed to a Blossom server. Get a permanent URL for podcast apps.
+              </p>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem' }}>
+                Blossom Server URL
+              </label>
+              <input
+                type="text"
+                value={blossomServer}
+                onChange={(e) => setBlossomServer(e.target.value)}
+                placeholder="https://blossom.example.com"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '4px',
+                  border: '1px solid var(--border)',
+                  backgroundColor: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.875rem'
+                }}
+              />
+              {feedUrl && (
+                <div style={{ marginTop: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem' }}>
+                    Feed URL
+                  </label>
+                  <input
+                    type="text"
+                    value={feedUrl}
+                    readOnly
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '4px',
+                      border: '1px solid var(--border)',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.875rem'
+                    }}
+                  />
+                  <button
+                    className="btn btn-secondary"
+                    style={{ marginTop: '8px' }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(feedUrl);
+                      setMessage({ type: 'success', text: 'URL copied to clipboard' });
+                    }}
+                  >
+                    Copy URL
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {progress && (
+            <div style={{ marginTop: '12px', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+              Publishing track {progress.current} of {progress.total}: {progress.trackTitle}
+            </div>
+          )}
 
           {message && (
             <div style={{
@@ -129,7 +239,9 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn }: SaveModalProp
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
           <button className="btn btn-primary" onClick={handleSave} disabled={loading}>
-            {loading ? 'Saving...' : 'Save'}
+            {loading
+              ? (mode === 'nostrMusic' || mode === 'blossom' ? 'Uploading...' : 'Saving...')
+              : (mode === 'nostrMusic' ? 'Publish' : mode === 'blossom' ? 'Upload' : 'Save')}
           </button>
         </div>
       </div>
