@@ -2,6 +2,7 @@ import type { Album, Track, Person, ValueRecipient } from '../types/feed';
 import type { NostrEvent, SavedAlbumInfo, NostrMusicTrackInfo, NostrMusicAlbumGroup, NostrZapSplit, NostrMusicContent } from '../types/nostr';
 import { generateRssFeed } from './xmlGenerator';
 import { parseRssFeed } from './xmlParser';
+import { hexToNpub } from './nostr';
 
 // Blossom auth event kind
 const BLOSSOM_AUTH_KIND = 24242;
@@ -17,6 +18,9 @@ export const DEFAULT_RELAYS = [
 // Kind 30054 for podcast/RSS feeds (parameterized replaceable)
 const RSS_FEED_KIND = 30054;
 const CLIENT_TAG = 'MSP 2.0';
+
+// Kind 1063 for file metadata (NIP-94)
+const FILE_METADATA_KIND = 1063;
 
 // Kind 36787 for Nostr music tracks
 const MUSIC_TRACK_KIND = 36787;
@@ -771,11 +775,76 @@ async function createBlossomAuthEvent(
   };
 }
 
+// Create NIP-94 file metadata event for RSS feed
+function createFileMetadataEvent(
+  blossomUrl: string,
+  hash: string,
+  fileSize: number,
+  album: Album,
+  pubkey: string
+): NostrEvent {
+  return {
+    kind: FILE_METADATA_KIND,
+    pubkey,
+    created_at: Math.floor(Date.now() / 1000),
+    tags: [
+      ['url', blossomUrl],
+      ['m', 'application/rss+xml'],
+      ['x', hash],
+      ['size', String(fileSize)],
+      ['alt', `RSS feed for: ${album.title}`],
+      ['title', album.title],
+      ['d', album.podcastGuid],
+      ['client', CLIENT_TAG]
+    ],
+    content: `${album.title} - Podcast RSS Feed`
+  };
+}
+
+// Publish file metadata to Nostr relays
+async function publishFileMetadata(
+  blossomUrl: string,
+  hash: string,
+  fileSize: number,
+  album: Album,
+  relays: string[]
+): Promise<{ success: boolean; eventId?: string }> {
+  if (!window.nostr) {
+    return { success: false };
+  }
+
+  try {
+    const pubkey = await window.nostr.getPublicKey();
+    const unsignedEvent = createFileMetadataEvent(blossomUrl, hash, fileSize, album, pubkey);
+    const signedEvent = await window.nostr.signEvent(unsignedEvent);
+
+    const results = await Promise.allSettled(
+      relays.map(async (relayUrl) => {
+        const ws = await connectRelay(relayUrl);
+        try {
+          await sendAndWait(ws, ['EVENT', signedEvent]);
+          return true;
+        } finally {
+          ws.close();
+        }
+      })
+    );
+
+    const successCount = results.filter(r => r.status === 'fulfilled').length;
+    return {
+      success: successCount > 0,
+      eventId: signedEvent.id
+    };
+  } catch {
+    return { success: false };
+  }
+}
+
 // Upload RSS feed to Blossom server
 export async function uploadToBlossom(
   album: Album,
   blossomServer: string
-): Promise<{ success: boolean; message: string; url?: string }> {
+): Promise<{ success: boolean; message: string; url?: string; stableUrl?: string }> {
   if (!window.nostr) {
     return { success: false, message: 'Nostr extension not found' };
   }
@@ -819,10 +888,30 @@ export async function uploadToBlossom(
     // Blossom returns the URL in the response
     const fileUrl = result.url || `${serverUrl}/${hash}.xml`;
 
+    // Publish NIP-94 file metadata event to enable stable URL
+    const fileSize = new Blob([rssXml]).size;
+    const metadataResult = await publishFileMetadata(
+      fileUrl,
+      hash,
+      fileSize,
+      album,
+      DEFAULT_RELAYS
+    );
+
+    // Construct stable URL if metadata was published
+    let stableUrl: string | undefined;
+    if (metadataResult.success) {
+      const npub = hexToNpub(pubkey);
+      stableUrl = `${window.location.origin}/api/feed/${npub}/${album.podcastGuid}`;
+    }
+
     return {
       success: true,
-      message: 'Feed uploaded successfully',
-      url: fileUrl
+      message: metadataResult.success
+        ? 'Feed uploaded and metadata published'
+        : 'Feed uploaded (metadata publish failed)',
+      url: fileUrl,
+      stableUrl
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';

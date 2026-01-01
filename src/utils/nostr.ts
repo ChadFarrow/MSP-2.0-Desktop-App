@@ -72,6 +72,32 @@ export function hexToNpub(hex: string): string {
   return prefix + '1' + words.map(w => BECH32_ALPHABET[w]).join('') + checksum;
 }
 
+// Convert npub (bech32) back to hex pubkey
+export function npubToHex(npub: string): string {
+  if (!npub.startsWith('npub1')) {
+    throw new Error('Invalid npub: must start with npub1');
+  }
+
+  // Remove prefix 'npub1'
+  const data = npub.slice(5);
+
+  // Decode bech32 characters to 5-bit words (excluding 6-char checksum)
+  const words: number[] = [];
+  for (let i = 0; i < data.length - 6; i++) {
+    const idx = BECH32_ALPHABET.indexOf(data[i]);
+    if (idx === -1) {
+      throw new Error('Invalid bech32 character');
+    }
+    words.push(idx);
+  }
+
+  // Convert 5-bit words back to 8-bit bytes
+  const bytes = convertBits(words, 5, 8, false);
+
+  // Convert bytes to hex
+  return bytes.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Truncate npub for display (shows npub1 + first 8 + ... + last 4)
 export function truncateNpub(npub: string): string {
   if (npub.length <= 20) return npub;

@@ -20,6 +20,7 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn }: SaveModalProp
   const [progress, setProgress] = useState<PublishProgress | null>(null);
   const [blossomServer, setBlossomServer] = useState(DEFAULT_BLOSSOM_SERVER);
   const [feedUrl, setFeedUrl] = useState<string | null>(null);
+  const [stableUrl, setStableUrl] = useState<string | null>(null);
 
   const handleSave = async () => {
     setLoading(true);
@@ -60,8 +61,13 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn }: SaveModalProp
           break;
         case 'blossom':
           const blossomResult = await uploadToBlossom(album, blossomServer);
-          if (blossomResult.success && blossomResult.url) {
-            setFeedUrl(blossomResult.url);
+          if (blossomResult.success) {
+            if (blossomResult.url) {
+              setFeedUrl(blossomResult.url);
+            }
+            if (blossomResult.stableUrl) {
+              setStableUrl(blossomResult.stableUrl);
+            }
           }
           setMessage({
             type: blossomResult.success ? 'success' : 'error',
@@ -187,8 +193,8 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn }: SaveModalProp
               />
               {feedUrl && (
                 <div style={{ marginTop: '12px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem' }}>
-                    Feed URL
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                    Direct Blossom URL (changes with each update)
                   </label>
                   <input
                     type="text"
@@ -202,18 +208,44 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn }: SaveModalProp
                       border: '1px solid var(--border)',
                       backgroundColor: 'var(--bg-tertiary)',
                       color: 'var(--text-primary)',
-                      fontSize: '0.875rem'
+                      fontSize: '0.75rem',
+                      fontFamily: 'monospace'
                     }}
                   />
+                </div>
+              )}
+              {stableUrl && (
+                <div style={{ marginTop: '16px', padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--success)' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem', fontWeight: 600, color: 'var(--success)' }}>
+                    Stable Feed URL (for podcast apps)
+                  </label>
+                  <input
+                    type="text"
+                    value={stableUrl}
+                    readOnly
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '4px',
+                      border: '1px solid var(--success)',
+                      backgroundColor: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.75rem',
+                      fontFamily: 'monospace'
+                    }}
+                  />
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '8px', marginBottom: '8px' }}>
+                    Use this URL in Apple Podcasts, Spotify, etc. It always points to the latest version.
+                  </p>
                   <button
-                    className="btn btn-secondary"
-                    style={{ marginTop: '8px' }}
+                    className="btn btn-primary"
                     onClick={() => {
-                      navigator.clipboard.writeText(feedUrl);
-                      setMessage({ type: 'success', text: 'URL copied to clipboard' });
+                      navigator.clipboard.writeText(stableUrl);
+                      setMessage({ type: 'success', text: 'Stable URL copied to clipboard' });
                     }}
                   >
-                    Copy URL
+                    Copy Stable URL
                   </button>
                 </div>
               )}
