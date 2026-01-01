@@ -1,8 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { generateRssFeed, downloadXml, copyToClipboard } from '../../utils/xmlGenerator';
 import { saveAlbumToNostr, publishNostrMusicTracks, uploadToBlossom } from '../../utils/nostrSync';
 import type { PublishProgress } from '../../utils/nostrSync';
 import type { Album } from '../../types/feed';
+import {
+  getHostedFeedInfo,
+  saveHostedFeedInfo,
+  createHostedFeed,
+  updateHostedFeed,
+  buildHostedUrl,
+  type HostedFeedInfo
+} from '../../utils/hostedFeed';
 
 const DEFAULT_BLOSSOM_SERVER = 'https://podtards.com';
 
@@ -14,13 +22,24 @@ interface SaveModalProps {
 }
 
 export function SaveModal({ onClose, album, isDirty, isLoggedIn }: SaveModalProps) {
-  const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom'>('local');
+  const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'hosted'>('local');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [progress, setProgress] = useState<PublishProgress | null>(null);
   const [blossomServer, setBlossomServer] = useState(DEFAULT_BLOSSOM_SERVER);
   const [feedUrl, setFeedUrl] = useState<string | null>(null);
   const [stableUrl, setStableUrl] = useState<string | null>(null);
+  const [hostedInfo, setHostedInfo] = useState<HostedFeedInfo | null>(null);
+  const [hostedUrl, setHostedUrl] = useState<string | null>(null);
+
+  // Check for existing hosted feed on mount
+  useEffect(() => {
+    const info = getHostedFeedInfo(album.podcastGuid);
+    if (info) {
+      setHostedInfo(info);
+      setHostedUrl(buildHostedUrl(info.feedId));
+    }
+  }, [album.podcastGuid]);
 
   const handleSave = async () => {
     setLoading(true);
@@ -74,6 +93,30 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn }: SaveModalProp
             text: blossomResult.message
           });
           break;
+        case 'hosted':
+          const hostedXml = generateRssFeed(album);
+          if (hostedInfo) {
+            // Update existing feed
+            await updateHostedFeed(hostedInfo.feedId, hostedInfo.editToken, hostedXml, album.title);
+            const updatedInfo = { ...hostedInfo, lastUpdated: Date.now() };
+            saveHostedFeedInfo(album.podcastGuid, updatedInfo);
+            setHostedInfo(updatedInfo);
+            setMessage({ type: 'success', text: 'Feed updated!' });
+          } else {
+            // Create new feed
+            const hostedResult = await createHostedFeed(hostedXml, album.title);
+            const newInfo: HostedFeedInfo = {
+              feedId: hostedResult.feedId,
+              editToken: hostedResult.editToken,
+              createdAt: Date.now(),
+              lastUpdated: Date.now()
+            };
+            saveHostedFeedInfo(album.podcastGuid, newInfo);
+            setHostedInfo(newInfo);
+            setHostedUrl(hostedResult.url);
+            setMessage({ type: 'success', text: 'Feed created!' });
+          }
+          break;
       }
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Save failed' });
@@ -109,6 +152,12 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn }: SaveModalProp
               onClick={() => setMode('clipboard')}
             >
               Copy to Clipboard
+            </button>
+            <button
+              className={`btn ${mode === 'hosted' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setMode('hosted')}
+            >
+              Host on MSP
             </button>
             {isLoggedIn && (
               <button
@@ -251,6 +300,55 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn }: SaveModalProp
               )}
             </div>
           )}
+          {mode === 'hosted' && (
+            <div style={{ marginTop: '16px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '12px' }}>
+                {hostedInfo
+                  ? 'Your feed is already hosted. Click Save to update it with your latest changes.'
+                  : 'Host your RSS feed on MSP. No account required - just save your edit token!'}
+              </p>
+              {hostedUrl && (
+                <div style={{ marginTop: '16px', padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--success)' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem', fontWeight: 600, color: 'var(--success)' }}>
+                    Your Feed URL
+                  </label>
+                  <input
+                    type="text"
+                    value={hostedUrl}
+                    readOnly
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '4px',
+                      border: '1px solid var(--success)',
+                      backgroundColor: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.75rem',
+                      fontFamily: 'monospace'
+                    }}
+                  />
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '8px', marginBottom: '8px' }}>
+                    Use this URL in Apple Podcasts, Spotify, etc. It always points to the latest version.
+                  </p>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                      navigator.clipboard.writeText(hostedUrl);
+                      setMessage({ type: 'success', text: 'Feed URL copied to clipboard' });
+                    }}
+                  >
+                    Copy URL
+                  </button>
+                </div>
+              )}
+              {!hostedInfo && (
+                <p style={{ color: 'var(--warning, #f59e0b)', fontSize: '0.75rem', marginTop: '12px', padding: '8px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '4px' }}>
+                  Your edit token will be saved in this browser. If you clear browser data, you won't be able to update this feed.
+                </p>
+              )}
+            </div>
+          )}
 
           {progress && (
             <div style={{ marginTop: '12px', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
@@ -272,8 +370,8 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn }: SaveModalProp
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
           <button className="btn btn-primary" onClick={handleSave} disabled={loading}>
             {loading
-              ? (mode === 'nostrMusic' || mode === 'blossom' ? 'Uploading...' : 'Saving...')
-              : (mode === 'nostrMusic' ? 'Publish' : mode === 'blossom' ? 'Upload' : 'Save')}
+              ? (mode === 'nostrMusic' || mode === 'blossom' || mode === 'hosted' ? 'Uploading...' : 'Saving...')
+              : (mode === 'nostrMusic' ? 'Publish' : mode === 'blossom' || mode === 'hosted' ? 'Upload' : 'Save')}
           </button>
         </div>
       </div>
