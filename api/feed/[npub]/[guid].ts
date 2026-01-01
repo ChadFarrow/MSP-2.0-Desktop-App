@@ -190,8 +190,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const feedUrl = urlTag[1];
 
-    // Set cache headers (cache for 5 minutes, allow stale for 1 hour)
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=3600');
+    // No caching - always fetch latest from Nostr
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
     // Redirect to the Blossom URL
     return res.redirect(302, feedUrl);
