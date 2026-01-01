@@ -964,6 +964,7 @@ function AppContent() {
         <NostrSyncModal
           onClose={() => setShowNostrModal(false)}
           album={state.album}
+          isDirty={state.isDirty}
           onLoadAlbum={(album) => dispatch({ type: 'SET_ALBUM', payload: album })}
         />
       )}

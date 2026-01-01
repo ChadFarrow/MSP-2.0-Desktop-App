@@ -6,10 +6,11 @@ import { saveAlbumToNostr, loadAlbumsFromNostr, loadAlbumByDTag } from '../utils
 interface NostrSyncModalProps {
   onClose: () => void;
   album: Album;
+  isDirty: boolean;
   onLoadAlbum: (album: Album) => void;
 }
 
-export function NostrSyncModal({ onClose, album, onLoadAlbum }: NostrSyncModalProps) {
+export function NostrSyncModal({ onClose, album, isDirty, onLoadAlbum }: NostrSyncModalProps) {
   const [mode, setMode] = useState<'save' | 'load'>('save');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -43,7 +44,7 @@ export function NostrSyncModal({ onClose, album, onLoadAlbum }: NostrSyncModalPr
     setLoading(true);
     setMessage(null);
 
-    const result = await saveAlbumToNostr(album);
+    const result = await saveAlbumToNostr(album, isDirty);
     setLoading(false);
 
     setMessage({

@@ -171,6 +171,7 @@ function createFeedEvent(rssXml: string, podcastGuid: string, title: string, pub
 // Save album to Nostr relays
 export async function saveAlbumToNostr(
   album: Album,
+  hasChanges = true,
   relays = DEFAULT_RELAYS
 ): Promise<{ success: boolean; message: string }> {
   if (!window.nostr) {
@@ -181,8 +182,13 @@ export async function saveAlbumToNostr(
     // Get public key
     const pubkey = await window.nostr.getPublicKey();
 
+    // Only update lastBuildDate if there are actual changes
+    const updatedAlbum = hasChanges
+      ? { ...album, lastBuildDate: new Date().toUTCString() }
+      : album;
+
     // Generate RSS XML from album
-    const rssXml = generateRssFeed(album);
+    const rssXml = generateRssFeed(updatedAlbum);
 
     // Create and sign the event
     const unsignedEvent = createFeedEvent(rssXml, album.podcastGuid, album.title, pubkey);
@@ -237,8 +243,7 @@ export async function loadAlbumsFromNostr(
           const subId = Math.random().toString(36).substring(7);
           const filter = {
             kinds: [RSS_FEED_KIND],
-            authors: [pubkey],
-            '#client': [CLIENT_TAG]
+            authors: [pubkey]
           };
 
           ws.send(JSON.stringify(['REQ', subId, filter]));
@@ -257,10 +262,11 @@ export async function loadAlbumsFromNostr(
       }
     }
 
-    // Deduplicate by event id
+    // Deduplicate by event id and filter by client tag
     const uniqueEvents = new Map<string, NostrEvent>();
     for (const event of allEvents) {
-      if (event.id && !uniqueEvents.has(event.id)) {
+      const clientTag = event.tags.find(t => t[0] === 'client')?.[1];
+      if (event.id && !uniqueEvents.has(event.id) && clientTag === CLIENT_TAG) {
         uniqueEvents.set(event.id, event);
       }
     }
