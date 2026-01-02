@@ -8,7 +8,7 @@ export const FIELD_INFO = {
   description: "A brief description of the album, band members, recording info, etc.",
   link: "The main website you want listeners to visit (usually a band website).",
   language: "The language the feed is written in. See rssboard.org/rss-language-codes for codes.",
-  podcastGuid: "A Globally Unique ID for your feed. Use tools.rssblue.com/podcast-guid to generate one from your feed URL.",
+  podcastGuid: "A Globally Unique ID used to identify your feed across platforms and services.",
   explicit: "Mark if your content contains explicit language or themes.",
 
   // Artwork
@@ -32,7 +32,7 @@ export const FIELD_INFO = {
   // Tracks
   trackTitle: "The song title.",
   trackDescription: "Optional description or notes about the track.",
-  trackDuration: "Total duration in HH:MM:SS format. Required for Fountain Radio and other podcast apps.",
+  trackDuration: "Total duration in HH:MM:SS format. Required for podcast apps.",
   enclosureUrl: "Direct link to the MP3 file. Ensure CORS policy allows access.",
   enclosureLength: "File size in MB. Important for podcast apps to show download size.",
   trackArtUrl: "Optional track-specific artwork. If empty, album art is used.",

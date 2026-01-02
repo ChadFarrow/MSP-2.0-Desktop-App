@@ -1,7 +1,10 @@
-export function Toggle({ checked, onChange, label }: {
+import { ReactNode } from 'react';
+
+export function Toggle({ checked, onChange, label, labelSuffix }: {
   checked: boolean;
   onChange: (val: boolean) => void;
   label?: string;
+  labelSuffix?: ReactNode;
 }) {
   return (
     <div className="toggle-wrapper">
@@ -9,6 +12,7 @@ export function Toggle({ checked, onChange, label }: {
         <div className="toggle-knob" />
       </div>
       {label && <span className="form-label">{label}</span>}
+      {labelSuffix}
     </div>
   );
 }

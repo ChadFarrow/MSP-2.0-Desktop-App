@@ -126,8 +126,8 @@ export function Editor() {
                   checked={album.explicit}
                   onChange={val => dispatch({ type: 'UPDATE_ALBUM', payload: { explicit: val } })}
                   label="Explicit Content"
+                  labelSuffix={<InfoIcon text={FIELD_INFO.explicit} />}
                 />
-                <InfoIcon text={FIELD_INFO.explicit} />
               </div>
             </div>
           </Section>
@@ -522,8 +522,8 @@ export function Editor() {
                           payload: { index, track: { explicit: val } }
                         })}
                         label="Explicit"
+                        labelSuffix={<InfoIcon text={FIELD_INFO.trackExplicit} />}
                       />
-                      <InfoIcon text={FIELD_INFO.trackExplicit} />
                     </div>
                     <div className="form-group">
                       <Toggle
@@ -533,8 +533,8 @@ export function Editor() {
                           payload: { index, track: { overrideValue: val } }
                         })}
                         label="Override Value Split"
+                        labelSuffix={<InfoIcon text={FIELD_INFO.overrideValue} />}
                       />
-                      <InfoIcon text={FIELD_INFO.overrideValue} />
                     </div>
                   </div>
                   )}
