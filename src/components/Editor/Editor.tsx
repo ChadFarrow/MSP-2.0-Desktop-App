@@ -91,7 +91,7 @@ export function Editor() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Language<InfoIcon text={FIELD_INFO.language} /></label>
+                <label className="form-label">Language <span className="required">*</span><InfoIcon text={FIELD_INFO.language} /></label>
                 <select
                   className="form-select"
                   value={album.language}
@@ -112,7 +112,7 @@ export function Editor() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Podcast GUID<InfoIcon text={FIELD_INFO.podcastGuid} /></label>
+                <label className="form-label">Podcast GUID <span className="required">*</span><InfoIcon text={FIELD_INFO.podcastGuid} /></label>
                 <input
                   type="text"
                   className="form-input"
