@@ -113,7 +113,7 @@ export const createEmptyTrack = (trackNumber: number): Track => ({
   enclosureUrl: '',
   enclosureLength: '',
   enclosureType: 'audio/mpeg',
-  duration: '00:00:00',
+  duration: '',
   explicit: false,
   trackArtUrl: '',
   bannerArtUrl: '',

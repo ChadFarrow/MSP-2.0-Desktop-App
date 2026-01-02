@@ -399,7 +399,7 @@ export function Editor() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
                     <span className="track-number">{track.trackNumber}</span>
                     <span style={{ flex: 1, fontWeight: 500 }}>{track.title || 'Untitled Track'}</span>
-                    {track.duration !== '00:00:00' && (
+                    {track.duration && track.duration !== '00:00:00' && (
                       <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{track.duration}</span>
                     )}
                     <button
