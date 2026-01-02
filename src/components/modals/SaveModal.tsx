@@ -214,7 +214,7 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
             setMessage({ type: 'success', text: 'Feed updated!' });
           } else {
             // Create new feed
-            const hostedResult = await createHostedFeed(hostedXml, album.title);
+            const hostedResult = await createHostedFeed(hostedXml, album.title, album.podcastGuid);
             const newInfo: HostedFeedInfo = {
               feedId: hostedResult.feedId,
               editToken: hostedResult.editToken,

@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { put } from '@vercel/blob';
-import { nanoid } from 'nanoid';
 import { createHash, randomBytes } from 'crypto';
 
 // Generate a secure edit token
@@ -27,11 +26,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { xml, title } = req.body;
+    const { xml, title, podcastGuid } = req.body;
 
     // Validate input
     if (!xml || typeof xml !== 'string') {
       return res.status(400).json({ error: 'Missing XML content' });
+    }
+
+    if (!podcastGuid || typeof podcastGuid !== 'string') {
+      return res.status(400).json({ error: 'Missing podcast GUID' });
+    }
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(podcastGuid)) {
+      return res.status(400).json({ error: 'Invalid podcast GUID format' });
     }
 
     // Basic XML validation
@@ -44,8 +53,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'XML content too large (max 1MB)' });
     }
 
-    // Generate IDs
-    const feedId = nanoid(12);
+    // Use podcast GUID as feed ID (one feed per podcast)
+    const feedId = podcastGuid;
     const editToken = generateEditToken();
     const editTokenHash = hashToken(editToken);
 

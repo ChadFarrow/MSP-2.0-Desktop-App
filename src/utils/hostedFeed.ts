@@ -47,12 +47,13 @@ interface CreateFeedResponse {
  */
 export async function createHostedFeed(
   xml: string,
-  title: string
+  title: string,
+  podcastGuid: string
 ): Promise<CreateFeedResponse> {
   const response = await fetch('/api/hosted', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ xml, title })
+    body: JSON.stringify({ xml, title, podcastGuid })
   });
 
   if (!response.ok) {

@@ -7,9 +7,9 @@ function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-// Validate feedId format (12-char nanoid)
+// Validate feedId format (UUID)
 function isValidFeedId(feedId: string): boolean {
-  return /^[a-zA-Z0-9_-]{12}$/.test(feedId);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(feedId);
 }
 
 // Metadata stored in separate .meta.json blob
