@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { put } from '@vercel/blob';
+import { put, list } from '@vercel/blob';
 import { createHash, randomBytes } from 'crypto';
 
 // Generate a secure edit token
@@ -55,6 +55,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Use podcast GUID as feed ID (one feed per podcast)
     const feedId = podcastGuid;
+
+    // Check if feed already exists
+    const { blobs } = await list({ prefix: `feeds/${feedId}.xml` });
+    const existingFeed = blobs.find(b => b.pathname === `feeds/${feedId}.xml`);
+    if (existingFeed) {
+      return res.status(409).json({
+        error: 'Feed already exists for this podcast. Use your edit token to update it, or use the Restore flow.',
+        feedId
+      });
+    }
+
     const editToken = generateEditToken();
     const editTokenHash = hashToken(editToken);
 
