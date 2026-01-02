@@ -236,7 +236,7 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
               className={`btn ${mode === 'hosted' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setMode('hosted')}
             >
-              From Hosted
+              From MSP Hosted
             </button>
             {isLoggedIn && (
               <>
