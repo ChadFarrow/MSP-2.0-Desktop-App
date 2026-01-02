@@ -77,7 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     // Build stable URL
-    const stableUrl = `${getBaseUrl(req)}/api/hosted/${feedId}`;
+    const stableUrl = `${getBaseUrl(req)}/api/hosted/${feedId}.xml`;
 
     return res.status(201).json({
       feedId,
