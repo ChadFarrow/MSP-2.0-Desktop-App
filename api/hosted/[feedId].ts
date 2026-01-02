@@ -35,7 +35,12 @@ async function getMetadata(feedId: string): Promise<FeedMetadata | null> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { feedId } = req.query;
+  let { feedId } = req.query;
+
+  // Strip .xml extension if present (support both /guid and /guid.xml)
+  if (typeof feedId === 'string' && feedId.endsWith('.xml')) {
+    feedId = feedId.slice(0, -4);
+  }
 
   // Validate feedId
   if (typeof feedId !== 'string' || !isValidFeedId(feedId)) {
