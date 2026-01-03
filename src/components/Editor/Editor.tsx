@@ -66,7 +66,7 @@ export function Editor() {
                   type="text"
                   className="form-input"
                   placeholder="Enter artist or band name"
-                  value={album.author}
+                  value={album.author || ''}
                   onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { author: e.target.value } })}
                 />
               </div>
@@ -76,7 +76,7 @@ export function Editor() {
                   type="text"
                   className="form-input"
                   placeholder="Enter album title"
-                  value={album.title}
+                  value={album.title || ''}
                   onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { title: e.target.value } })}
                 />
               </div>
@@ -86,7 +86,7 @@ export function Editor() {
                   type="url"
                   className="form-input"
                   placeholder="https://yourband.com"
-                  value={album.link}
+                  value={album.link || ''}
                   onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { link: e.target.value } })}
                 />
               </div>
@@ -94,7 +94,7 @@ export function Editor() {
                 <label className="form-label">Language <span className="required">*</span><InfoIcon text={FIELD_INFO.language} /></label>
                 <select
                   className="form-select"
-                  value={album.language}
+                  value={album.language || 'en'}
                   onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { language: e.target.value } })}
                 >
                   {LANGUAGES.map(lang => (
@@ -107,7 +107,7 @@ export function Editor() {
                 <textarea
                   className="form-textarea"
                   placeholder="Describe your album, band members, recording info, etc."
-                  value={album.description}
+                  value={album.description || ''}
                   onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { description: e.target.value } })}
                 />
               </div>
@@ -117,7 +117,7 @@ export function Editor() {
                   type="text"
                   className="form-input"
                   placeholder="Auto-generated UUID"
-                  value={album.podcastGuid}
+                  value={album.podcastGuid || ''}
                   onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { podcastGuid: e.target.value } })}
                 />
               </div>
@@ -141,7 +141,7 @@ export function Editor() {
                   type="url"
                   className="form-input"
                   placeholder="https://example.com/album-art.jpg"
-                  value={album.imageUrl}
+                  value={album.imageUrl || ''}
                   onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { imageUrl: e.target.value } })}
                 />
               </div>
@@ -151,7 +151,7 @@ export function Editor() {
                   type="text"
                   className="form-input"
                   placeholder="Album cover description"
-                  value={album.imageTitle}
+                  value={album.imageTitle || ''}
                   onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { imageTitle: e.target.value } })}
                 />
               </div>
@@ -161,7 +161,7 @@ export function Editor() {
                   type="text"
                   className="form-input"
                   placeholder="Optional description"
-                  value={album.imageDescription}
+                  value={album.imageDescription || ''}
                   onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { imageDescription: e.target.value } })}
                 />
               </div>
@@ -191,7 +191,7 @@ export function Editor() {
                           type="text"
                           className="form-input"
                           placeholder="Person name"
-                          value={person.name}
+                          value={person.name || ''}
                           onChange={e => dispatch({
                             type: 'UPDATE_PERSON',
                             payload: { index, person: { ...person, name: e.target.value } }
@@ -202,7 +202,7 @@ export function Editor() {
                         <label className="form-label">Group<InfoIcon text={FIELD_INFO.personGroup} /></label>
                         <select
                           className="form-select"
-                          value={person.group}
+                          value={person.group || 'music'}
                           onChange={e => dispatch({
                             type: 'UPDATE_PERSON',
                             payload: { index, person: { ...person, group: e.target.value as any, role: PERSON_ROLES[e.target.value]?.[0]?.value || 'band' } }
@@ -217,7 +217,7 @@ export function Editor() {
                         <label className="form-label">Role<InfoIcon text={FIELD_INFO.personRole} /></label>
                         <select
                           className="form-select"
-                          value={person.role}
+                          value={person.role || 'band'}
                           onChange={e => dispatch({
                             type: 'UPDATE_PERSON',
                             payload: { index, person: { ...person, role: e.target.value } }
@@ -286,7 +286,7 @@ export function Editor() {
                           type="text"
                           className="form-input"
                           placeholder="Recipient name"
-                          value={recipient.name}
+                          value={recipient.name || ''}
                           onChange={e => dispatch({
                             type: 'UPDATE_RECIPIENT',
                             payload: { index, recipient: { ...recipient, name: e.target.value } }
@@ -299,7 +299,7 @@ export function Editor() {
                           type="text"
                           className="form-input"
                           placeholder="Node pubkey or LN address"
-                          value={recipient.address}
+                          value={recipient.address || ''}
                           onChange={e => {
                             const address = e.target.value;
                             const detectedType = address.includes('@') ? 'lnaddress' : 'node';
@@ -318,7 +318,7 @@ export function Editor() {
                           placeholder="50"
                           min="0"
                           max="100"
-                          value={recipient.split}
+                          value={recipient.split ?? 0}
                           onChange={e => dispatch({
                             type: 'UPDATE_RECIPIENT',
                             payload: { index, recipient: { ...recipient, split: parseInt(e.target.value) || 0 } }
@@ -440,7 +440,7 @@ export function Editor() {
                         type="text"
                         className="form-input"
                         placeholder="Enter track title"
-                        value={track.title}
+                        value={track.title || ''}
                         onChange={e => dispatch({
                           type: 'UPDATE_TRACK',
                           payload: { index, track: { title: e.target.value } }
@@ -453,7 +453,7 @@ export function Editor() {
                         type="text"
                         className="form-input"
                         placeholder="00:00:00"
-                        value={track.duration}
+                        value={track.duration || ''}
                         onChange={e => dispatch({
                           type: 'UPDATE_TRACK',
                           payload: { index, track: { duration: e.target.value } }
@@ -470,7 +470,7 @@ export function Editor() {
                         type="url"
                         className="form-input"
                         placeholder="https://example.com/track.mp3"
-                        value={track.enclosureUrl}
+                        value={track.enclosureUrl || ''}
                         onChange={e => dispatch({
                           type: 'UPDATE_TRACK',
                           payload: { index, track: { enclosureUrl: e.target.value } }
@@ -521,7 +521,7 @@ export function Editor() {
                       <textarea
                         className="form-textarea"
                         placeholder="Track description or notes"
-                        value={track.description}
+                        value={track.description || ''}
                         onChange={e => dispatch({
                           type: 'UPDATE_TRACK',
                           payload: { index, track: { description: e.target.value } }
@@ -602,7 +602,7 @@ export function Editor() {
                                     type="text"
                                     className="form-input"
                                     placeholder="Recipient name"
-                                    value={recipient.name}
+                                    value={recipient.name || ''}
                                     onChange={e => {
                                       const newRecipients = [...(track.value?.recipients || [])];
                                       newRecipients[rIndex] = { ...recipient, name: e.target.value };
@@ -619,7 +619,7 @@ export function Editor() {
                                     type="text"
                                     className="form-input"
                                     placeholder="Node pubkey or LN address"
-                                    value={recipient.address}
+                                    value={recipient.address || ''}
                                     onChange={e => {
                                       const address = e.target.value;
                                       const detectedType = address.includes('@') ? 'lnaddress' : 'node';
@@ -640,7 +640,7 @@ export function Editor() {
                                     placeholder="50"
                                     min="0"
                                     max="100"
-                                    value={recipient.split}
+                                    value={recipient.split ?? 0}
                                     onChange={e => {
                                       const newRecipients = [...(track.value?.recipients || [])];
                                       newRecipients[rIndex] = { ...recipient, split: parseInt(e.target.value) || 0 };
