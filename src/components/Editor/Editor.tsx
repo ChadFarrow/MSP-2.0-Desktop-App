@@ -133,7 +133,7 @@ export function Editor() {
           </Section>
 
           {/* Artwork Section */}
-          <Section title="Artwork" icon="&#127912;">
+          <Section title="Album Artwork" icon="&#127912;">
             <div className="form-grid">
               <div className="form-group">
                 <label className="form-label">Album Art URL <span className="required">*</span><InfoIcon text={FIELD_INFO.imageUrl} /></label>
@@ -274,21 +274,6 @@ export function Editor() {
 
           {/* Value Block Section */}
           <Section title="Value Block (Lightning)" icon="&#9889;">
-            <div className="form-grid" style={{ marginBottom: '16px' }}>
-              <div className="form-group">
-                <label className="form-label">Suggested Amount (BTC)<InfoIcon text={FIELD_INFO.valueSuggested} /></label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="0.000033333"
-                  value={album.value.suggested || ''}
-                  onChange={e => dispatch({
-                    type: 'UPDATE_ALBUM',
-                    payload: { value: { ...album.value, suggested: e.target.value } }
-                  })}
-                />
-              </div>
-            </div>
             <h4 style={{ marginBottom: '12px', color: 'var(--text-secondary)' }}>Recipients</h4>
             <div className="repeatable-list">
               {album.value.recipients.map((recipient, index) => (
@@ -340,6 +325,36 @@ export function Editor() {
                           })}
                         />
                       </div>
+                      {recipient.type === 'node' && recipient.address && (
+                        <>
+                          <div className="form-group">
+                            <label className="form-label">Custom Key<InfoIcon text={FIELD_INFO.recipientCustomKey} /></label>
+                            <input
+                              type="text"
+                              className="form-input"
+                              placeholder="696969"
+                              value={recipient.customKey || ''}
+                              onChange={e => dispatch({
+                                type: 'UPDATE_RECIPIENT',
+                                payload: { index, recipient: { ...recipient, customKey: e.target.value || undefined } }
+                              })}
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Custom Value<InfoIcon text={FIELD_INFO.recipientCustomValue} /></label>
+                            <input
+                              type="text"
+                              className="form-input"
+                              placeholder="Optional TLV value"
+                              value={recipient.customValue || ''}
+                              onChange={e => dispatch({
+                                type: 'UPDATE_RECIPIENT',
+                                payload: { index, recipient: { ...recipient, customValue: e.target.value || undefined } }
+                              })}
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="repeatable-item-actions">

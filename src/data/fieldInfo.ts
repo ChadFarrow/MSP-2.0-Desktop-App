@@ -24,10 +24,11 @@ export const FIELD_INFO = {
   personRole: "Specific role: band, vocalist, guitarist, songwriter, producer, etc.",
 
   // Value Block
-  valueSuggested: "Suggested boost amount in BTC (e.g., 0.000033333).",
   recipientName: "Name of the payment recipient.",
   recipientAddress: "Lightning node pubkey (66 hex chars) or Lightning address (user@wallet.com). Type is auto-detected.",
   recipientSplit: "Percentage of payment this recipient receives. Splits are totaled and divided proportionally (must be whole numbers).",
+  recipientCustomKey: "TLV record key for routing to subwallets (e.g., 696969).",
+  recipientCustomValue: "Subwallet identifier or user ID for the payment destination.",
 
   // Funding
   fundingUrl: "URL where listeners can support your podcast (e.g., Patreon, Ko-fi, your website).",
