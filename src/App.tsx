@@ -7,6 +7,7 @@ import { createEmptyAlbum } from './types/feed';
 import { NostrLoginButton } from './components/NostrLoginButton';
 import { ImportModal } from './components/modals/ImportModal';
 import { SaveModal } from './components/modals/SaveModal';
+import { InfoModal } from './components/modals/InfoModal';
 import { Editor } from './components/Editor/Editor';
 import type { Album } from './types/feed';
 import mspLogo from './assets/msp-logo.png';
@@ -17,6 +18,7 @@ function AppContent() {
   const { state, dispatch } = useFeed();
   const [showImportModal, setShowImportModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
   const { state: nostrState } = useNostr();
 
   const handleImport = (xml: string) => {
@@ -58,6 +60,9 @@ function AppContent() {
             <h1>MSP 2.0 - Music Side Project Studio</h1>
           </div>
           <div className="header-actions">
+            <button className="btn btn-secondary btn-small" onClick={() => setShowInfoModal(true)}>
+              ℹ️ Info
+            </button>
             <button className="btn btn-secondary btn-small" onClick={handleNew}>
               📂 New
             </button>
@@ -91,6 +96,10 @@ function AppContent() {
           isLoggedIn={nostrState.isLoggedIn}
           onImport={handleImport}
         />
+      )}
+
+      {showInfoModal && (
+        <InfoModal onClose={() => setShowInfoModal(false)} />
       )}
     </>
   );

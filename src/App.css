@@ -564,6 +564,56 @@ body {
   border-top: 1px solid var(--border-color);
 }
 
+/* Info Modal */
+.info-modal {
+  max-width: 700px;
+}
+
+.info-content {
+  max-height: 70vh;
+  line-height: 1.7;
+}
+
+.info-content h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.info-content h2 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+}
+
+.info-content h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.info-content p {
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+}
+
+.info-content a {
+  color: var(--accent-secondary);
+  text-decoration: none;
+}
+
+.info-content a:hover {
+  text-decoration: underline;
+}
+
 /* Modal Tabs */
 .modal-tabs {
   display: flex;
