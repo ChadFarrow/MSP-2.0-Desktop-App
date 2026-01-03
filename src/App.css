@@ -925,7 +925,8 @@ body {
   vertical-align: middle;
 }
 
-.info-icon:hover {
+.info-icon:hover,
+.info-icon-active {
   background: var(--accent-primary);
 }
 
