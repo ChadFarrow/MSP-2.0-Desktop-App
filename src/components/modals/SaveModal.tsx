@@ -38,6 +38,7 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
   const [restoreFeedId, setRestoreFeedId] = useState('');
   const [restoreToken, setRestoreToken] = useState('');
   const [restoreLoading, setRestoreLoading] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   // Check for existing hosted feed on mount, and apply pending credentials
   useEffect(() => {
@@ -263,7 +264,16 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Save Feed</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            Save Feed
+            <span
+              className="import-help-icon"
+              onClick={() => setShowHelp(true)}
+              title="Show save type descriptions"
+            >
+              ℹ️
+            </span>
+          </h2>
           <button className="btn btn-icon" onClick={onClose}>&#10005;</button>
         </div>
         <div className="modal-content">
@@ -613,6 +623,31 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
           </button>
         </div>
       </div>
+
+      {showHelp && (
+        <div className="modal-overlay" style={{ zIndex: 1001 }} onClick={() => setShowHelp(false)}>
+          <div className="modal import-help-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Save Types</h2>
+              <button className="btn btn-icon" onClick={() => setShowHelp(false)}>&#10005;</button>
+            </div>
+            <div className="modal-content">
+              <ul className="import-help-list">
+                <li><strong>Local Storage</strong> - Save to your browser's local storage. Data persists until you clear browser data.</li>
+                <li><strong>Download XML</strong> - Download the RSS feed as an XML file to your computer.</li>
+                <li><strong>Copy to Clipboard</strong> - Copy the RSS XML to your clipboard for pasting elsewhere.</li>
+                <li><strong>Host on MSP</strong> - Host your feed on MSP servers. Get a permanent URL for your RSS feed to use in any app.</li>
+                <li><strong>Save to Nostr</strong> - Publish to Nostr relays. Load it later on any device with your Nostr key (requires login).</li>
+                <li><strong>Publish Nostr Music</strong> - Publish each track as a Nostr Music event (kind 36787) for music clients (requires login).</li>
+                <li><strong>Publish to Blossom</strong> - Upload your feed to a Blossom server. Get a stable MSP URL that always points to your latest upload (requires login).</li>
+              </ul>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={() => setShowHelp(false)}>Got it</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
