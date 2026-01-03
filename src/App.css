@@ -94,6 +94,10 @@ body {
   gap: 8px;
 }
 
+.header-actions .btn {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
 /* Main Content */
 .main-content {
   display: flex;
@@ -925,6 +929,20 @@ body {
   top: 13px;
   border: 5px solid transparent;
   border-right-color: var(--bg-tertiary);
+}
+
+.info-tooltip-close {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .info-tooltip-close {
+    display: block;
+    margin-top: 8px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
 }
 
 /* Nostr Login Styles */
