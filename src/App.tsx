@@ -22,6 +22,17 @@ function AppContent() {
   const handleImport = (xml: string) => {
     try {
       const album = parseRssFeed(xml);
+
+      // Warn if not a music feed
+      if (album.medium && album.medium !== 'music' && album.medium !== 'musicL') {
+        const proceed = confirm(
+          `This feed has medium "${album.medium}" which is not a music feed. ` +
+          `MSP 2.0 is designed for music feeds. Continue anyway?`
+        );
+        if (!proceed) return;
+        album.medium = 'music';
+      }
+
       dispatch({ type: 'SET_ALBUM', payload: album });
     } catch (err) {
       alert('Failed to parse feed: ' + (err instanceof Error ? err.message : 'Unknown error'));
