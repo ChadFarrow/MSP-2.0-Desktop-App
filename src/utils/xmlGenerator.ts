@@ -172,8 +172,6 @@ export const generateRssFeed = (album: Album): string => {
   // Locked
   if (album.locked && album.lockedOwner) {
     lines.push(`${indent(2)}<podcast:locked owner="${escapeXml(album.lockedOwner)}">yes</podcast:locked>`);
-  } else {
-    lines.push(`${indent(2)}<podcast:locked>no</podcast:locked>`);
   }
 
   // GUID
@@ -204,7 +202,6 @@ export const generateRssFeed = (album: Album): string => {
     lines.push(`${indent(2)}<image>`);
     lines.push(`${indent(3)}<url>${escapeXml(album.imageUrl)}</url>`);
     lines.push(`${indent(3)}<title>${escapeXml(album.imageTitle || album.title)}</title>`);
-    lines.push(`${indent(3)}<link>${escapeXml(album.imageLink || album.link)}</link>`);
     if (album.imageDescription) {
       lines.push(`${indent(3)}<description>${escapeXml(album.imageDescription)}</description>`);
     }
