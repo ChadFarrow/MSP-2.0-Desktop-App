@@ -119,16 +119,12 @@ export function buildHostedUrl(feedId: string): string {
  * Backup file structure for hosted feeds
  */
 export interface HostedFeedBackup {
-  msp_hosted_feed_backup: {
-    version: number;
-    created_at: string;
-    feed_id: string;
-    edit_token: string;
-    feed_url: string;
-    podcast_guid: string;
-    album_title: string;
-    warning: string;
-  };
+  _info: string;
+  album: string;
+  feedUrl: string;
+  feedId: string;
+  editToken: string;
+  createdAt: string;
 }
 
 /**
@@ -138,19 +134,15 @@ export function downloadHostedFeedBackup(
   feedId: string,
   editToken: string,
   albumTitle: string,
-  podcastGuid: string
+  _podcastGuid: string
 ): void {
   const backup: HostedFeedBackup = {
-    msp_hosted_feed_backup: {
-      version: 1,
-      created_at: new Date().toISOString(),
-      feed_id: feedId,
-      edit_token: editToken,
-      feed_url: buildHostedUrl(feedId),
-      podcast_guid: podcastGuid,
-      album_title: albumTitle,
-      warning: 'Keep this file safe! Anyone with this token can edit or delete your feed.'
-    }
+    _info: 'MSP Hosted Feed Backup - Keep this file safe!',
+    album: albumTitle,
+    feedUrl: buildHostedUrl(feedId),
+    feedId: feedId,
+    editToken: editToken,
+    createdAt: new Date().toISOString()
   };
 
   const json = JSON.stringify(backup, null, 2);

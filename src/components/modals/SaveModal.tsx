@@ -561,8 +561,45 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
                     </button>
                   ) : (
                     <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        Upload backup file or enter manually:
+                      </label>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            try {
+                              const json = JSON.parse(event.target?.result as string);
+                              // Support both old and new format
+                              const feedId = json.feedId || json.feed_id || json.msp_hosted_feed_backup?.feed_id;
+                              const token = json.editToken || json.edit_token || json.msp_hosted_feed_backup?.edit_token;
+                              if (feedId && token) {
+                                setRestoreFeedId(feedId);
+                                setRestoreToken(token);
+                                setMessage({ type: 'success', text: 'Backup file loaded!' });
+                              } else {
+                                setMessage({ type: 'error', text: 'Invalid backup file format' });
+                              }
+                            } catch {
+                              setMessage({ type: 'error', text: 'Could not parse backup file' });
+                            }
+                          };
+                          reader.readAsText(file);
+                          e.target.value = '';
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          marginBottom: '12px',
+                          fontSize: '0.75rem'
+                        }}
+                      />
                       <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        Feed ID (from your feed URL)
+                        Feed ID
                       </label>
                       <input
                         type="text"
