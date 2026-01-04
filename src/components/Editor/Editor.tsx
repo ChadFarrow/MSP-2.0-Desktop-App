@@ -462,6 +462,14 @@ export function Editor() {
                           type: 'UPDATE_TRACK',
                           payload: { index, track: { duration: formatDuration(e.target.value) } }
                         })}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            dispatch({
+                              type: 'UPDATE_TRACK',
+                              payload: { index, track: { duration: formatDuration((e.target as HTMLInputElement).value) } }
+                            });
+                          }
+                        }}
                       />
                     </div>
                     <div className="form-group">
