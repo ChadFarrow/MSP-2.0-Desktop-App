@@ -10,12 +10,6 @@ interface NostrEvent {
   sig?: string;
 }
 
-interface VerifyResponse {
-  success: boolean;
-  pubkey?: string;
-  error?: string;
-}
-
 interface FeedInfo {
   feedId: string;
   title?: string;
