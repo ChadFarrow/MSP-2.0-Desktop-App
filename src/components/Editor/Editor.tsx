@@ -777,7 +777,6 @@ export function Editor() {
                 </div>
               ))}
               <button className="add-item-btn" onClick={() => {
-                setCollapsedTracks(new Set(album.tracks.map(t => t.id)));
                 dispatch({ type: 'ADD_TRACK' });
               }}>
                 + Add Track

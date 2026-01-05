@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 
-export function Section({ title, icon, children, defaultOpen = false }: {
+export function Section({ title, icon, children, defaultOpen = true }: {
   title: string;
   icon: string;
   children: ReactNode;
