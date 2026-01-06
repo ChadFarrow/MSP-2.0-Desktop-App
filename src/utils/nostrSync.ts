@@ -1,5 +1,5 @@
 import type { Album, Track, Person, ValueRecipient } from '../types/feed';
-import type { NostrEvent, SavedAlbumInfo, NostrMusicTrackInfo, NostrMusicAlbumGroup, NostrZapSplit, NostrMusicContent } from '../types/nostr';
+import type { NostrEvent, SavedAlbumInfo, NostrMusicTrackInfo, NostrMusicAlbumGroup, NostrZapSplit, NostrMusicContent, PublishedTrackRef } from '../types/nostr';
 import { generateRssFeed } from './xmlGenerator';
 import { parseRssFeed } from './xmlParser';
 import { formatReleasedDate } from './dateUtils';
@@ -23,6 +23,9 @@ const CLIENT_TAG = 'MSP 2.0';
 
 // Kind 36787 for Nostr music tracks
 const MUSIC_TRACK_KIND = 36787;
+
+// Kind 34139 for Nostr music playlists
+const MUSIC_PLAYLIST_KIND = 34139;
 
 // Nostr profile metadata interface
 export interface NostrProfile {
@@ -564,25 +567,77 @@ function createMusicTrackEvent(
   };
 }
 
+// Create a kind 34139 playlist event referencing published tracks
+function createMusicPlaylistEvent(
+  album: Album,
+  publishedTracks: PublishedTrackRef[],
+  pubkey: string
+): NostrEvent {
+  const tags: string[][] = [
+    // Required tags per NIP
+    ['d', album.podcastGuid],
+    ['title', album.title || 'Untitled Playlist'],
+    ['alt', `Playlist: ${album.title || 'Untitled'} by ${album.author || 'Unknown Artist'}`],
+    // Client identifier
+    ['client', CLIENT_TAG]
+  ];
+
+  // Optional: description tag
+  if (album.description?.trim()) {
+    tags.push(['description', album.description.trim()]);
+  }
+
+  // Optional: image tag (album artwork)
+  if (album.imageUrl?.trim()) {
+    tags.push(['image', album.imageUrl]);
+  }
+
+  // Track references as 'a' tags in order
+  // Format: "36787:<pubkey>:<d-tag>"
+  for (const track of publishedTracks) {
+    tags.push(['a', `${MUSIC_TRACK_KIND}:${track.pubkey}:${track.dTag}`]);
+  }
+
+  // Category tags for discovery
+  for (const category of album.categories) {
+    tags.push(['t', category.toLowerCase()]);
+  }
+
+  // Default to public playlist
+  tags.push(['public', 'true']);
+
+  // Content field: playlist description
+  const content = album.description?.trim() || '';
+
+  return {
+    kind: MUSIC_PLAYLIST_KIND,
+    pubkey,
+    created_at: Math.floor(Date.now() / 1000),
+    tags,
+    content
+  };
+}
+
 // Publish result for progress tracking
 export interface PublishProgress {
   current: number;
   total: number;
   trackTitle: string;
+  phase: 'tracks' | 'playlist';
 }
 
-// Publish album tracks as Nostr Music events (kind 36787)
+// Publish album tracks as Nostr Music events (kind 36787) + playlist (kind 34139)
 export async function publishNostrMusicTracks(
   album: Album,
   relays = DEFAULT_RELAYS,
   onProgress?: (progress: PublishProgress) => void
-): Promise<{ success: boolean; message: string; publishedCount: number }> {
+): Promise<{ success: boolean; message: string; publishedCount: number; playlistPublished: boolean }> {
   if (!hasSigner()) {
-    return { success: false, message: 'Not logged in', publishedCount: 0 };
+    return { success: false, message: 'Not logged in', publishedCount: 0, playlistPublished: false };
   }
 
   if (!album.tracks || album.tracks.length === 0) {
-    return { success: false, message: 'No tracks to publish', publishedCount: 0 };
+    return { success: false, message: 'No tracks to publish', publishedCount: 0, playlistPublished: false };
   }
 
   try {
@@ -590,7 +645,9 @@ export async function publishNostrMusicTracks(
     const pubkey = await signer.getPublicKey();
     let publishedCount = 0;
     const total = album.tracks.length;
+    const publishedTracks: PublishedTrackRef[] = [];
 
+    // Phase 1: Publish all tracks
     for (let i = 0; i < album.tracks.length; i++) {
       const track = album.tracks[i];
 
@@ -599,9 +656,9 @@ export async function publishNostrMusicTracks(
         continue;
       }
 
-      // Report progress
+      // Report progress (tracks phase)
       if (onProgress) {
-        onProgress({ current: i + 1, total, trackTitle: track.title });
+        onProgress({ current: i + 1, total, trackTitle: track.title, phase: 'tracks' });
       }
 
       // Create and sign the event
@@ -614,21 +671,41 @@ export async function publishNostrMusicTracks(
       // Count as published if at least one relay succeeded
       if (successCount > 0) {
         publishedCount++;
+        // Record successful publish for playlist reference
+        publishedTracks.push({ dTag: track.guid, pubkey });
       }
     }
 
     if (publishedCount === 0) {
-      return { success: false, message: 'Failed to publish any tracks', publishedCount: 0 };
+      return { success: false, message: 'Failed to publish any tracks', publishedCount: 0, playlistPublished: false };
+    }
+
+    // Phase 2: Publish playlist (only if at least one track succeeded)
+    let playlistPublished = false;
+
+    if (onProgress) {
+      onProgress({ current: 1, total: 1, trackTitle: album.title || 'Playlist', phase: 'playlist' });
+    }
+
+    const playlistEvent = createMusicPlaylistEvent(album, publishedTracks, pubkey);
+    const signedPlaylist = await signer.signEvent(playlistEvent);
+    const { successCount: playlistSuccessCount } = await publishEventToRelays(signedPlaylist as NostrEvent, relays);
+
+    if (playlistSuccessCount > 0) {
+      playlistPublished = true;
     }
 
     return {
       success: true,
-      message: `Published ${publishedCount} of ${total} track(s) to Nostr`,
-      publishedCount
+      message: playlistPublished
+        ? `Published ${publishedCount} track(s) and playlist to Nostr`
+        : `Published ${publishedCount} track(s) to Nostr (playlist failed)`,
+      publishedCount,
+      playlistPublished
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return { success: false, message, publishedCount: 0 };
+    return { success: false, message, publishedCount: 0, playlistPublished: false };
   }
 }
 

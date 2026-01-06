@@ -72,6 +72,12 @@ export interface NostrZapSplit {
   splitPercentage: number;
 }
 
+// Kind 34139 Music Playlist - Published track reference
+export interface PublishedTrackRef {
+  dTag: string;
+  pubkey: string;
+}
+
 // Kind 36787 Music Track - Parsed content sections
 export interface NostrMusicContent {
   lyrics?: string;

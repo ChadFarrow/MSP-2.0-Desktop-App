@@ -694,7 +694,10 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
 
           {progress && (
             <div style={{ marginTop: '12px', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-              Publishing track {progress.current} of {progress.total}: {progress.trackTitle}
+              {progress.phase === 'tracks'
+                ? `Publishing track ${progress.current} of ${progress.total}: ${progress.trackTitle}`
+                : `Publishing playlist: ${progress.trackTitle}`
+              }
             </div>
           )}
 
