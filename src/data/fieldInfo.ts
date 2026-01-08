@@ -25,7 +25,7 @@ export const FIELD_INFO = {
   personHref: "Link to the person's website or social profile.",
   personImg: "Link to the person's profile picture.",
   personGroup: "Category: music (performers), writing (songwriters), production (producers/engineers).",
-  personRole: "Specific role: band, vocalist, guitarist, songwriter, producer, etc.",
+  personRole: "Roles from the Podcasting 2.0 taxonomy. The first role is Primary and shown by apps that only display one role. Add multiple roles per person as needed.",
 
   // Value Block
   recipientName: "Name of the payment recipient.",

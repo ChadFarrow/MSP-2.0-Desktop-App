@@ -1,5 +1,5 @@
 // Shared comparison utilities for MSP 2.0
-import type { ValueBlock, Person } from '../types/feed';
+import type { ValueBlock, Person, PersonRole } from '../types/feed';
 
 /**
  * Compare two value blocks for equality by checking recipient addresses
@@ -39,17 +39,34 @@ export function areValueBlocksStrictEqual(a: ValueBlock, b: ValueBlock): boolean
 }
 
 /**
+ * Compare two role arrays for equality (order-independent)
+ */
+function areRolesEqual(a: PersonRole[], b: PersonRole[]): boolean {
+  if (a.length !== b.length) return false;
+
+  // Create a set of role keys for comparison
+  const aKeys = new Set(a.map(r => `${r.group}|${r.role}`));
+  const bKeys = new Set(b.map(r => `${r.group}|${r.role}`));
+
+  if (aKeys.size !== bKeys.size) return false;
+
+  for (const key of aKeys) {
+    if (!bKeys.has(key)) return false;
+  }
+
+  return true;
+}
+
+/**
  * Compare two person arrays for equality
- * Checks name, role, and group in order
+ * Checks name and roles (order-independent for roles)
  */
 export function arePersonsEqual(a: Person[], b: Person[]): boolean {
   if (a.length !== b.length) return false;
 
   for (let i = 0; i < a.length; i++) {
-    if (a[i].name !== b[i].name || a[i].role !== b[i].role ||
-        a[i].group !== b[i].group) {
-      return false;
-    }
+    if (a[i].name !== b[i].name) return false;
+    if (!areRolesEqual(a[i].roles, b[i].roles)) return false;
   }
   return true;
 }

@@ -19,15 +19,17 @@ const escapeXml = (str: string): string => {
 // Generate indent
 const indent = (level: number): string => '    '.repeat(level);
 
-// Generate person XML
+// Generate person XML - outputs one <podcast:person> tag per role
 const generatePersonXml = (person: Person, level: number): string => {
-  const attrs: string[] = [];
-  if (person.href) attrs.push(`href="${escapeXml(person.href)}"`);
-  if (person.img) attrs.push(`img="${escapeXml(person.img)}"`);
-  attrs.push(`group="${escapeXml(person.group)}"`);
-  attrs.push(`role="${escapeXml(person.role)}"`);
-
-  return `${indent(level)}<podcast:person ${attrs.join(' ')}>${escapeXml(person.name)}</podcast:person>`;
+  // Generate one tag per role (per Podcasting 2.0 spec)
+  return person.roles.map(role => {
+    const attrs: string[] = [];
+    if (person.href) attrs.push(`href="${escapeXml(person.href)}"`);
+    if (person.img) attrs.push(`img="${escapeXml(person.img)}"`);
+    attrs.push(`group="${escapeXml(role.group)}"`);
+    attrs.push(`role="${escapeXml(role.role)}"`);
+    return `${indent(level)}<podcast:person ${attrs.join(' ')}>${escapeXml(person.name)}</podcast:person>`;
+  }).join('\n');
 };
 
 // Generate value recipient XML

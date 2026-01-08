@@ -1,8 +1,8 @@
 // MSP 2.0 - Feed State Management (React Context)
 import { createContext, useContext, useReducer, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import type { Album, Track, Person, ValueRecipient, Funding } from '../types/feed';
-import { createEmptyAlbum, createEmptyTrack, createEmptyPerson, createEmptyRecipient, createEmptyFunding } from '../types/feed';
+import type { Album, Track, Person, PersonRole, ValueRecipient, Funding } from '../types/feed';
+import { createEmptyAlbum, createEmptyTrack, createEmptyPerson, createEmptyPersonRole, createEmptyRecipient, createEmptyFunding } from '../types/feed';
 import { albumStorage } from '../utils/storage';
 
 // Action types
@@ -12,6 +12,9 @@ type FeedAction =
   | { type: 'ADD_PERSON'; payload?: Person }
   | { type: 'UPDATE_PERSON'; payload: { index: number; person: Person } }
   | { type: 'REMOVE_PERSON'; payload: number }
+  | { type: 'ADD_PERSON_ROLE'; payload: { personIndex: number; role?: PersonRole } }
+  | { type: 'UPDATE_PERSON_ROLE'; payload: { personIndex: number; roleIndex: number; role: PersonRole } }
+  | { type: 'REMOVE_PERSON_ROLE'; payload: { personIndex: number; roleIndex: number } }
   | { type: 'ADD_RECIPIENT'; payload?: ValueRecipient }
   | { type: 'UPDATE_RECIPIENT'; payload: { index: number; recipient: ValueRecipient } }
   | { type: 'REMOVE_RECIPIENT'; payload: number }
@@ -83,6 +86,44 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
         },
         isDirty: true
       };
+
+    case 'ADD_PERSON_ROLE': {
+      const persons = [...state.album.persons];
+      const person = persons[action.payload.personIndex];
+      if (person) {
+        persons[action.payload.personIndex] = {
+          ...person,
+          roles: [...person.roles, action.payload.role || createEmptyPersonRole()]
+        };
+      }
+      return { album: { ...state.album, persons }, isDirty: true };
+    }
+
+    case 'UPDATE_PERSON_ROLE': {
+      const persons = [...state.album.persons];
+      const person = persons[action.payload.personIndex];
+      if (person) {
+        persons[action.payload.personIndex] = {
+          ...person,
+          roles: person.roles.map((r, i) =>
+            i === action.payload.roleIndex ? action.payload.role : r
+          )
+        };
+      }
+      return { album: { ...state.album, persons }, isDirty: true };
+    }
+
+    case 'REMOVE_PERSON_ROLE': {
+      const persons = [...state.album.persons];
+      const person = persons[action.payload.personIndex];
+      if (person && person.roles.length > 1) {
+        persons[action.payload.personIndex] = {
+          ...person,
+          roles: person.roles.filter((_, i) => i !== action.payload.roleIndex)
+        };
+      }
+      return { album: { ...state.album, persons }, isDirty: true };
+    }
 
     case 'ADD_RECIPIENT':
       return {

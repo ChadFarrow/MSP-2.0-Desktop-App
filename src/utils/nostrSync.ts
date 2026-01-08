@@ -472,8 +472,9 @@ export async function fetchNostrMusicTracks(
 // Convert persons array to Credits section string
 function formatCreditsFromPersons(persons: Person[]): string {
   if (!persons || persons.length === 0) return '';
+  // For each person, list all their roles
   return persons
-    .map(p => `${p.name}: ${p.role}`)
+    .map(p => `${p.name}: ${p.roles.map(r => r.role).join(', ')}`)
     .join('\n');
 }
 

@@ -1,4 +1,4 @@
-import type { Album, Track, ValueRecipient, ValueBlock, Person } from '../types/feed';
+import type { Album, Track, ValueRecipient, ValueBlock, Person, PersonGroup } from '../types/feed';
 import type { NostrMusicTrackInfo, NostrMusicAlbumGroup, NostrZapSplit, NostrEvent } from '../types/nostr';
 import { createEmptyAlbum, createEmptyTrack } from '../types/feed';
 import { fetchNostrProfile } from './nostrSync';
@@ -9,16 +9,16 @@ import { parseReleasedDate } from './dateUtils';
 const MUSIC_TRACK_KIND = 36787;
 
 // Infer person group from role string
-function inferPersonGroup(role: string): Person['group'] {
+function inferPersonGroup(role: string): PersonGroup {
   const roleLower = role.toLowerCase();
 
   if (/vocal|sing|voice/i.test(roleLower)) return 'music';
   if (/guitar|bass|drum|keyboard|instrument|beat/i.test(roleLower)) return 'music';
   if (/write|lyric|compos/i.test(roleLower)) return 'writing';
-  if (/produc|engineer|mix|master/i.test(roleLower)) return 'production';
+  if (/produc|engineer|mix|master/i.test(roleLower)) return 'audio-production';
   if (/art|design|photo|video|visual|cover/i.test(roleLower)) return 'visuals';
 
-  return 'other';
+  return 'misc';
 }
 
 // Parse credits string into Person array
@@ -38,8 +38,7 @@ function parseCreditsToPersons(credits: string): Person[] {
 
       persons.push({
         name,
-        group,
-        role: role || 'contributor'
+        roles: [{ group, role: role || 'contributor' }]
       });
     }
   }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useFeed } from '../../store/feedStore';
-import { LANGUAGES, PERSON_GROUPS, PERSON_ROLES } from '../../types/feed';
+import { LANGUAGES, PERSON_GROUPS, PERSON_ROLES, createEmptyPersonRole } from '../../types/feed';
+import type { PersonGroup } from '../../types/feed';
 import { FIELD_INFO } from '../../data/fieldInfo';
 import { InfoIcon } from '../InfoIcon';
 import { Section } from '../Section';
@@ -36,10 +37,69 @@ function formatDuration(input: string): string {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+// Roles Reference Modal
+function RolesModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose} style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0, 0, 0, 0.7)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000
+    }}>
+      <div className="modal-content" onClick={e => e.stopPropagation()} style={{
+        background: 'var(--bg-secondary)',
+        borderRadius: '12px',
+        padding: '24px',
+        maxWidth: '900px',
+        maxHeight: '80vh',
+        overflow: 'auto',
+        width: '90%'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0, color: 'var(--text-primary)' }}>Podcasting 2.0 Roles Reference</h2>
+          <button onClick={onClose} className="btn btn-icon" style={{ fontSize: '20px' }}>&times;</button>
+        </div>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '20px' }}>
+          Full list of groups and roles from the Podcasting 2.0 taxonomy, plus custom music roles.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
+          {PERSON_GROUPS.map(group => (
+            <div key={group.value} style={{
+              background: 'var(--bg-tertiary)',
+              borderRadius: '8px',
+              padding: '16px'
+            }}>
+              <h4 style={{ margin: '0 0 12px 0', color: 'var(--accent-primary)', fontSize: '14px', textTransform: 'uppercase' }}>
+                {group.label}
+              </h4>
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                {PERSON_ROLES[group.value].map(role => (
+                  <li key={role.value} style={{ color: 'var(--text-primary)', padding: '4px 0', fontSize: '13px' }}>
+                    {role.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Editor() {
   const { state, dispatch } = useFeed();
   const { album } = state;
   const [collapsedTracks, setCollapsedTracks] = useState<Set<string>>(new Set());
+  const [showRolesModal, setShowRolesModal] = useState(false);
 
   const toggleTrackCollapse = (trackId: string) => {
     setCollapsedTracks(prev => {
@@ -222,8 +282,8 @@ export function Editor() {
           {/* Credits Section */}
           <Section title="Credits / Persons" icon="&#128100;">
             <div className="repeatable-list">
-              {album.persons.map((person, index) => (
-                <div key={index} className="repeatable-item">
+              {album.persons.map((person, personIndex) => (
+                <div key={personIndex} className="repeatable-item">
                   <div className="repeatable-item-content">
                     <div className="form-grid">
                       <div className="form-group">
@@ -235,39 +295,9 @@ export function Editor() {
                           value={person.name || ''}
                           onChange={e => dispatch({
                             type: 'UPDATE_PERSON',
-                            payload: { index, person: { ...person, name: e.target.value } }
+                            payload: { index: personIndex, person: { ...person, name: e.target.value } }
                           })}
                         />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Group<InfoIcon text={FIELD_INFO.personGroup} /></label>
-                        <select
-                          className="form-select"
-                          value={person.group || 'music'}
-                          onChange={e => dispatch({
-                            type: 'UPDATE_PERSON',
-                            payload: { index, person: { ...person, group: e.target.value as any, role: PERSON_ROLES[e.target.value]?.[0]?.value || 'band' } }
-                          })}
-                        >
-                          {PERSON_GROUPS.map(g => (
-                            <option key={g.value} value={g.value}>{g.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Role<InfoIcon text={FIELD_INFO.personRole} /></label>
-                        <select
-                          className="form-select"
-                          value={person.role || 'band'}
-                          onChange={e => dispatch({
-                            type: 'UPDATE_PERSON',
-                            payload: { index, person: { ...person, role: e.target.value } }
-                          })}
-                        >
-                          {(PERSON_ROLES[person.group] || PERSON_ROLES.music).map(r => (
-                            <option key={r.value} value={r.value}>{r.label}</option>
-                          ))}
-                        </select>
                       </div>
                       <div className="form-group">
                         <label className="form-label">Website<InfoIcon text={FIELD_INFO.personHref} /></label>
@@ -278,7 +308,7 @@ export function Editor() {
                           value={person.href || ''}
                           onChange={e => dispatch({
                             type: 'UPDATE_PERSON',
-                            payload: { index, person: { ...person, href: e.target.value } }
+                            payload: { index: personIndex, person: { ...person, href: e.target.value } }
                           })}
                         />
                       </div>
@@ -291,16 +321,96 @@ export function Editor() {
                           value={person.img || ''}
                           onChange={e => dispatch({
                             type: 'UPDATE_PERSON',
-                            payload: { index, person: { ...person, img: e.target.value } }
+                            payload: { index: personIndex, person: { ...person, img: e.target.value } }
                           })}
                         />
                       </div>
+                    </div>
+                    {/* Roles section */}
+                    <div className="person-roles-section" style={{ marginTop: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                        <label className="form-label" style={{ margin: 0 }}>Roles<InfoIcon text={FIELD_INFO.personRole} /></label>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ fontSize: '14px', padding: '8px 16px' }}
+                          onClick={() => setShowRolesModal(true)}
+                        >
+                          View All Roles
+                        </button>
+                      </div>
+                      <div className="person-roles-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
+                        {person.roles.map((role, roleIndex) => (
+                          <div key={roleIndex} className="person-role-item" style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: 'var(--bg-tertiary)',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}>
+                            <select
+                              className="form-select"
+                              style={{ minWidth: '180px', padding: '8px 12px', fontSize: '14px' }}
+                              value={role.group}
+                              onChange={e => {
+                                const newGroup = e.target.value as PersonGroup;
+                                const newRole = PERSON_ROLES[newGroup]?.[0]?.value || 'band';
+                                dispatch({
+                                  type: 'UPDATE_PERSON_ROLE',
+                                  payload: { personIndex, roleIndex, role: { group: newGroup, role: newRole } }
+                                });
+                              }}
+                            >
+                              {PERSON_GROUPS.map(g => (
+                                <option key={g.value} value={g.value}>{g.label}</option>
+                              ))}
+                            </select>
+                            <select
+                              className="form-select"
+                              style={{ minWidth: '200px', padding: '8px 12px', fontSize: '14px' }}
+                              value={role.role}
+                              onChange={e => dispatch({
+                                type: 'UPDATE_PERSON_ROLE',
+                                payload: { personIndex, roleIndex, role: { ...role, role: e.target.value } }
+                              })}
+                            >
+                              {(PERSON_ROLES[role.group] || PERSON_ROLES.music).map(r => (
+                                <option key={r.value} value={r.value}>{r.label}</option>
+                              ))}
+                            </select>
+                            {person.roles.length > 1 && (
+                              <button
+                                className="btn btn-icon btn-danger"
+                                style={{ padding: '6px 10px', fontSize: '14px', minWidth: 'auto' }}
+                                onClick={() => dispatch({
+                                  type: 'REMOVE_PERSON_ROLE',
+                                  payload: { personIndex, roleIndex }
+                                })}
+                                title="Remove role"
+                              >
+                                &#10005;
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        className="btn btn-secondary"
+                        style={{ fontSize: '12px', padding: '4px 12px' }}
+                        onClick={() => dispatch({
+                          type: 'ADD_PERSON_ROLE',
+                          payload: { personIndex, role: createEmptyPersonRole() }
+                        })}
+                      >
+                        + Add Role
+                      </button>
                     </div>
                   </div>
                   <div className="repeatable-item-actions">
                     <button
                       className="btn btn-icon btn-danger"
-                      onClick={() => dispatch({ type: 'REMOVE_PERSON', payload: index })}
+                      onClick={() => dispatch({ type: 'REMOVE_PERSON', payload: personIndex })}
                     >
                       &#10005;
                     </button>
@@ -785,6 +895,7 @@ export function Editor() {
           </Section>
         </div>
       </div>
+      <RolesModal isOpen={showRolesModal} onClose={() => setShowRolesModal(false)} />
     </>
   );
 }

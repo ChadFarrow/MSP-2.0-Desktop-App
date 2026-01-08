@@ -1,5 +1,5 @@
 // Centralized localStorage utilities for MSP 2.0
-import type { Album } from '../types/feed';
+import type { Album, Person, PersonRole, PersonGroup } from '../types/feed';
 import type { NostrUser } from '../types/nostr';
 
 // Storage keys
@@ -9,6 +9,51 @@ export const STORAGE_KEYS = {
   HOSTED_PREFIX: 'msp2-hosted-',
   PENDING_HOSTED: 'msp2-pending-hosted'
 } as const;
+
+// Migration helper: convert old person format to new format
+// Old: { name, href, img, group, role }
+// New: { name, href, img, roles: [{group, role}] }
+interface OldPerson {
+  name: string;
+  href?: string;
+  img?: string;
+  group?: string;
+  role?: string;
+  roles?: PersonRole[];
+}
+
+function migratePerson(person: OldPerson): Person {
+  // Already migrated
+  if (person.roles && Array.isArray(person.roles)) {
+    return person as Person;
+  }
+  // Migrate old format
+  const group = (person.group || 'music') as PersonGroup;
+  const role = person.role || 'band';
+  return {
+    name: person.name || '',
+    href: person.href,
+    img: person.img,
+    roles: [{ group, role }]
+  };
+}
+
+function migrateAlbum(album: Album & { persons?: OldPerson[]; tracks?: Array<{ persons?: OldPerson[] }> }): Album {
+  // Migrate album-level persons
+  if (album.persons) {
+    album.persons = album.persons.map(migratePerson);
+  }
+  // Migrate track-level persons
+  if (album.tracks) {
+    album.tracks = album.tracks.map(track => {
+      if (track.persons) {
+        track.persons = track.persons.map(migratePerson);
+      }
+      return track;
+    });
+  }
+  return album as Album;
+}
 
 /**
  * Safely get an item from localStorage with JSON parsing
@@ -53,7 +98,13 @@ function removeItem(key: string): boolean {
 
 // Album storage operations
 export const albumStorage = {
-  load: (): Album | null => getItem<Album>(STORAGE_KEYS.ALBUM_DATA),
+  load: (): Album | null => {
+    const album = getItem<Album>(STORAGE_KEYS.ALBUM_DATA);
+    if (album) {
+      return migrateAlbum(album);
+    }
+    return null;
+  },
   save: (album: Album): boolean => setItem(STORAGE_KEYS.ALBUM_DATA, album),
   clear: (): boolean => removeItem(STORAGE_KEYS.ALBUM_DATA)
 };

@@ -1,6 +1,6 @@
 // MSP 2.0 - XML Parser for importing Demu RSS Feeds
 import { XMLParser } from 'fast-xml-parser';
-import type { Album, Track, Person, ValueRecipient, ValueBlock, Funding } from '../types/feed';
+import type { Album, Track, Person, PersonRole, PersonGroup, ValueRecipient, ValueBlock, Funding } from '../types/feed';
 import { createEmptyAlbum, createEmptyTrack } from '../types/feed';
 import { areValueBlocksStrictEqual, arePersonsEqual } from './comparison';
 
@@ -86,11 +86,7 @@ export const parseRssFeed = (xmlString: string): Album => {
   album.webMaster = getText(channel.webMaster) || '';
 
   // Persons
-  const persons = channel['podcast:person'];
-  if (persons) {
-    const personArray = Array.isArray(persons) ? persons : [persons];
-    album.persons = personArray.map(parsePerson).filter(Boolean) as Person[];
-  }
+  album.persons = parsePersons(channel['podcast:person']);
 
   // Value block
   const value = channel['podcast:value'];
@@ -136,17 +132,65 @@ function getAttr(node: unknown, attr: string): string {
   return '';
 }
 
-// Parse person tag
-function parsePerson(node: unknown): Person | null {
+// Intermediate type for parsing a single person tag (has one role)
+interface ParsedPersonTag {
+  name: string;
+  href?: string;
+  img?: string;
+  group: PersonGroup;
+  role: string;
+}
+
+// Parse a single person tag from XML
+function parsePersonTag(node: unknown): ParsedPersonTag | null {
   if (!node) return null;
 
   return {
     name: getText(node),
     href: getAttr(node, 'href') || undefined,
     img: getAttr(node, 'img') || undefined,
-    group: (getAttr(node, 'group') || 'music') as Person['group'],
+    group: (getAttr(node, 'group') || 'music') as PersonGroup,
     role: getAttr(node, 'role') || 'band'
   };
+}
+
+// Merge multiple person tags with the same name into a single Person with multiple roles
+function mergePersonTags(tags: ParsedPersonTag[]): Person[] {
+  const personMap = new Map<string, Person>();
+
+  for (const tag of tags) {
+    // Create a key based on name + href + img to group same person
+    const key = `${tag.name}|${tag.href || ''}|${tag.img || ''}`;
+
+    if (personMap.has(key)) {
+      // Add role to existing person
+      const person = personMap.get(key)!;
+      const roleExists = person.roles.some(
+        r => r.group === tag.group && r.role === tag.role
+      );
+      if (!roleExists) {
+        person.roles.push({ group: tag.group, role: tag.role });
+      }
+    } else {
+      // Create new person
+      personMap.set(key, {
+        name: tag.name,
+        href: tag.href,
+        img: tag.img,
+        roles: [{ group: tag.group, role: tag.role }]
+      });
+    }
+  }
+
+  return Array.from(personMap.values());
+}
+
+// Parse person tags and merge by name
+function parsePersons(nodes: unknown): Person[] {
+  if (!nodes) return [];
+  const nodeArray = Array.isArray(nodes) ? nodes : [nodes];
+  const tags = nodeArray.map(parsePersonTag).filter(Boolean) as ParsedPersonTag[];
+  return mergePersonTags(tags);
 }
 
 // Parse funding tag
@@ -260,8 +304,7 @@ function parseTrack(node: unknown, trackNumber: number, albumValue: ValueBlock, 
   // Persons - only set override if different from album
   const persons = item['podcast:person'];
   if (persons) {
-    const personArray = Array.isArray(persons) ? persons : [persons];
-    track.persons = personArray.map(parsePerson).filter(Boolean) as Person[];
+    track.persons = parsePersons(persons);
     track.overridePersons = !arePersonsEqual(track.persons, albumPersons);
   }
 
