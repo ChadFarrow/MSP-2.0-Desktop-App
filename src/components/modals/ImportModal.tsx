@@ -52,12 +52,12 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
     setError('');
 
     const result = await loadAlbumByDTag(dTag);
-    setLoading(false);
 
     if (result.success && result.album) {
-      onLoadAlbum(result.album);
       onClose();
+      onLoadAlbum(result.album);
     } else {
+      setLoading(false);
       setError(result.message);
     }
   };
@@ -87,8 +87,8 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
 
     try {
       const album = await convertNostrMusicToAlbum(albumGroup, true);
-      onLoadAlbum(album);
       onClose();
+      onLoadAlbum(album);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to convert music tracks');
       setLoading(false);
