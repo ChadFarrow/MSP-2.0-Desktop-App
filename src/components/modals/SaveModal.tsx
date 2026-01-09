@@ -198,29 +198,36 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
       }
     }
 
+    // Helper to show success and auto-close
+    const showSuccessAndClose = (text: string, delay = 1500) => {
+      setMessage({ type: 'success', text });
+      setTimeout(() => onClose(), delay);
+    };
+
     try {
       switch (mode) {
         case 'local':
           albumStorage.save(album);
-          setMessage({ type: 'success', text: 'Saved to browser storage' });
+          showSuccessAndClose('Saved to browser storage');
           break;
         case 'download':
           const xml = generateRssFeed(album);
           const filename = `${album.title || 'feed'}.xml`.replace(/[^a-z0-9.-]/gi, '_');
           downloadXml(xml, filename);
-          setMessage({ type: 'success', text: 'Download started' });
+          showSuccessAndClose('Download started');
           break;
         case 'clipboard':
           const xmlContent = generateRssFeed(album);
           await copyToClipboard(xmlContent);
-          setMessage({ type: 'success', text: 'Copied to clipboard' });
+          showSuccessAndClose('Copied to clipboard');
           break;
         case 'nostr':
           const result = await saveAlbumToNostr(album, isDirty);
-          setMessage({
-            type: result.success ? 'success' : 'error',
-            text: result.message
-          });
+          if (result.success) {
+            showSuccessAndClose(result.message);
+          } else {
+            setMessage({ type: 'error', text: result.message });
+          }
           break;
         case 'nostrMusic':
           const musicResult = await publishNostrMusicTracks(album, undefined, setProgress);
@@ -229,10 +236,11 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
           const allTracksPublished = musicResult.publishedCount === album.tracks.length;
           const playlistExpected = album.tracks.length >= 2;
           const hasPartialFailure = !allTracksPublished || (playlistExpected && !musicResult.playlistPublished);
-          setMessage({
-            type: musicResult.success && !hasPartialFailure ? 'success' : 'error',
-            text: musicResult.message
-          });
+          if (musicResult.success && !hasPartialFailure) {
+            showSuccessAndClose(musicResult.message);
+          } else {
+            setMessage({ type: 'error', text: musicResult.message });
+          }
           break;
         case 'blossom':
           const blossomResult = await uploadToBlossom(album, blossomServer);
@@ -261,7 +269,7 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
             const updatedInfo = { ...hostedInfo, lastUpdated: Date.now() };
             saveHostedFeedInfo(album.podcastGuid, updatedInfo);
             setHostedInfo(updatedInfo);
-            setMessage({ type: 'success', text: 'Feed updated!' });
+            showSuccessAndClose('Feed updated!');
           } else if (pendingToken) {
             // Create new feed - use Nostr auth if user opted in
             let hostedResult;
