@@ -109,10 +109,8 @@ const generateTrackXml = (track: Track, album: Album, level: number): string => 
   // Duration
   lines.push(`${indent(level + 1)}<itunes:duration>${track.duration}</itunes:duration>`);
 
-  // Season
-  if (track.season) {
-    lines.push(`${indent(level + 1)}<podcast:season>${track.season}</podcast:season>`);
-  }
+  // Season (always 1)
+  lines.push(`${indent(level + 1)}<podcast:season>1</podcast:season>`);
 
   // Episode number (use track.episode if set, otherwise trackNumber)
   lines.push(`${indent(level + 1)}<podcast:episode>${track.episode ?? track.trackNumber}</podcast:episode>`);

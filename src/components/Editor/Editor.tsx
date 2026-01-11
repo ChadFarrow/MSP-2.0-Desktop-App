@@ -688,21 +688,7 @@ export function Editor() {
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Season<InfoIcon text={FIELD_INFO.trackSeason} /></label>
-                      <input
-                        type="number"
-                        className="form-input"
-                        placeholder="1"
-                        min="1"
-                        value={track.season ?? ''}
-                        onChange={e => dispatch({
-                          type: 'UPDATE_TRACK',
-                          payload: { index, track: { season: e.target.value ? parseInt(e.target.value) : undefined } }
-                        })}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Episode #<InfoIcon text={FIELD_INFO.trackEpisode} /></label>
+                      <label className="form-label">Track # (Episode)<InfoIcon text={FIELD_INFO.trackEpisode} /></label>
                       <input
                         type="number"
                         className="form-input"
