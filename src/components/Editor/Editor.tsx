@@ -701,6 +701,14 @@ export function Editor() {
                           }
                         }}
                       />
+                      {track.enclosureUrl && (
+                        <audio
+                          src={track.enclosureUrl}
+                          controls
+                          style={{ width: '100%', marginTop: '8px' }}
+                          onError={e => (e.target as HTMLAudioElement).style.display = 'none'}
+                        />
+                      )}
                     </div>
                     <div className="form-group">
                       <label className="form-label">Duration (HH:MM:SS) <span className="required">*</span><InfoIcon text={FIELD_INFO.trackDuration} /></label>
