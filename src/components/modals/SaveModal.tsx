@@ -882,6 +882,30 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
             </div>
           )}
 
+          <div style={{
+            marginTop: '16px',
+            padding: '12px',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderRadius: '8px',
+            border: '1px solid rgba(59, 130, 246, 0.3)'
+          }}>
+            <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#3b82f6', marginBottom: '8px' }}>
+              Get Discovered by Podcast Apps
+            </p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              Submit your feed to Podcastindex.org so apps like Fountain, Castamatic, and others can find it.
+            </p>
+            <a
+              href="https://podcastindex.org/add"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.75rem', textDecoration: 'none' }}
+            >
+              Add to Podcast Index
+            </a>
+          </div>
+
           {progress && (
             <div style={{ marginTop: '12px', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
               {progress.phase === 'tracks'
