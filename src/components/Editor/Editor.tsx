@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import { useFeed } from '../../store/feedStore';
 import { LANGUAGES, PERSON_GROUPS, PERSON_ROLES, createEmptyPersonRole } from '../../types/feed';
-import type { PersonGroup } from '../../types/feed';
+import type { PersonGroup, ValueRecipient } from '../../types/feed';
 import { FIELD_INFO } from '../../data/fieldInfo';
 import { InfoIcon } from '../InfoIcon';
 import { Section } from '../Section';
 import { Toggle } from '../Toggle';
+
+const PRESET_RECIPIENTS: { label: string; recipient: ValueRecipient }[] = [
+  { label: 'MSP 2.0', recipient: { name: 'MSP 2.0', address: 'chadf@getalby.com', split: 1, type: 'lnaddress' } },
+  { label: 'Podcastindex.org', recipient: { name: 'Podcastindex.org', address: 'podcastindex@getalby.com', split: 1, type: 'lnaddress' } },
+];
 
 // Get MP3 duration from URL using Audio API (works without CORS)
 function getAudioDuration(url: string): Promise<number | null> {
@@ -559,9 +564,29 @@ export function Editor() {
                   </div>
                 </div>
               ))}
-              <button className="add-item-btn" onClick={() => dispatch({ type: 'ADD_RECIPIENT' })}>
-                + Add Recipient
-              </button>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <select
+                  className="form-input"
+                  style={{ width: 'auto', minWidth: '180px' }}
+                  value=""
+                  onChange={e => {
+                    const value = e.target.value;
+                    if (value === 'blank') {
+                      dispatch({ type: 'ADD_RECIPIENT' });
+                    } else {
+                      const preset = PRESET_RECIPIENTS.find(p => p.label === value);
+                      if (preset) dispatch({ type: 'ADD_RECIPIENT', payload: preset.recipient });
+                    }
+                    e.target.value = '';
+                  }}
+                >
+                  <option value="" disabled>+ Add Recipient</option>
+                  <option value="blank">Blank Recipient</option>
+                  {PRESET_RECIPIENTS.map(preset => (
+                    <option key={preset.label} value={preset.label}>{preset.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </Section>
 
@@ -915,18 +940,33 @@ export function Editor() {
                             </div>
                           </div>
                         ))}
-                        <button
-                          className="add-item-btn"
-                          onClick={() => {
-                            const newRecipients = [...(track.value?.recipients || []), { name: '', address: '', split: 0, type: 'node' as const }];
-                            dispatch({
-                              type: 'UPDATE_TRACK',
-                              payload: { index, track: { value: { type: 'lightning', method: 'keysend', recipients: newRecipients } } }
-                            });
-                          }}
-                        >
-                          + Add Recipient
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <select
+                            className="form-input"
+                            style={{ width: 'auto', minWidth: '180px' }}
+                            value=""
+                            onChange={e => {
+                              const value = e.target.value;
+                              if (value === 'blank') {
+                                const newRecipients = [...(track.value?.recipients || []), { name: '', address: '', split: 0, type: 'node' as const }];
+                                dispatch({ type: 'UPDATE_TRACK', payload: { index, track: { value: { type: 'lightning', method: 'keysend', recipients: newRecipients } } } });
+                              } else {
+                                const preset = PRESET_RECIPIENTS.find(p => p.label === value);
+                                if (preset) {
+                                  const newRecipients = [...(track.value?.recipients || []), preset.recipient];
+                                  dispatch({ type: 'UPDATE_TRACK', payload: { index, track: { value: { type: 'lightning', method: 'keysend', recipients: newRecipients } } } });
+                                }
+                              }
+                              e.target.value = '';
+                            }}
+                          >
+                            <option value="" disabled>+ Add Recipient</option>
+                            <option value="blank">Blank Recipient</option>
+                            {PRESET_RECIPIENTS.map(preset => (
+                              <option key={preset.label} value={preset.label}>{preset.label}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                     </div>
                   )}
