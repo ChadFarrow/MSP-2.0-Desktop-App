@@ -801,13 +801,16 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
                   </div>
                   {podcastIndexPageUrl && (
                     <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        Your Podcast Index Page
+                      </label>
                       <a
                         href={podcastIndexPageUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ fontSize: '0.875rem', color: '#3b82f6' }}
+                        style={{ fontSize: '0.875rem', color: '#3b82f6', wordBreak: 'break-all' }}
                       >
-                        View on Podcast Index →
+                        {podcastIndexPageUrl}
                       </a>
                     </div>
                   )}
