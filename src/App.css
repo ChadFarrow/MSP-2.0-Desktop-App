@@ -112,6 +112,37 @@ body {
   border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
+/* Feed Type Tabs */
+.feed-type-tabs {
+  display: flex;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  gap: 2px;
+}
+
+.feed-type-tab {
+  padding: 6px 14px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.feed-type-tab:hover {
+  color: var(--text-primary);
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.feed-type-tab.active {
+  background: var(--accent-primary);
+  color: white;
+}
+
 /* Header Dropdown Menu */
 .header-dropdown {
   position: relative;

@@ -1,9 +1,12 @@
 // MSP 2.0 - Feed State Management (React Context)
 import { createContext, useContext, useReducer, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import type { Album, Track, Person, PersonRole, ValueRecipient, Funding } from '../types/feed';
-import { createEmptyAlbum, createEmptyTrack, createEmptyPerson, createEmptyPersonRole, createEmptyRecipient, createEmptyFunding } from '../types/feed';
-import { albumStorage } from '../utils/storage';
+import type { Album, Track, Person, PersonRole, ValueRecipient, Funding, PublisherFeed, RemoteItem } from '../types/feed';
+import { createEmptyAlbum, createEmptyTrack, createEmptyPerson, createEmptyPersonRole, createEmptyRecipient, createEmptyFunding, createEmptyPublisherFeed, createEmptyRemoteItem } from '../types/feed';
+import { albumStorage, publisherStorage } from '../utils/storage';
+
+// Feed type enum
+export type FeedType = 'album' | 'publisher';
 
 // Action types
 type FeedAction =
@@ -31,18 +34,30 @@ type FeedAction =
   | { type: 'ADD_TRACK_RECIPIENT'; payload: { trackIndex: number; recipient?: ValueRecipient } }
   | { type: 'UPDATE_TRACK_RECIPIENT'; payload: { trackIndex: number; recipientIndex: number; recipient: ValueRecipient } }
   | { type: 'REMOVE_TRACK_RECIPIENT'; payload: { trackIndex: number; recipientIndex: number } }
-  | { type: 'RESET' };
+  | { type: 'RESET' }
+  // Publisher feed actions
+  | { type: 'SET_FEED_TYPE'; payload: FeedType }
+  | { type: 'SET_PUBLISHER_FEED'; payload: PublisherFeed }
+  | { type: 'UPDATE_PUBLISHER_FEED'; payload: Partial<PublisherFeed> }
+  | { type: 'ADD_REMOTE_ITEM'; payload?: RemoteItem }
+  | { type: 'UPDATE_REMOTE_ITEM'; payload: { index: number; item: RemoteItem } }
+  | { type: 'REMOVE_REMOTE_ITEM'; payload: number }
+  | { type: 'CREATE_NEW_PUBLISHER_FEED' };
 
 // State interface
 interface FeedState {
+  feedType: FeedType;
   album: Album;
+  publisherFeed: PublisherFeed | null;
   isDirty: boolean;
 }
 
 
 // Initial state - try to load from localStorage first
 const initialState: FeedState = {
+  feedType: 'album',
   album: albumStorage.load() || createEmptyAlbum(),
+  publisherFeed: publisherStorage.load() || null,
   isDirty: false
 };
 
@@ -50,16 +65,18 @@ const initialState: FeedState = {
 function feedReducer(state: FeedState, action: FeedAction): FeedState {
   switch (action.type) {
     case 'SET_ALBUM':
-      return { album: action.payload, isDirty: false };
+      return { ...state, album: action.payload, feedType: 'album', isDirty: false };
 
     case 'UPDATE_ALBUM':
       return {
+        ...state,
         album: { ...state.album, ...action.payload },
         isDirty: true
       };
 
     case 'ADD_PERSON':
       return {
+        ...state,
         album: {
           ...state.album,
           persons: [...state.album.persons, action.payload || createEmptyPerson()]
@@ -69,6 +86,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
     case 'UPDATE_PERSON':
       return {
+        ...state,
         album: {
           ...state.album,
           persons: state.album.persons.map((p, i) =>
@@ -80,6 +98,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
     case 'REMOVE_PERSON':
       return {
+        ...state,
         album: {
           ...state.album,
           persons: state.album.persons.filter((_, i) => i !== action.payload)
@@ -96,7 +115,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
           roles: [...person.roles, action.payload.role || createEmptyPersonRole()]
         };
       }
-      return { album: { ...state.album, persons }, isDirty: true };
+      return { ...state, album: { ...state.album, persons }, isDirty: true };
     }
 
     case 'UPDATE_PERSON_ROLE': {
@@ -110,7 +129,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
           )
         };
       }
-      return { album: { ...state.album, persons }, isDirty: true };
+      return { ...state, album: { ...state.album, persons }, isDirty: true };
     }
 
     case 'REMOVE_PERSON_ROLE': {
@@ -122,11 +141,12 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
           roles: person.roles.filter((_, i) => i !== action.payload.roleIndex)
         };
       }
-      return { album: { ...state.album, persons }, isDirty: true };
+      return { ...state, album: { ...state.album, persons }, isDirty: true };
     }
 
     case 'ADD_RECIPIENT':
       return {
+        ...state,
         album: {
           ...state.album,
           value: {
@@ -139,6 +159,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
     case 'UPDATE_RECIPIENT':
       return {
+        ...state,
         album: {
           ...state.album,
           value: {
@@ -153,6 +174,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
     case 'REMOVE_RECIPIENT':
       return {
+        ...state,
         album: {
           ...state.album,
           value: {
@@ -165,6 +187,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
     case 'ADD_FUNDING':
       return {
+        ...state,
         album: {
           ...state.album,
           funding: [...(state.album.funding || []), action.payload || createEmptyFunding()]
@@ -174,6 +197,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
     case 'UPDATE_FUNDING':
       return {
+        ...state,
         album: {
           ...state.album,
           funding: (state.album.funding || []).map((f, i) =>
@@ -185,6 +209,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
     case 'REMOVE_FUNDING':
       return {
+        ...state,
         album: {
           ...state.album,
           funding: (state.album.funding || []).filter((_, i) => i !== action.payload)
@@ -195,6 +220,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
     case 'ADD_TRACK': {
       const newTrack = action.payload || createEmptyTrack(state.album.tracks.length + 1);
       return {
+        ...state,
         album: {
           ...state.album,
           tracks: [...state.album.tracks, newTrack]
@@ -205,6 +231,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
     case 'UPDATE_TRACK':
       return {
+        ...state,
         album: {
           ...state.album,
           tracks: state.album.tracks.map((t, i) =>
@@ -216,6 +243,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
     case 'REMOVE_TRACK':
       return {
+        ...state,
         album: {
           ...state.album,
           tracks: state.album.tracks
@@ -230,6 +258,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
       const [removed] = tracks.splice(action.payload.fromIndex, 1);
       tracks.splice(action.payload.toIndex, 0, removed);
       return {
+        ...state,
         album: {
           ...state.album,
           tracks: tracks.map((t, i) => ({ ...t, trackNumber: i + 1 }))
@@ -244,7 +273,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
       if (track) {
         track.persons = [...track.persons, action.payload.person || createEmptyPerson()];
       }
-      return { album: { ...state.album, tracks }, isDirty: true };
+      return { ...state, album: { ...state.album, tracks }, isDirty: true };
     }
 
     case 'UPDATE_TRACK_PERSON': {
@@ -255,7 +284,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
           i === action.payload.personIndex ? action.payload.person : p
         );
       }
-      return { album: { ...state.album, tracks }, isDirty: true };
+      return { ...state, album: { ...state.album, tracks }, isDirty: true };
     }
 
     case 'REMOVE_TRACK_PERSON': {
@@ -264,7 +293,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
       if (track) {
         track.persons = track.persons.filter((_, i) => i !== action.payload.personIndex);
       }
-      return { album: { ...state.album, tracks }, isDirty: true };
+      return { ...state, album: { ...state.album, tracks }, isDirty: true };
     }
 
     case 'ADD_TRACK_RECIPIENT': {
@@ -276,7 +305,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
         }
         track.value.recipients = [...track.value.recipients, action.payload.recipient || createEmptyRecipient()];
       }
-      return { album: { ...state.album, tracks }, isDirty: true };
+      return { ...state, album: { ...state.album, tracks }, isDirty: true };
     }
 
     case 'UPDATE_TRACK_RECIPIENT': {
@@ -287,7 +316,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
           i === action.payload.recipientIndex ? action.payload.recipient : r
         );
       }
-      return { album: { ...state.album, tracks }, isDirty: true };
+      return { ...state, album: { ...state.album, tracks }, isDirty: true };
     }
 
     case 'REMOVE_TRACK_RECIPIENT': {
@@ -296,11 +325,69 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
       if (track && track.value) {
         track.value.recipients = track.value.recipients.filter((_, i) => i !== action.payload.recipientIndex);
       }
-      return { album: { ...state.album, tracks }, isDirty: true };
+      return { ...state, album: { ...state.album, tracks }, isDirty: true };
     }
 
     case 'RESET':
       return initialState;
+
+    // Publisher feed actions
+    case 'SET_FEED_TYPE':
+      return { ...state, feedType: action.payload };
+
+    case 'SET_PUBLISHER_FEED':
+      return { ...state, publisherFeed: action.payload, feedType: 'publisher', isDirty: false };
+
+    case 'UPDATE_PUBLISHER_FEED':
+      if (!state.publisherFeed) return state;
+      return {
+        ...state,
+        publisherFeed: { ...state.publisherFeed, ...action.payload },
+        isDirty: true
+      };
+
+    case 'ADD_REMOTE_ITEM':
+      if (!state.publisherFeed) return state;
+      return {
+        ...state,
+        publisherFeed: {
+          ...state.publisherFeed,
+          remoteItems: [...state.publisherFeed.remoteItems, action.payload || createEmptyRemoteItem()]
+        },
+        isDirty: true
+      };
+
+    case 'UPDATE_REMOTE_ITEM':
+      if (!state.publisherFeed) return state;
+      return {
+        ...state,
+        publisherFeed: {
+          ...state.publisherFeed,
+          remoteItems: state.publisherFeed.remoteItems.map((item, i) =>
+            i === action.payload.index ? action.payload.item : item
+          )
+        },
+        isDirty: true
+      };
+
+    case 'REMOVE_REMOTE_ITEM':
+      if (!state.publisherFeed) return state;
+      return {
+        ...state,
+        publisherFeed: {
+          ...state.publisherFeed,
+          remoteItems: state.publisherFeed.remoteItems.filter((_, i) => i !== action.payload)
+        },
+        isDirty: true
+      };
+
+    case 'CREATE_NEW_PUBLISHER_FEED':
+      return {
+        ...state,
+        publisherFeed: createEmptyPublisherFeed(),
+        feedType: 'publisher',
+        isDirty: true
+      };
 
     default:
       return state;
@@ -323,6 +410,13 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     albumStorage.save(state.album);
   }, [state.album]);
+
+  // Auto-save publisher feed to localStorage
+  useEffect(() => {
+    if (state.publisherFeed) {
+      publisherStorage.save(state.publisherFeed);
+    }
+  }, [state.publisherFeed]);
 
   return (
     <FeedContext.Provider value={{ state, dispatch }}>

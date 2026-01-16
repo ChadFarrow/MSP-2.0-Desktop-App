@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { generateRssFeed, downloadXml, copyToClipboard } from '../../utils/xmlGenerator';
+import { generateRssFeed, generatePublisherRssFeed, downloadXml, copyToClipboard } from '../../utils/xmlGenerator';
 import { saveAlbumToNostr, publishNostrMusicTracks, uploadToBlossom } from '../../utils/nostrSync';
 import type { PublishProgress } from '../../utils/nostrSync';
-import type { Album } from '../../types/feed';
+import type { Album, PublisherFeed } from '../../types/feed';
+import type { FeedType } from '../../store/feedStore';
 import {
   getHostedFeedInfo,
   saveHostedFeedInfo,
@@ -17,7 +18,7 @@ import {
   linkNostrToFeed,
   type HostedFeedInfo
 } from '../../utils/hostedFeed';
-import { albumStorage, pendingHostedStorage } from '../../utils/storage';
+import { albumStorage, publisherStorage, pendingHostedStorage } from '../../utils/storage';
 import { useNostr } from '../../store/nostrStore';
 
 const DEFAULT_BLOSSOM_SERVER = 'https://blossom.primal.net/';
@@ -25,14 +26,26 @@ const DEFAULT_BLOSSOM_SERVER = 'https://blossom.primal.net/';
 interface SaveModalProps {
   onClose: () => void;
   album: Album;
+  publisherFeed?: PublisherFeed | null;
+  feedType?: FeedType;
   isDirty: boolean;
   isLoggedIn: boolean;
   onImport?: (xml: string) => void;
 }
 
-export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: SaveModalProps) {
+export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', isDirty, isLoggedIn, onImport }: SaveModalProps) {
   const { state: nostrState } = useNostr();
   const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'hosted' | 'podcastIndex'>('local');
+  const isPublisherMode = feedType === 'publisher';
+
+  // Helper function to generate XML for current feed type
+  const generateCurrentFeedXml = () => {
+    if (isPublisherMode && publisherFeed) {
+      return generatePublisherRssFeed(publisherFeed);
+    }
+    return generateRssFeed(album);
+  };
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [progress, setProgress] = useState<PublishProgress | null>(null);
@@ -159,7 +172,7 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
 
     try {
       // Try to update the feed with the provided credentials to verify they work
-      const xml = generateRssFeed(album);
+      const xml = generateCurrentFeedXml();
       await updateHostedFeed(restoreFeedId.trim(), restoreToken.trim(), xml, album.title);
 
       // Credentials work - save them
@@ -244,19 +257,29 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
     const requiresValidation = !['local', 'download', 'clipboard'].includes(mode);
     if (requiresValidation) {
       const errors: string[] = [];
-      if (!album.author?.trim()) errors.push('Artist/Band');
-      if (!album.title?.trim()) errors.push('Album Title');
-      if (!album.description?.trim()) errors.push('Description');
-      if (!album.imageUrl?.trim()) errors.push('Album Art URL');
-      if (!album.language?.trim()) errors.push('Language');
-      if (!album.podcastGuid?.trim()) errors.push('Podcast GUID');
 
-      album.tracks.forEach((track, i) => {
-        if (!track.title?.trim()) errors.push(`Track ${i + 1} Title`);
-        if (!track.duration?.trim()) errors.push(`Track ${i + 1} Duration`);
-        if (!track.enclosureUrl?.trim()) errors.push(`Track ${i + 1} MP3 URL`);
-        if (!track.enclosureLength?.trim()) errors.push(`Track ${i + 1} File Size`);
-      });
+      if (isPublisherMode && publisherFeed) {
+        // Publisher feed validation
+        if (!publisherFeed.author?.trim()) errors.push('Publisher Name');
+        if (!publisherFeed.title?.trim()) errors.push('Catalog Title');
+        if (!publisherFeed.description?.trim()) errors.push('Description');
+        if (!publisherFeed.podcastGuid?.trim()) errors.push('Publisher GUID');
+      } else {
+        // Album validation
+        if (!album.author?.trim()) errors.push('Artist/Band');
+        if (!album.title?.trim()) errors.push('Album Title');
+        if (!album.description?.trim()) errors.push('Description');
+        if (!album.imageUrl?.trim()) errors.push('Album Art URL');
+        if (!album.language?.trim()) errors.push('Language');
+        if (!album.podcastGuid?.trim()) errors.push('Podcast GUID');
+
+        album.tracks.forEach((track, i) => {
+          if (!track.title?.trim()) errors.push(`Track ${i + 1} Title`);
+          if (!track.duration?.trim()) errors.push(`Track ${i + 1} Duration`);
+          if (!track.enclosureUrl?.trim()) errors.push(`Track ${i + 1} MP3 URL`);
+          if (!track.enclosureLength?.trim()) errors.push(`Track ${i + 1} File Size`);
+        });
+      }
 
       if (errors.length > 0) {
         setMessage({ type: 'error', text: `Missing required fields: ${errors.join(', ')}` });
@@ -274,17 +297,22 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
     try {
       switch (mode) {
         case 'local':
-          albumStorage.save(album);
+          if (isPublisherMode && publisherFeed) {
+            publisherStorage.save(publisherFeed);
+          } else {
+            albumStorage.save(album);
+          }
           showSuccessAndClose('Saved to browser storage');
           break;
         case 'download':
-          const xml = generateRssFeed(album);
-          const filename = `${album.title || 'feed'}.xml`.replace(/[^a-z0-9.-]/gi, '_');
+          const xml = generateCurrentFeedXml();
+          const feedTitle = isPublisherMode && publisherFeed ? publisherFeed.title : album.title;
+          const filename = `${feedTitle || 'feed'}.xml`.replace(/[^a-z0-9.-]/gi, '_');
           downloadXml(xml, filename);
           showSuccessAndClose('Download started');
           break;
         case 'clipboard':
-          const xmlContent = generateRssFeed(album);
+          const xmlContent = generateCurrentFeedXml();
           await copyToClipboard(xmlContent);
           showSuccessAndClose('Copied to clipboard');
           break;
@@ -325,7 +353,7 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
           });
           break;
         case 'hosted':
-          const hostedXml = generateRssFeed(album);
+          const hostedXml = generateCurrentFeedXml();
 
           // If there's a legacy feed with mismatched feedId, update it first
           if (legacyHostedInfo && legacyHostedInfo.feedId !== album.podcastGuid) {
@@ -497,19 +525,30 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
               <option value="local">Local Storage</option>
               <option value="download">Download XML</option>
               <option value="clipboard">Copy to Clipboard</option>
-              <option value="hosted">Host on MSP</option>
-              <option value="podcastIndex">Submit to Podcast Index</option>
-              {isLoggedIn && <option value="nostr">Save to Nostr</option>}
-              {isLoggedIn && <option value="nostrMusic">Publish Nostr Music</option>}
-              {isLoggedIn && <option value="blossom">Publish to Blossom</option>}
+              {!isPublisherMode && <option value="hosted">Host on MSP</option>}
+              {!isPublisherMode && <option value="podcastIndex">Submit to Podcast Index</option>}
+              {!isPublisherMode && isLoggedIn && <option value="nostr">Save to Nostr</option>}
+              {!isPublisherMode && isLoggedIn && <option value="nostrMusic">Publish Nostr Music</option>}
+              {!isPublisherMode && isLoggedIn && <option value="blossom">Publish to Blossom</option>}
             </select>
           </div>
 
           <div className="nostr-album-preview">
-            <h3>{album.title || 'Untitled Album'}</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-              {album.author || 'No author'} &bull; {album.tracks.length} track{album.tracks.length !== 1 ? 's' : ''}
-            </p>
+            {isPublisherMode && publisherFeed ? (
+              <>
+                <h3>{publisherFeed.title || 'Untitled Publisher Feed'}</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                  {publisherFeed.author || 'No publisher'} &bull; {publisherFeed.remoteItems.length} feed{publisherFeed.remoteItems.length !== 1 ? 's' : ''} in catalog
+                </p>
+              </>
+            ) : (
+              <>
+                <h3>{album.title || 'Untitled Album'}</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                  {album.author || 'No author'} &bull; {album.tracks.length} track{album.tracks.length !== 1 ? 's' : ''}
+                </p>
+              </>
+            )}
           </div>
 
           {mode === 'local' && (

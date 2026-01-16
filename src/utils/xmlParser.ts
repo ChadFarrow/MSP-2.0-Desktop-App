@@ -1,7 +1,7 @@
 // MSP 2.0 - XML Parser for importing Demu RSS Feeds
 import { XMLParser } from 'fast-xml-parser';
-import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Funding } from '../types/feed';
-import { createEmptyAlbum, createEmptyTrack } from '../types/feed';
+import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Funding, PublisherFeed, RemoteItem, PublisherReference } from '../types/feed';
+import { createEmptyAlbum, createEmptyTrack, createEmptyPublisherFeed } from '../types/feed';
 import { areValueBlocksStrictEqual, arePersonsEqual } from './comparison';
 
 // Parse XML string to Album object
@@ -99,6 +99,12 @@ export const parseRssFeed = (xmlString: string): Album => {
   if (funding) {
     const fundingArray = Array.isArray(funding) ? funding : [funding];
     album.funding = fundingArray.map(parseFunding).filter(Boolean) as Funding[];
+  }
+
+  // Publisher reference (if this album belongs to a publisher)
+  const publisher = channel['podcast:publisher'];
+  if (publisher) {
+    album.publisher = parsePublisherReference(publisher);
   }
 
   // Tracks
@@ -233,6 +239,47 @@ function parseValueBlock(node: unknown): ValueBlock {
   };
 }
 
+// Parse remote item (for publisher feeds and podroll)
+function parseRemoteItem(node: unknown): RemoteItem | null {
+  if (!node) return null;
+
+  const feedGuid = getAttr(node, 'feedGuid');
+  const feedUrl = getAttr(node, 'feedUrl');
+
+  // Must have at least feedGuid or feedUrl
+  if (!feedGuid && !feedUrl) return null;
+
+  return {
+    feedGuid: feedGuid || '',
+    feedUrl: feedUrl || undefined,
+    itemGuid: getAttr(node, 'itemGuid') || undefined,
+    medium: getAttr(node, 'medium') || undefined,
+    title: getText(node) || undefined
+  };
+}
+
+// Parse publisher reference (for albums that belong to a publisher)
+function parsePublisherReference(node: unknown): PublisherReference | undefined {
+  if (!node) return undefined;
+
+  const publisherNode = node as Record<string, unknown>;
+  const remoteItem = publisherNode['podcast:remoteItem'];
+
+  if (remoteItem) {
+    const feedGuid = getAttr(remoteItem, 'feedGuid');
+    const feedUrl = getAttr(remoteItem, 'feedUrl');
+
+    if (feedGuid || feedUrl) {
+      return {
+        feedGuid: feedGuid || '',
+        feedUrl: feedUrl || undefined
+      };
+    }
+  }
+
+  return undefined;
+}
+
 // Parse track/item
 function parseTrack(node: unknown, trackNumber: number, albumValue: ValueBlock, albumPersons: Person[]): Track {
   const track = createEmptyTrack(trackNumber);
@@ -362,4 +409,132 @@ export const fetchFeedFromUrl = async (url: string): Promise<string> => {
   }
 
   throw new Error('Failed to fetch feed from URL. Please paste the XML content directly.');
+};
+
+// Detect if XML is a publisher feed based on medium tag
+export const isPublisherFeed = (xmlString: string): boolean => {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    textNodeName: '#text',
+    parseAttributeValue: true,
+    trimValues: true
+  });
+
+  try {
+    const result = parser.parse(xmlString);
+    const channel = result?.rss?.channel;
+    if (!channel) return false;
+
+    const medium = getText(channel['podcast:medium']);
+    return medium === 'publisher';
+  } catch {
+    return false;
+  }
+};
+
+// Parse XML string to PublisherFeed object
+export const parsePublisherRssFeed = (xmlString: string): PublisherFeed => {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    textNodeName: '#text',
+    parseAttributeValue: true,
+    trimValues: true
+  });
+
+  const result = parser.parse(xmlString);
+  const channel = result?.rss?.channel;
+
+  if (!channel) {
+    throw new Error('Invalid RSS feed: missing channel element');
+  }
+
+  const feed = createEmptyPublisherFeed();
+
+  // Basic info
+  feed.title = getText(channel.title) || '';
+  feed.author = getText(channel['itunes:author']) || '';
+  feed.description = getText(channel.description) || '';
+  feed.link = getText(channel.link) || '';
+  feed.language = getText(channel.language) || 'en';
+  feed.generator = getText(channel.generator) || 'MSP 2.0';
+  feed.pubDate = getText(channel.pubDate) || new Date().toUTCString();
+  feed.lastBuildDate = getText(channel.lastBuildDate) || new Date().toUTCString();
+
+  // Podcast Index tags
+  feed.podcastGuid = getText(channel['podcast:guid']) || '';
+  feed.location = getText(channel['podcast:location']) || '';
+
+  // Locked
+  const locked = channel['podcast:locked'];
+  if (locked) {
+    feed.locked = getText(locked) === 'yes';
+    feed.lockedOwner = getAttr(locked, 'owner') || '';
+  }
+
+  // Categories
+  const categories = channel['itunes:category'];
+  if (categories) {
+    const catArray = Array.isArray(categories) ? categories : [categories];
+    feed.categories = catArray.map(c => getAttr(c, 'text')).filter(Boolean) as string[];
+  }
+
+  // Keywords
+  feed.keywords = getText(channel['itunes:keywords']) || '';
+
+  // Explicit
+  const explicitVal = channel['itunes:explicit'];
+  feed.explicit = explicitVal === true || explicitVal === 'true' || getText(explicitVal) === 'true';
+
+  // Owner
+  const owner = channel['itunes:owner'];
+  if (owner) {
+    feed.ownerName = getText((owner as Record<string, unknown>)['itunes:name']) || '';
+    feed.ownerEmail = getText((owner as Record<string, unknown>)['itunes:email']) || '';
+  }
+
+  // Image
+  const image = channel.image;
+  if (image) {
+    feed.imageUrl = getText(image.url) || '';
+    feed.imageTitle = getText(image.title) || '';
+    feed.imageLink = getText(image.link) || '';
+    feed.imageDescription = getText(image.description) || '';
+  }
+
+  // iTunes image fallback
+  const itunesImage = channel['itunes:image'];
+  if (itunesImage && !feed.imageUrl) {
+    feed.imageUrl = getAttr(itunesImage, 'href') || '';
+  }
+
+  // Contact
+  feed.managingEditor = getText(channel.managingEditor) || '';
+  feed.webMaster = getText(channel.webMaster) || '';
+
+  // Persons
+  feed.persons = parsePersons(channel['podcast:person']);
+
+  // Value block
+  const value = channel['podcast:value'];
+  if (value) {
+    feed.value = parseValueBlock(value);
+  }
+
+  // Funding
+  const funding = channel['podcast:funding'];
+  if (funding) {
+    const fundingArray = Array.isArray(funding) ? funding : [funding];
+    feed.funding = fundingArray.map(parseFunding).filter(Boolean) as Funding[];
+  }
+
+  // Remote items (the feeds this publisher owns)
+  const remoteItems = channel['podcast:remoteItem'];
+  if (remoteItems) {
+    const remoteArray = Array.isArray(remoteItems) ? remoteItems : [remoteItems];
+    feed.remoteItems = remoteArray.map(parseRemoteItem).filter(Boolean) as RemoteItem[];
+  }
+
+  return feed;
 };

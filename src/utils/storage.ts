@@ -1,10 +1,11 @@
 // Centralized localStorage utilities for MSP 2.0
-import type { Album, Person, PersonRole, PersonGroup } from '../types/feed';
+import type { Album, Person, PersonRole, PersonGroup, PublisherFeed } from '../types/feed';
 import type { NostrUser } from '../types/nostr';
 
 // Storage keys
 export const STORAGE_KEYS = {
   ALBUM_DATA: 'msp2-album-data',
+  PUBLISHER_DATA: 'msp2-publisher-data',
   NOSTR_USER: 'msp2-nostr-user',
   HOSTED_PREFIX: 'msp2-hosted-',
   PENDING_HOSTED: 'msp2-pending-hosted'
@@ -107,6 +108,13 @@ export const albumStorage = {
   },
   save: (album: Album): boolean => setItem(STORAGE_KEYS.ALBUM_DATA, album),
   clear: (): boolean => removeItem(STORAGE_KEYS.ALBUM_DATA)
+};
+
+// Publisher feed storage operations
+export const publisherStorage = {
+  load: (): PublisherFeed | null => getItem<PublisherFeed>(STORAGE_KEYS.PUBLISHER_DATA),
+  save: (feed: PublisherFeed): boolean => setItem(STORAGE_KEYS.PUBLISHER_DATA, feed),
+  clear: (): boolean => removeItem(STORAGE_KEYS.PUBLISHER_DATA)
 };
 
 // Nostr user storage operations

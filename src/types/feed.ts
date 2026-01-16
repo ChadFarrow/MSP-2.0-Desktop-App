@@ -51,6 +51,21 @@ export interface Funding {
   text: string;
 }
 
+// Remote item for referencing other feeds (used in publisher feeds and podroll)
+export interface RemoteItem {
+  feedGuid: string;
+  feedUrl?: string;
+  itemGuid?: string;
+  medium?: string;
+  title?: string;
+}
+
+// Publisher reference - allows a feed to link to its parent publisher feed
+export interface PublisherReference {
+  feedGuid: string;
+  feedUrl?: string;
+}
+
 export interface Track {
   id: string;
   trackNumber: number;
@@ -118,8 +133,60 @@ export interface Album {
   // Funding
   funding: Funding[];
 
+  // Publisher reference (optional - links this feed to a parent publisher feed)
+  publisher?: PublisherReference;
+
   // Tracks
   tracks: Track[];
+}
+
+// Publisher feed - aggregates multiple feeds under one publisher
+export type PublisherMedium = 'publisher';
+
+export interface PublisherFeed {
+  // Basic Info
+  title: string;
+  author: string;
+  description: string;
+  link: string;
+  language: string;
+  generator: string;
+  pubDate: string;
+  lastBuildDate: string;
+
+  // Podcast Index
+  podcastGuid: string;
+  medium: PublisherMedium;
+  locked: boolean;
+  lockedOwner: string;
+  location: string;
+
+  // iTunes
+  categories: string[];
+  keywords: string;
+  explicit: boolean;
+  ownerName: string;
+  ownerEmail: string;
+
+  // Artwork
+  imageUrl: string;
+  imageTitle: string;
+  imageLink: string;
+  imageDescription: string;
+
+  // Contact
+  managingEditor: string;
+  webMaster: string;
+
+  // People & Value (optional for publisher feeds)
+  persons: Person[];
+  value: ValueBlock;
+
+  // Funding
+  funding: Funding[];
+
+  // Remote items - the feeds this publisher owns
+  remoteItems: RemoteItem[];
 }
 
 export interface FeedState {
@@ -217,6 +284,56 @@ export const createEmptyRecipient = (): ValueRecipient => ({
 export const createEmptyFunding = (): Funding => ({
   url: '',
   text: ''
+});
+
+// Default empty remote item
+export const createEmptyRemoteItem = (): RemoteItem => ({
+  feedGuid: '',
+  feedUrl: '',
+  title: ''
+});
+
+// Default empty publisher reference
+export const createEmptyPublisherReference = (): PublisherReference => ({
+  feedGuid: '',
+  feedUrl: ''
+});
+
+// Default empty publisher feed
+export const createEmptyPublisherFeed = (): PublisherFeed => ({
+  title: '',
+  author: '',
+  description: '',
+  link: '',
+  language: 'en',
+  generator: 'MSP 2.0 - Music Side Project Studio',
+  pubDate: new Date().toUTCString(),
+  lastBuildDate: new Date().toUTCString(),
+  podcastGuid: crypto.randomUUID(),
+  medium: 'publisher',
+  locked: false,
+  lockedOwner: '',
+  location: '',
+  categories: [],
+  keywords: '',
+  explicit: false,
+  ownerName: '',
+  ownerEmail: '',
+  imageUrl: '',
+  imageTitle: '',
+  imageLink: '',
+  imageDescription: '',
+  managingEditor: '',
+  webMaster: '',
+  persons: [],
+  value: {
+    type: 'lightning',
+    method: 'keysend',
+    suggested: '0.000033333',
+    recipients: []
+  },
+  funding: [],
+  remoteItems: []
 });
 
 // iTunes categories for music

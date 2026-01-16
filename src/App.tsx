@@ -1,9 +1,10 @@
 // MSP 2.0 - Music Side Project Studio
 import { useState, useEffect, useRef } from 'react';
 import { FeedProvider, useFeed } from './store/feedStore.tsx';
+import type { FeedType } from './store/feedStore.tsx';
 import { NostrProvider, useNostr } from './store/nostrStore.tsx';
-import { parseRssFeed } from './utils/xmlParser';
-import { createEmptyAlbum } from './types/feed';
+import { parseRssFeed, isPublisherFeed, parsePublisherRssFeed } from './utils/xmlParser';
+import { createEmptyAlbum, createEmptyPublisherFeed } from './types/feed';
 import { generateTestAlbum } from './utils/testData';
 import { NostrLoginButton } from './components/NostrLoginButton';
 import { ImportModal } from './components/modals/ImportModal';
@@ -11,6 +12,7 @@ import { SaveModal } from './components/modals/SaveModal';
 import { InfoModal } from './components/modals/InfoModal';
 import { NostrConnectModal } from './components/modals/NostrConnectModal';
 import { Editor } from './components/Editor/Editor';
+import { PublisherEditor } from './components/Editor/PublisherEditor';
 import { AdminPage } from './components/admin/AdminPage';
 import type { Album } from './types/feed';
 import mspLogo from './assets/msp-logo.png';
@@ -40,6 +42,14 @@ function AppContent() {
 
   const handleImport = (xml: string) => {
     try {
+      // Check if this is a publisher feed
+      if (isPublisherFeed(xml)) {
+        const publisherFeed = parsePublisherRssFeed(xml);
+        dispatch({ type: 'SET_PUBLISHER_FEED', payload: publisherFeed });
+        return;
+      }
+
+      // Parse as regular album feed
       const album = parseRssFeed(xml);
 
       // Warn if not a music feed
@@ -64,9 +74,22 @@ function AppContent() {
     dispatch({ type: 'SET_ALBUM', payload: album });
   };
 
-  const handleNew = () => {
-    if (confirm('Create a new feed? This will clear all current data.')) {
-      dispatch({ type: 'SET_ALBUM', payload: createEmptyAlbum() });
+  const handleNew = (feedType: FeedType = 'album') => {
+    const typeName = feedType === 'publisher' ? 'Publisher Feed' : 'Album';
+    if (confirm(`Create a new ${typeName}? This will clear all current data for this feed type.`)) {
+      if (feedType === 'publisher') {
+        dispatch({ type: 'SET_PUBLISHER_FEED', payload: createEmptyPublisherFeed() });
+      } else {
+        dispatch({ type: 'SET_ALBUM', payload: createEmptyAlbum() });
+      }
+    }
+  };
+
+  const handleSwitchFeedType = (feedType: FeedType) => {
+    dispatch({ type: 'SET_FEED_TYPE', payload: feedType });
+    // If switching to publisher and no publisher feed exists, create one
+    if (feedType === 'publisher' && !state.publisherFeed) {
+      dispatch({ type: 'CREATE_NEW_PUBLISHER_FEED' });
     }
   };
 
@@ -79,6 +102,21 @@ function AppContent() {
             <h1><span className="title-short">MSP 2.0</span><span className="title-full"> - Music Side Project Studio</span></h1>
           </div>
           <div className="header-actions">
+            {/* Feed Type Tabs */}
+            <div className="feed-type-tabs">
+              <button
+                className={`feed-type-tab ${state.feedType === 'album' ? 'active' : ''}`}
+                onClick={() => handleSwitchFeedType('album')}
+              >
+                Album
+              </button>
+              <button
+                className={`feed-type-tab ${state.feedType === 'publisher' ? 'active' : ''}`}
+                onClick={() => handleSwitchFeedType('publisher')}
+              >
+                Publisher
+              </button>
+            </div>
             <NostrLoginButton />
             <div className="header-dropdown" ref={dropdownRef}>
               <button
@@ -93,9 +131,9 @@ function AppContent() {
                 <div className="dropdown-menu">
                   <button
                     className="dropdown-item"
-                    onClick={() => { handleNew(); setShowDropdown(false); }}
+                    onClick={() => { handleNew(state.feedType); setShowDropdown(false); }}
                   >
-                    📂 New
+                    📂 New {state.feedType === 'publisher' ? 'Publisher' : 'Album'}
                   </button>
                   <button
                     className="dropdown-item"
@@ -159,7 +197,7 @@ function AppContent() {
             </div>
           </div>
         </header>
-        <Editor />
+        {state.feedType === 'publisher' ? <PublisherEditor /> : <Editor />}
       </div>
 
       {showImportModal && (
@@ -175,6 +213,8 @@ function AppContent() {
         <SaveModal
           onClose={() => setShowSaveModal(false)}
           album={state.album}
+          publisherFeed={state.publisherFeed}
+          feedType={state.feedType}
           isDirty={state.isDirty}
           isLoggedIn={nostrState.isLoggedIn}
           onImport={handleImport}
