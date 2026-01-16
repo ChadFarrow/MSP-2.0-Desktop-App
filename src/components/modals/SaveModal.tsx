@@ -53,6 +53,7 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
   const [linkNostrOnCreate, setLinkNostrOnCreate] = useState(true); // Default to linking if logged in
   const [podcastIndexUrl, setPodcastIndexUrl] = useState('');
   const [submittingToIndex, setSubmittingToIndex] = useState(false);
+  const [podcastIndexPageUrl, setPodcastIndexPageUrl] = useState<string | null>(null);
 
   // Check if feed is linked to current user's Nostr identity
   const isNostrLinked = hostedInfo?.ownerPubkey && nostrState.user?.pubkey === hostedInfo.ownerPubkey;
@@ -448,7 +449,12 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
         throw new Error(data.error || 'Failed to submit to Podcast Index');
       }
 
-      setMessage({ type: 'success', text: 'Feed submitted to Podcast Index!' });
+      if (data.podcastIndexUrl) {
+        setPodcastIndexPageUrl(data.podcastIndexUrl);
+        setMessage({ type: 'success', text: 'Feed submitted to Podcast Index!' });
+      } else {
+        setMessage({ type: 'success', text: 'Feed submitted! It may take a moment to appear in the index.' });
+      }
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to submit to Podcast Index' });
     } finally {
@@ -989,6 +995,27 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '12px' }}>
                 Use this to submit a new feed or notify Podcast Index that an existing feed has been updated.
               </p>
+              {podcastIndexPageUrl && (
+                <div style={{
+                  marginBottom: '12px',
+                  padding: '12px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  borderRadius: '8px',
+                  border: '1px solid var(--success)'
+                }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--success)' }}>
+                    Your Podcast Index Page
+                  </label>
+                  <a
+                    href={podcastIndexPageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: '0.875rem', color: '#3b82f6', wordBreak: 'break-all' }}
+                  >
+                    {podcastIndexPageUrl}
+                  </a>
+                </div>
+              )}
               <a
                 href="https://podcastindex.org/add"
                 target="_blank"
