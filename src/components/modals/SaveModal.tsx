@@ -85,9 +85,12 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
   // Notify Podcast Index and return the PI page URL if available
   const notifyPodcastIndex = async (feedUrl: string): Promise<string | null> => {
     try {
+      console.log('Notifying Podcast Index:', feedUrl);
       const res = await fetch(`/api/pubnotify?url=${encodeURIComponent(feedUrl)}`);
       const data = await res.json();
+      console.log('Podcast Index response:', data);
       if (data.success && data.podcastIndexUrl) {
+        console.log('Setting PI URL:', data.podcastIndexUrl);
         setPodcastIndexPageUrl(data.podcastIndexUrl);
         return data.podcastIndexUrl;
       }
