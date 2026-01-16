@@ -114,7 +114,10 @@ export async function deleteHostedFeed(
  * Build the stable URL for a hosted feed
  */
 export function buildHostedUrl(feedId: string): string {
-  return `${window.location.origin}/api/hosted/${feedId}.xml`;
+  const origin = window.location.hostname === 'localhost'
+    ? 'https://msp.podtards.com'
+    : window.location.origin;
+  return `${origin}/api/hosted/${feedId}.xml`;
 }
 
 /**

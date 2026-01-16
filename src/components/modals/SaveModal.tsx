@@ -32,7 +32,7 @@ interface SaveModalProps {
 
 export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: SaveModalProps) {
   const { state: nostrState } = useNostr();
-  const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'hosted'>('local');
+  const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'hosted' | 'podcastIndex'>('local');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [progress, setProgress] = useState<PublishProgress | null>(null);
@@ -57,14 +57,38 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
   // Check if feed is linked to current user's Nostr identity
   const isNostrLinked = hostedInfo?.ownerPubkey && nostrState.user?.pubkey === hostedInfo.ownerPubkey;
 
+  // Helper to get button text based on mode and loading state
+  const getButtonText = () => {
+    if (mode === 'podcastIndex') return submittingToIndex ? 'Submitting...' : 'Submit';
+    if (loading) {
+      if (mode === 'nostrMusic' || mode === 'blossom' || mode === 'hosted') return 'Uploading...';
+      if (mode === 'download') return 'Downloading...';
+      if (mode === 'clipboard') return 'Copying...';
+      return 'Saving...';
+    }
+    if (mode === 'nostrMusic') return 'Publish';
+    if (mode === 'blossom' || mode === 'hosted') return 'Upload';
+    if (mode === 'download') return 'Download';
+    if (mode === 'clipboard') return 'Copy to Clipboard';
+    return 'Save';
+  };
+
+  // Helper to determine if button should be disabled
+  const isButtonDisabled = () => {
+    if (mode === 'podcastIndex') return submittingToIndex || !podcastIndexUrl.trim();
+    if (loading) return true;
+    if (mode === 'hosted' && !hostedInfo && !legacyHostedInfo && !tokenAcknowledged) return true;
+    return false;
+  };
+
   // Auto-populate Podcast Index URL when a hosted URL becomes available
   useEffect(() => {
-    if (hostedUrl) {
-      setPodcastIndexUrl(hostedUrl);
-    } else if (stableUrl) {
+    if (mode === 'blossom' && stableUrl) {
       setPodcastIndexUrl(stableUrl);
+    } else if (mode === 'hosted' && hostedUrl) {
+      setPodcastIndexUrl(hostedUrl);
     }
-  }, [hostedUrl, stableUrl]);
+  }, [mode, hostedUrl, stableUrl]);
 
   // Generate token when selecting hosted mode for a new feed
   useEffect(() => {
@@ -444,6 +468,7 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
               <option value="download">Download XML</option>
               <option value="clipboard">Copy to Clipboard</option>
               <option value="hosted">Host on MSP</option>
+              <option value="podcastIndex">Submit to Podcast Index</option>
               {isLoggedIn && <option value="nostr">Save to Nostr</option>}
               {isLoggedIn && <option value="nostrMusic">Publish Nostr Music</option>}
               {isLoggedIn && <option value="blossom">Publish to Blossom</option>}
@@ -919,57 +944,43 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
             </div>
           )}
 
-          {(mode === 'hosted' || mode === 'blossom') && (
-            <div style={{
-              marginTop: '16px',
-              padding: '12px',
-              backgroundColor: 'rgba(59, 130, 246, 0.1)',
-              borderRadius: '8px',
-              border: '1px solid rgba(59, 130, 246, 0.3)'
-            }}>
-              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#3b82f6', marginBottom: '8px' }}>
-                Get Discovered by Podcast Apps
+          {mode === 'podcastIndex' && (
+            <div style={{ marginTop: '16px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '12px' }}>
+                Notify Podcast Index about your feed so apps like Fountain, Castamatic, and others can find it.
               </p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                Submit your feed to Podcastindex.org so apps like Fountain, Castamatic, and others can find it.
-              </p>
-              <div style={{ marginBottom: '8px' }}>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  Feed URL
+                </label>
                 <input
                   type="text"
                   value={podcastIndexUrl}
                   onChange={(e) => setPodcastIndexUrl(e.target.value)}
-                  placeholder="Enter your feed URL"
+                  placeholder="https://example.com/feed.xml"
                   style={{
                     width: '100%',
                     padding: '8px 12px',
                     borderRadius: '4px',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    border: '1px solid var(--border-color)',
                     backgroundColor: 'var(--bg-secondary)',
                     color: 'var(--text-primary)',
-                    fontSize: '0.75rem',
+                    fontSize: '0.875rem',
                     fontFamily: 'monospace'
                   }}
                 />
               </div>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button
-                  className="btn btn-primary"
-                  style={{ fontSize: '0.75rem' }}
-                  onClick={handleSubmitToPodcastIndex}
-                  disabled={submittingToIndex || !podcastIndexUrl.trim()}
-                >
-                  {submittingToIndex ? 'Submitting...' : 'Submit to Podcast Index'}
-                </button>
-                <a
-                  href="https://podcastindex.org/add"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.75rem', textDecoration: 'none' }}
-                >
-                  Add Manually
-                </a>
-              </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '12px' }}>
+                Use this to submit a new feed or notify Podcast Index that an existing feed has been updated.
+              </p>
+              <a
+                href="https://podcastindex.org/add"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: '0.75rem', color: '#3b82f6' }}
+              >
+                Add feed manually on podcastindex.org →
+              </a>
             </div>
           )}
 
@@ -994,10 +1005,12 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
         </div>
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={handleClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={loading || (mode === 'hosted' && !hostedInfo && !legacyHostedInfo && !tokenAcknowledged)}>
-            {loading
-              ? (mode === 'nostrMusic' || mode === 'blossom' || mode === 'hosted' ? 'Uploading...' : mode === 'download' ? 'Downloading...' : mode === 'clipboard' ? 'Copying...' : 'Saving...')
-              : (mode === 'nostrMusic' ? 'Publish' : mode === 'blossom' || mode === 'hosted' ? 'Upload' : mode === 'download' ? 'Download' : mode === 'clipboard' ? 'Copy to Clipboard' : 'Save')}
+          <button
+            className="btn btn-primary"
+            onClick={mode === 'podcastIndex' ? handleSubmitToPodcastIndex : handleSave}
+            disabled={isButtonDisabled()}
+          >
+            {getButtonText()}
           </button>
         </div>
       </div>
@@ -1015,6 +1028,7 @@ export function SaveModal({ onClose, album, isDirty, isLoggedIn, onImport }: Sav
                 <li><strong>Download XML</strong> - Download the RSS feed as an XML file to your computer.</li>
                 <li><strong>Copy to Clipboard</strong> - Copy the RSS XML to your clipboard for pasting elsewhere.</li>
                 <li><strong>Host on MSP</strong> - Host your feed on MSP servers. Get a permanent URL for your RSS feed to use in any app.{isLoggedIn && ' You can link your Nostr identity to edit from any device without needing the token.'}</li>
+                <li><strong>Submit to Podcast Index</strong> - Notify Podcast Index about your feed URL so podcast apps can discover it. Use this for new feeds or to notify them of updates.</li>
                 <li><strong>Save to Nostr</strong> - Publish to Nostr relays. Load it later on any device with your Nostr key (requires login).</li>
                 <li><strong>Publish Nostr Music</strong> - Publish tracks and playlist (kinds 36787 + 34139) for Nostr music clients (requires login).</li>
                 <li><strong>Publish to Blossom</strong> - Upload your feed to a Blossom server. Get a stable MSP URL that always points to your latest upload (requires login).</li>
