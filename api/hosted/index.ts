@@ -38,13 +38,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const { blobs } = await list({ prefix: 'feeds/' });
       const metaBlobs = blobs.filter(b => b.pathname.endsWith('.meta.json'));
+      const xmlBlobs = blobs.filter(b => b.pathname.endsWith('.xml'));
 
       const feeds = await Promise.all(
         metaBlobs.map(async (blob) => {
           const response = await fetch(blob.url);
           const meta = await response.json();
           const feedId = blob.pathname.replace('feeds/', '').replace('.meta.json', '');
-          return { feedId, ...meta };
+
+          // Try to extract author from the XML feed
+          let author: string | undefined;
+          const xmlBlob = xmlBlobs.find(b => b.pathname === `feeds/${feedId}.xml`);
+          if (xmlBlob) {
+            try {
+              const xmlResponse = await fetch(xmlBlob.url);
+              const xml = await xmlResponse.text();
+              // Extract itunes:author using regex
+              const authorMatch = xml.match(/<itunes:author>([^<]+)<\/itunes:author>/);
+              if (authorMatch) {
+                author = authorMatch[1];
+              }
+            } catch {
+              // Ignore errors extracting author
+            }
+          }
+
+          return { feedId, author, ...meta };
         })
       );
 

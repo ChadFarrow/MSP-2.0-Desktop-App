@@ -5,6 +5,7 @@ import { DeleteConfirmModal } from './DeleteConfirmModal';
 interface FeedInfo {
   feedId: string;
   title?: string;
+  author?: string;
   createdAt?: string;
   lastUpdated?: string;
   ownerPubkey?: string;
@@ -90,6 +91,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
           <thead>
             <tr>
               <th>Title</th>
+              <th>Author</th>
               <th>Feed ID</th>
               <th>Created</th>
               <th>Updated</th>
@@ -100,6 +102,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
             {myFeeds.map(feed => (
               <tr key={feed.feedId}>
                 <td>{feed.title || 'Untitled'}</td>
+                <td className="feed-author">{feed.author || '-'}</td>
                 <td className="feed-id">{feed.feedId}</td>
                 <td>{formatDate(feed.createdAt)}</td>
                 <td>{formatDate(feed.lastUpdated)}</td>
@@ -127,6 +130,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
             <thead>
               <tr>
                 <th>Title</th>
+                <th>Author</th>
                 <th>Feed ID</th>
                 <th>Owner</th>
                 <th>Created</th>
@@ -138,6 +142,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
               {otherFeeds.map(feed => (
                 <tr key={feed.feedId}>
                   <td>{feed.title || 'Untitled'}</td>
+                  <td className="feed-author">{feed.author || '-'}</td>
                   <td className="feed-id">{feed.feedId}</td>
                   <td className="feed-id">{feed.ownerPubkey ? truncatePubkey(feed.ownerPubkey) : 'Unknown'}</td>
                   <td>{formatDate(feed.createdAt)}</td>
