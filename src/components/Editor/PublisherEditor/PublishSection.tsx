@@ -218,7 +218,7 @@ export function PublishSection({ publisherFeed }: PublishSectionProps) {
   const showNewTokenInfo = pendingHostedInfo && !isLoggedIn;
 
   return (
-    <Section title="Publish" icon="&#128640;">
+    <Section title="Publish on MSP" icon="&#128640;">
       <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '14px' }}>
         {isPublished
           ? 'Your publisher feed is hosted on MSP. Click Update to push your latest changes.'

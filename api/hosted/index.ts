@@ -3,6 +3,35 @@ import { put, list } from '@vercel/blob';
 import { createHash, randomBytes } from 'crypto';
 import { parseAuthHeader, parseFeedAuthHeader } from '../_utils/adminAuth.js';
 
+const PI_API_KEY = process.env.PODCASTINDEX_API_KEY;
+const PI_API_SECRET = process.env.PODCASTINDEX_API_SECRET;
+
+// Submit feed to Podcast Index (fire and forget)
+async function notifyPodcastIndex(feedUrl: string): Promise<void> {
+  if (!PI_API_KEY || !PI_API_SECRET) return;
+
+  try {
+    const apiHeaderTime = Math.floor(Date.now() / 1000);
+    const hash = createHash('sha1')
+      .update(PI_API_KEY + PI_API_SECRET + apiHeaderTime)
+      .digest('hex');
+
+    const headers = {
+      'X-Auth-Key': PI_API_KEY,
+      'X-Auth-Date': apiHeaderTime.toString(),
+      'Authorization': hash,
+      'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)'
+    };
+
+    await fetch(`https://api.podcastindex.org/api/1.0/add/byfeedurl?url=${encodeURIComponent(feedUrl)}`, {
+      method: 'POST',
+      headers
+    });
+  } catch {
+    // Silent fail - don't block feed creation
+  }
+}
+
 // Generate a secure edit token
 function generateEditToken(): string {
   return randomBytes(32).toString('base64url');
@@ -161,6 +190,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Build stable URL
     const stableUrl = `${getBaseUrl(req)}/api/hosted/${feedId}.xml`;
+
+    // Notify Podcast Index (fire and forget)
+    notifyPodcastIndex(stableUrl);
 
     return res.status(201).json({
       feedId,

@@ -108,6 +108,9 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
     <Section title="Catalog Feeds" icon="&#128218;">
       <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '14px' }}>
         Add the feeds that belong to this publisher. Search by name, Podcast Index ID, or podcastindex.org URL.
+        <strong style={{ display: 'block', marginTop: '8px', color: 'var(--text-primary)' }}>
+          Note: All catalog feeds must be in the Podcast Index for the publisher reference to work.
+        </strong>
       </p>
 
       {/* Search UI */}
