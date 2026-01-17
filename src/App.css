@@ -70,6 +70,12 @@ body {
   position: relative;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .header-title {
   display: flex;
   align-items: center;
@@ -112,35 +118,36 @@ body {
   border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
-/* Feed Type Tabs */
-.feed-type-tabs {
-  display: flex;
+/* Feed Type Dropdown */
+.feed-type-select {
+  padding: 8px 32px 8px 12px;
   background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 3px;
-  gap: 2px;
-}
-
-.feed-type-tab {
-  padding: 6px 14px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0a0b0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color var(--transition);
 }
 
-.feed-type-tab:hover {
+.feed-type-select:hover {
+  border-color: var(--accent-primary);
+}
+
+.feed-type-select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--border-focus);
+}
+
+.feed-type-select option {
+  background: var(--bg-secondary);
   color: var(--text-primary);
-  background: rgba(139, 92, 246, 0.1);
-}
-
-.feed-type-tab.active {
-  background: var(--accent-primary);
-  color: white;
 }
 
 /* Header Dropdown Menu */

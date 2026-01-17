@@ -97,26 +97,22 @@ function AppContent() {
     <>
       <div className="app">
         <header className="header">
-          <div className="header-title">
-            <img src={mspLogo} alt="MSP Logo" className="header-logo" />
-            <h1><span className="title-short">MSP 2.0</span><span className="title-full"> - Music Side Project Studio</span></h1>
+          <div className="header-left">
+            <div className="header-title">
+              <img src={mspLogo} alt="MSP Logo" className="header-logo" />
+              <h1><span className="title-short">MSP 2.0</span><span className="title-full"> - Music Side Project Studio</span></h1>
+            </div>
+            {/* Feed Type Dropdown */}
+            <select
+              className="feed-type-select"
+              value={state.feedType}
+              onChange={(e) => handleSwitchFeedType(e.target.value as FeedType)}
+            >
+              <option value="album">Album</option>
+              <option value="publisher">Publisher</option>
+            </select>
           </div>
           <div className="header-actions">
-            {/* Feed Type Tabs */}
-            <div className="feed-type-tabs">
-              <button
-                className={`feed-type-tab ${state.feedType === 'album' ? 'active' : ''}`}
-                onClick={() => handleSwitchFeedType('album')}
-              >
-                Album
-              </button>
-              <button
-                className={`feed-type-tab ${state.feedType === 'publisher' ? 'active' : ''}`}
-                onClick={() => handleSwitchFeedType('publisher')}
-              >
-                Publisher
-              </button>
-            </div>
             <NostrLoginButton />
             <div className="header-dropdown" ref={dropdownRef}>
               <button
