@@ -67,7 +67,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
     ? feeds.filter(f => f.ownerPubkey === currentUserPubkey)
     : feeds;
   const otherFeeds = currentUserPubkey
-    ? feeds.filter(f => f.ownerPubkey && f.ownerPubkey !== currentUserPubkey)
+    ? feeds.filter(f => f.ownerPubkey !== currentUserPubkey)
     : [];
 
   if (loading) {
@@ -139,7 +139,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
                 <tr key={feed.feedId}>
                   <td>{feed.title || 'Untitled'}</td>
                   <td className="feed-id">{feed.feedId}</td>
-                  <td className="feed-id">{feed.ownerPubkey ? truncatePubkey(feed.ownerPubkey) : '-'}</td>
+                  <td className="feed-id">{feed.ownerPubkey ? truncatePubkey(feed.ownerPubkey) : 'Unknown'}</td>
                   <td>{formatDate(feed.createdAt)}</td>
                   <td>{formatDate(feed.lastUpdated)}</td>
                   <td>
