@@ -470,10 +470,39 @@ function parseTrack(node: unknown, trackNumber: number, albumValue: ValueBlock, 
   return track;
 }
 
+// Check if URL is an MSP-hosted feed
+const isMspUrl = (url: string): boolean => {
+  return url.includes('/api/hosted/') ||
+    url.includes('msp.podtards.com') ||
+    url.includes('msp-2-0');
+};
+
 // Fetch XML from URL (with CORS proxy fallback)
 export const fetchFeedFromUrl = async (url: string): Promise<string> => {
+  // For MSP feeds, try our own proxy first to avoid CORS issues
+  if (isMspUrl(url)) {
+    try {
+      const proxyUrl = `/api/proxy-feed?url=${encodeURIComponent(url)}`;
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+        }
+      });
+
+      if (response.ok) {
+        const content = await response.text();
+        if (content.includes('<rss') || content.includes('<channel')) {
+          return content;
+        }
+      }
+    } catch {
+      // Fall through to other methods
+    }
+  }
+
   const corsProxies = [
     '', // Try direct first
+    '/api/proxy-feed?url=', // Our own proxy
     'https://api.allorigins.win/get?url=',
     'https://corsproxy.io/?'
   ];

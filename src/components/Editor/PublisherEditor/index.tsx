@@ -4,6 +4,7 @@ import { PublisherArtworkSection } from './PublisherArtworkSection';
 import { CatalogFeedsSection } from './CatalogFeedsSection';
 import { PublisherValueSection } from './PublisherValueSection';
 import { PublisherFundingSection } from './PublisherFundingSection';
+import { PublishSection } from './PublishSection';
 
 export function PublisherEditor() {
   const { state, dispatch } = useFeed();
@@ -29,6 +30,7 @@ export function PublisherEditor() {
         <CatalogFeedsSection publisherFeed={publisherFeed} dispatch={dispatch} />
         <PublisherValueSection publisherFeed={publisherFeed} dispatch={dispatch} />
         <PublisherFundingSection publisherFeed={publisherFeed} dispatch={dispatch} />
+        <PublishSection publisherFeed={publisherFeed} />
       </div>
     </div>
   );
