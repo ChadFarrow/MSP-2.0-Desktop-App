@@ -7,13 +7,15 @@ interface FeedInfo {
   title?: string;
   createdAt?: string;
   lastUpdated?: string;
+  ownerPubkey?: string;
 }
 
 interface FeedListProps {
   onError: (error: string) => void;
+  currentUserPubkey?: string;
 }
 
-export function FeedList({ onError }: FeedListProps) {
+export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
   const [feeds, setFeeds] = useState<FeedInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<FeedInfo | null>(null);
@@ -56,6 +58,18 @@ export function FeedList({ onError }: FeedListProps) {
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
   };
 
+  const truncatePubkey = (pubkey: string) => {
+    return `${pubkey.slice(0, 8)}...${pubkey.slice(-8)}`;
+  };
+
+  // Split feeds into user's own feeds and other users' feeds
+  const myFeeds = currentUserPubkey
+    ? feeds.filter(f => f.ownerPubkey === currentUserPubkey)
+    : feeds;
+  const otherFeeds = currentUserPubkey
+    ? feeds.filter(f => f.ownerPubkey && f.ownerPubkey !== currentUserPubkey)
+    : [];
+
   if (loading) {
     return <div className="admin-loading">Loading feeds...</div>;
   }
@@ -63,13 +77,13 @@ export function FeedList({ onError }: FeedListProps) {
   return (
     <div className="admin-feed-list">
       <div className="admin-feed-header">
-        <h3>Hosted Feeds ({feeds.length})</h3>
+        <h3>My Feeds ({myFeeds.length})</h3>
         <button className="btn btn-secondary btn-small" onClick={loadFeeds}>
           Refresh
         </button>
       </div>
 
-      {feeds.length === 0 ? (
+      {myFeeds.length === 0 ? (
         <p className="text-muted">No feeds found.</p>
       ) : (
         <table className="admin-table">
@@ -83,7 +97,7 @@ export function FeedList({ onError }: FeedListProps) {
             </tr>
           </thead>
           <tbody>
-            {feeds.map(feed => (
+            {myFeeds.map(feed => (
               <tr key={feed.feedId}>
                 <td>{feed.title || 'Untitled'}</td>
                 <td className="feed-id">{feed.feedId}</td>
@@ -102,6 +116,45 @@ export function FeedList({ onError }: FeedListProps) {
             ))}
           </tbody>
         </table>
+      )}
+
+      {otherFeeds.length > 0 && (
+        <div className="other-feeds-section">
+          <div className="admin-feed-header other-feeds-header">
+            <h3>Other Users' Feeds ({otherFeeds.length}) <span className="warning-icon" title="These feeds belong to other users">&#9888;</span></h3>
+          </div>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Feed ID</th>
+                <th>Owner</th>
+                <th>Created</th>
+                <th>Updated</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {otherFeeds.map(feed => (
+                <tr key={feed.feedId}>
+                  <td>{feed.title || 'Untitled'}</td>
+                  <td className="feed-id">{feed.feedId}</td>
+                  <td className="feed-id">{feed.ownerPubkey ? truncatePubkey(feed.ownerPubkey) : '-'}</td>
+                  <td>{formatDate(feed.createdAt)}</td>
+                  <td>{formatDate(feed.lastUpdated)}</td>
+                  <td>
+                    <button
+                      className="btn btn-small btn-delete-other"
+                      onClick={() => setDeleteTarget(feed)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {deleteTarget && (

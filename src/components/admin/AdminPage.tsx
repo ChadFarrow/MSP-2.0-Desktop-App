@@ -65,7 +65,7 @@ export function AdminPage() {
             <div className="admin-info">
               Signed in as: <code>{nostrState.user?.pubkey.slice(0, 8)}...{nostrState.user?.pubkey.slice(-8)}</code>
             </div>
-            <FeedList onError={setError} />
+            <FeedList onError={setError} currentUserPubkey={nostrState.user?.pubkey} />
             {error && <div className="admin-error">{error}</div>}
           </div>
         )}
@@ -169,6 +169,26 @@ export function AdminPage() {
         }
         .admin-table tr:hover {
           background: var(--bg-tertiary);
+        }
+        .other-feeds-section {
+          margin-top: 2rem;
+          padding-top: 1.5rem;
+          border-top: 1px solid var(--border-color);
+        }
+        .other-feeds-header h3 {
+          color: #e5a00d;
+        }
+        .warning-icon {
+          color: #e5a00d;
+          font-size: 1.1em;
+        }
+        .btn-delete-other {
+          background-color: #6c757d;
+          color: white;
+          border: none;
+        }
+        .btn-delete-other:hover {
+          background-color: #dc3545;
         }
       `}</style>
     </div>
