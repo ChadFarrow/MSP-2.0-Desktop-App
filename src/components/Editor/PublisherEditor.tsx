@@ -201,7 +201,8 @@ export function PublisherEditor() {
       }
 
       // No credentials or not MSP-hosted - download for manual upload
-      const filename = `${feedTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30) || 'feed'}-with-publisher.xml`;
+      // Use the album's podcastGuid as filename to match hosted URL pattern
+      const filename = `${album.podcastGuid || item.feedGuid}.xml`;
       downloadXml(updatedXml, filename);
       return {
         title: feedTitle,
