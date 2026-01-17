@@ -268,10 +268,28 @@ export function PublisherEditor() {
                 border: '1px solid var(--border-color)',
                 borderRadius: '8px',
                 overflow: 'hidden',
-                marginBottom: '16px',
-                maxHeight: '300px',
-                overflowY: 'auto'
+                marginBottom: '16px'
               }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                  backgroundColor: 'var(--surface-color)',
+                  borderBottom: '1px solid var(--border-color)'
+                }}>
+                  <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                    {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+                  </span>
+                  <button
+                    className="btn btn-icon"
+                    onClick={() => { setSearchResults([]); setSearchQuery(''); }}
+                    style={{ padding: '4px 8px', fontSize: '12px' }}
+                  >
+                    Close
+                  </button>
+                </div>
+                <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
                 {searchResults.map(result => (
                   <div
                     key={result.id}
@@ -305,6 +323,7 @@ export function PublisherEditor() {
                     </button>
                   </div>
                 ))}
+                </div>
               </div>
             )}
           </div>
