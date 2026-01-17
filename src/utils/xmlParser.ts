@@ -1,7 +1,7 @@
 // MSP 2.0 - XML Parser for importing Demu RSS Feeds
 import { XMLParser } from 'fast-xml-parser';
-import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Funding, PublisherFeed, RemoteItem, PublisherReference } from '../types/feed';
-import { createEmptyAlbum, createEmptyTrack, createEmptyPublisherFeed } from '../types/feed';
+import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData } from '../types/feed';
+import { createEmptyTrack } from '../types/feed';
 import { areValueBlocksStrictEqual, arePersonsEqual } from './comparison';
 
 // Known channel keys that we explicitly parse (don't capture as unknown)
@@ -69,94 +69,23 @@ export const parseRssFeed = (xmlString: string): Album => {
     throw new Error('Invalid RSS feed: missing channel element');
   }
 
-  const album = createEmptyAlbum();
+  // Parse common channel elements
+  const common = parseCommonChannelElements(channel);
 
-  // Basic info
-  album.title = getText(channel.title) || '';
-  album.author = getText(channel['itunes:author']) || '';
-  album.description = getText(channel.description) || '';
-  album.link = getText(channel.link) || '';
-  album.language = getText(channel.language) || 'en';
-  album.generator = getText(channel.generator) || 'MSP 2.0';
-  album.pubDate = getText(channel.pubDate) || new Date().toUTCString();
-  album.lastBuildDate = getText(channel.lastBuildDate) || new Date().toUTCString();
-
-  // Podcast Index tags
-  album.podcastGuid = getText(channel['podcast:guid']) || '';
-  album.medium = (getText(channel['podcast:medium']) as 'music' | 'musicL') || 'music';
-  album.location = getText(channel['podcast:location']) || '';
-
-  // Locked
-  const locked = channel['podcast:locked'];
-  if (locked) {
-    album.locked = getText(locked) === 'yes';
-    album.lockedOwner = getAttr(locked, 'owner') || '';
-  }
-
-  // Categories
-  const categories = channel['itunes:category'];
-  if (categories) {
-    const catArray = Array.isArray(categories) ? categories : [categories];
-    album.categories = catArray.map(c => getAttr(c, 'text')).filter(Boolean) as string[];
-  }
-
-  // Keywords
-  album.keywords = getText(channel['itunes:keywords']) || '';
-
-  // Explicit
-  const explicitVal = channel['itunes:explicit'];
-  album.explicit = explicitVal === true || explicitVal === 'true' || getText(explicitVal) === 'true';
-
-  // Owner
-  const owner = channel['itunes:owner'];
-  if (owner) {
-    album.ownerName = getText((owner as Record<string, unknown>)['itunes:name']) || '';
-    album.ownerEmail = getText((owner as Record<string, unknown>)['itunes:email']) || '';
-  }
-
-  // Image
-  const image = channel.image;
-  if (image) {
-    album.imageUrl = getText(image.url) || '';
-    album.imageTitle = getText(image.title) || '';
-    album.imageLink = getText(image.link) || '';
-    album.imageDescription = getText(image.description) || '';
-  }
-
-  // iTunes image fallback
-  const itunesImage = channel['itunes:image'];
-  if (itunesImage && !album.imageUrl) {
-    album.imageUrl = getAttr(itunesImage, 'href') || '';
-  }
-
-  // Contact
-  album.managingEditor = getText(channel.managingEditor) || '';
-  album.webMaster = getText(channel.webMaster) || '';
-
-  // Persons
-  album.persons = parsePersons(channel['podcast:person']);
-
-  // Value block
-  const value = channel['podcast:value'];
-  if (value) {
-    album.value = parseValueBlock(value);
-  }
-
-  // Funding
-  const funding = channel['podcast:funding'];
-  if (funding) {
-    const fundingArray = Array.isArray(funding) ? funding : [funding];
-    album.funding = fundingArray.map(parseFunding).filter(Boolean) as Funding[];
-  }
+  // Create album with common elements
+  const album: Album = {
+    ...common,
+    medium: (getText(channel['podcast:medium']) as 'music' | 'musicL') || 'music',
+    bannerArtUrl: '',
+    unknownChannelElements: captureUnknownElements(channel, KNOWN_CHANNEL_KEYS),
+    tracks: []
+  };
 
   // Publisher reference (if this album belongs to a publisher)
   const publisher = channel['podcast:publisher'];
   if (publisher) {
     album.publisher = parsePublisherReference(publisher);
   }
-
-  // Capture unknown channel elements
-  album.unknownChannelElements = captureUnknownElements(channel, KNOWN_CHANNEL_KEYS);
 
   // Tracks
   const items = channel.item;
@@ -303,6 +232,111 @@ function parseValueBlock(node: unknown): ValueBlock {
     method: 'keysend',
     suggested: getAttr(node, 'suggested') || undefined,
     recipients: recipientArray.map(parseRecipient).filter(Boolean) as ValueRecipient[]
+  };
+}
+
+// Parse common channel elements shared between Album and PublisherFeed
+function parseCommonChannelElements(channel: Record<string, unknown>): Omit<BaseChannelData, 'unknownChannelElements'> {
+  // Basic info
+  const title = getText(channel.title) || '';
+  const author = getText(channel['itunes:author']) || '';
+  const description = getText(channel.description) || '';
+  const link = getText(channel.link) || '';
+  const language = getText(channel.language) || 'en';
+  const generator = getText(channel.generator) || 'MSP 2.0';
+  const pubDate = getText(channel.pubDate) || new Date().toUTCString();
+  const lastBuildDate = getText(channel.lastBuildDate) || new Date().toUTCString();
+
+  // Podcast Index tags
+  const podcastGuid = getText(channel['podcast:guid']) || '';
+  const location = getText(channel['podcast:location']) || '';
+
+  // Locked
+  const lockedNode = channel['podcast:locked'];
+  const locked = lockedNode ? getText(lockedNode) === 'yes' : false;
+  const lockedOwner = lockedNode ? getAttr(lockedNode, 'owner') || '' : '';
+
+  // Categories
+  const categoriesNode = channel['itunes:category'];
+  let categories: string[] = [];
+  if (categoriesNode) {
+    const catArray = Array.isArray(categoriesNode) ? categoriesNode : [categoriesNode];
+    categories = catArray.map(c => getAttr(c, 'text')).filter(Boolean) as string[];
+  }
+
+  // Keywords
+  const keywords = getText(channel['itunes:keywords']) || '';
+
+  // Explicit
+  const explicitVal = channel['itunes:explicit'];
+  const explicit = explicitVal === true || explicitVal === 'true' || getText(explicitVal) === 'true';
+
+  // Owner
+  const owner = channel['itunes:owner'];
+  const ownerName = owner ? getText((owner as Record<string, unknown>)['itunes:name']) || '' : '';
+  const ownerEmail = owner ? getText((owner as Record<string, unknown>)['itunes:email']) || '' : '';
+
+  // Image
+  const image = channel.image as Record<string, unknown> | undefined;
+  let imageUrl = image ? getText(image.url) || '' : '';
+  const imageTitle = image ? getText(image.title) || '' : '';
+  const imageLink = image ? getText(image.link) || '' : '';
+  const imageDescription = image ? getText(image.description) || '' : '';
+
+  // iTunes image fallback
+  const itunesImage = channel['itunes:image'];
+  if (itunesImage && !imageUrl) {
+    imageUrl = getAttr(itunesImage, 'href') || '';
+  }
+
+  // Contact
+  const managingEditor = getText(channel.managingEditor) || '';
+  const webMaster = getText(channel.webMaster) || '';
+
+  // Persons
+  const persons = parsePersons(channel['podcast:person']);
+
+  // Value block
+  const valueNode = channel['podcast:value'];
+  const value: ValueBlock = valueNode
+    ? parseValueBlock(valueNode)
+    : { type: 'lightning', method: 'keysend', suggested: '0.000033333', recipients: [] };
+
+  // Funding
+  const fundingNode = channel['podcast:funding'];
+  let funding: Funding[] = [];
+  if (fundingNode) {
+    const fundingArray = Array.isArray(fundingNode) ? fundingNode : [fundingNode];
+    funding = fundingArray.map(parseFunding).filter(Boolean) as Funding[];
+  }
+
+  return {
+    title,
+    author,
+    description,
+    link,
+    language,
+    generator,
+    pubDate,
+    lastBuildDate,
+    podcastGuid,
+    locked,
+    lockedOwner,
+    location,
+    categories,
+    keywords,
+    explicit,
+    ownerName,
+    ownerEmail,
+    imageUrl,
+    imageTitle,
+    imageLink,
+    imageDescription,
+    managingEditor,
+    webMaster,
+    persons,
+    value,
+    funding
   };
 }
 
@@ -521,84 +555,16 @@ export const parsePublisherRssFeed = (xmlString: string): PublisherFeed => {
     throw new Error('Invalid RSS feed: missing channel element');
   }
 
-  const feed = createEmptyPublisherFeed();
+  // Parse common channel elements
+  const common = parseCommonChannelElements(channel);
 
-  // Basic info
-  feed.title = getText(channel.title) || '';
-  feed.author = getText(channel['itunes:author']) || '';
-  feed.description = getText(channel.description) || '';
-  feed.link = getText(channel.link) || '';
-  feed.language = getText(channel.language) || 'en';
-  feed.generator = getText(channel.generator) || 'MSP 2.0';
-  feed.pubDate = getText(channel.pubDate) || new Date().toUTCString();
-  feed.lastBuildDate = getText(channel.lastBuildDate) || new Date().toUTCString();
-
-  // Podcast Index tags
-  feed.podcastGuid = getText(channel['podcast:guid']) || '';
-  feed.location = getText(channel['podcast:location']) || '';
-
-  // Locked
-  const locked = channel['podcast:locked'];
-  if (locked) {
-    feed.locked = getText(locked) === 'yes';
-    feed.lockedOwner = getAttr(locked, 'owner') || '';
-  }
-
-  // Categories
-  const categories = channel['itunes:category'];
-  if (categories) {
-    const catArray = Array.isArray(categories) ? categories : [categories];
-    feed.categories = catArray.map(c => getAttr(c, 'text')).filter(Boolean) as string[];
-  }
-
-  // Keywords
-  feed.keywords = getText(channel['itunes:keywords']) || '';
-
-  // Explicit
-  const explicitVal = channel['itunes:explicit'];
-  feed.explicit = explicitVal === true || explicitVal === 'true' || getText(explicitVal) === 'true';
-
-  // Owner
-  const owner = channel['itunes:owner'];
-  if (owner) {
-    feed.ownerName = getText((owner as Record<string, unknown>)['itunes:name']) || '';
-    feed.ownerEmail = getText((owner as Record<string, unknown>)['itunes:email']) || '';
-  }
-
-  // Image
-  const image = channel.image;
-  if (image) {
-    feed.imageUrl = getText(image.url) || '';
-    feed.imageTitle = getText(image.title) || '';
-    feed.imageLink = getText(image.link) || '';
-    feed.imageDescription = getText(image.description) || '';
-  }
-
-  // iTunes image fallback
-  const itunesImage = channel['itunes:image'];
-  if (itunesImage && !feed.imageUrl) {
-    feed.imageUrl = getAttr(itunesImage, 'href') || '';
-  }
-
-  // Contact
-  feed.managingEditor = getText(channel.managingEditor) || '';
-  feed.webMaster = getText(channel.webMaster) || '';
-
-  // Persons
-  feed.persons = parsePersons(channel['podcast:person']);
-
-  // Value block
-  const value = channel['podcast:value'];
-  if (value) {
-    feed.value = parseValueBlock(value);
-  }
-
-  // Funding
-  const funding = channel['podcast:funding'];
-  if (funding) {
-    const fundingArray = Array.isArray(funding) ? funding : [funding];
-    feed.funding = fundingArray.map(parseFunding).filter(Boolean) as Funding[];
-  }
+  // Create publisher feed with common elements
+  const feed: PublisherFeed = {
+    ...common,
+    medium: 'publisher',
+    unknownChannelElements: captureUnknownElements(channel, KNOWN_CHANNEL_KEYS),
+    remoteItems: []
+  };
 
   // Remote items (the feeds this publisher owns)
   const remoteItems = channel['podcast:remoteItem'];
@@ -606,9 +572,6 @@ export const parsePublisherRssFeed = (xmlString: string): PublisherFeed => {
     const remoteArray = Array.isArray(remoteItems) ? remoteItems : [remoteItems];
     feed.remoteItems = remoteArray.map(parseRemoteItem).filter(Boolean) as RemoteItem[];
   }
-
-  // Capture unknown channel elements
-  feed.unknownChannelElements = captureUnknownElements(channel, KNOWN_CHANNEL_KEYS);
 
   return feed;
 };

@@ -61,6 +61,37 @@ export interface RemoteItem {
   image?: string;
 }
 
+// Base channel data shared between Album and PublisherFeed
+export interface BaseChannelData {
+  title: string;
+  author: string;
+  description: string;
+  link: string;
+  language: string;
+  generator: string;
+  pubDate: string;
+  lastBuildDate: string;
+  podcastGuid: string;
+  locked: boolean;
+  lockedOwner: string;
+  location: string;
+  categories: string[];
+  keywords: string;
+  explicit: boolean;
+  ownerName: string;
+  ownerEmail: string;
+  imageUrl: string;
+  imageTitle: string;
+  imageLink: string;
+  imageDescription: string;
+  managingEditor: string;
+  webMaster: string;
+  persons: Person[];
+  value: ValueBlock;
+  funding: Funding[];
+  unknownChannelElements?: Record<string, unknown>;
+}
+
 // Publisher reference - allows a feed to link to its parent publisher feed
 export interface PublisherReference {
   feedGuid: string;

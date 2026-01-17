@@ -9,7 +9,7 @@ import { albumStorage, publisherStorage } from '../utils/storage';
 export type FeedType = 'album' | 'publisher';
 
 // Action types
-type FeedAction =
+export type FeedAction =
   | { type: 'SET_ALBUM'; payload: Album }
   | { type: 'UPDATE_ALBUM'; payload: Partial<Album> }
   | { type: 'ADD_PERSON'; payload?: Person }

@@ -1,42 +1,12 @@
 import { useState } from 'react';
 import { useFeed } from '../../store/feedStore';
 import { LANGUAGES, PERSON_GROUPS, PERSON_ROLES, createEmptyPersonRole } from '../../types/feed';
-import type { PersonGroup, ValueRecipient } from '../../types/feed';
+import type { PersonGroup } from '../../types/feed';
 import { FIELD_INFO } from '../../data/fieldInfo';
 import { InfoIcon } from '../InfoIcon';
 import { Section } from '../Section';
 import { Toggle } from '../Toggle';
-
-const PRESET_RECIPIENTS: { label: string; recipient: ValueRecipient }[] = [
-  { label: 'MSP 2.0', recipient: { name: 'MSP 2.0', address: 'chadf@getalby.com', split: 1, type: 'lnaddress' } },
-  { label: 'Podcastindex.org', recipient: { name: 'Podcastindex.org', address: 'podcastindex@getalby.com', split: 1, type: 'lnaddress' } },
-];
-
-function AddRecipientSelect({ onAdd }: { onAdd: (recipient: ValueRecipient) => void }) {
-  return (
-    <select
-      className="form-input"
-      style={{ width: 'auto', minWidth: '180px' }}
-      value=""
-      onChange={e => {
-        const value = e.target.value;
-        if (value === 'blank') {
-          onAdd({ name: '', address: '', split: 0, type: 'node' });
-        } else {
-          const preset = PRESET_RECIPIENTS.find(p => p.label === value);
-          if (preset) onAdd(preset.recipient);
-        }
-        e.target.value = '';
-      }}
-    >
-      <option value="" disabled>+ Add Recipient</option>
-      <option value="blank">Blank Recipient</option>
-      {PRESET_RECIPIENTS.map(preset => (
-        <option key={preset.label} value={preset.label}>{preset.label}</option>
-      ))}
-    </select>
-  );
-}
+import { AddRecipientSelect } from '../AddRecipientSelect';
 
 // Get MP3 duration from URL using Audio API (works without CORS)
 function getAudioDuration(url: string): Promise<number | null> {

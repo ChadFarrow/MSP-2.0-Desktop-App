@@ -1,5 +1,5 @@
 // MSP 2.0 - XML Generator for Demu RSS Feeds
-import type { Album, Track, Person, ValueBlock, ValueRecipient, Funding, PublisherFeed, RemoteItem, PublisherReference } from '../types/feed';
+import type { Album, Track, Person, ValueBlock, ValueRecipient, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData } from '../types/feed';
 import { formatRFC822Date } from './dateUtils';
 
 // Re-export for backward compatibility
@@ -260,6 +260,120 @@ const generatePublisherXml = (publisher: PublisherReference, level: number): str
   return lines.join('\n');
 };
 
+// Generate common channel elements shared between Album and PublisherFeed
+const generateCommonChannelElements = (data: BaseChannelData, medium: string, level: number): string[] => {
+  const lines: string[] = [];
+
+  // Title
+  lines.push(`${indent(level)}<title>${escapeXml(data.title)}</title>`);
+
+  // Author
+  lines.push(`${indent(level)}<itunes:author>${escapeXml(data.author)}</itunes:author>`);
+
+  // Description
+  lines.push(`${indent(level)}<description>`);
+  lines.push(`${indent(level + 1)}${escapeXml(data.description)}`);
+  lines.push(`${indent(level)}</description>`);
+
+  // Link
+  if (data.link) {
+    lines.push(`${indent(level)}<link>${escapeXml(data.link)}</link>`);
+  }
+
+  // Language
+  lines.push(`${indent(level)}<language>${data.language}</language>`);
+
+  // Generator
+  lines.push(`${indent(level)}<generator>${escapeXml(data.generator)}</generator>`);
+
+  // Dates
+  lines.push(`${indent(level)}<pubDate>${formatRFC822Date(data.pubDate)}</pubDate>`);
+  lines.push(`${indent(level)}<lastBuildDate>${formatRFC822Date(data.lastBuildDate)}</lastBuildDate>`);
+
+  // Locked
+  if (data.locked && data.lockedOwner) {
+    lines.push(`${indent(level)}<podcast:locked owner="${escapeXml(data.lockedOwner)}">yes</podcast:locked>`);
+  }
+
+  // GUID
+  if (data.podcastGuid) {
+    lines.push(`${indent(level)}<podcast:guid>${escapeXml(data.podcastGuid)}</podcast:guid>`);
+  }
+
+  // Categories
+  data.categories.forEach(cat => {
+    lines.push(`${indent(level)}<itunes:category text="${escapeXml(cat)}" />`);
+  });
+
+  // Keywords
+  if (data.keywords) {
+    lines.push(`${indent(level)}<itunes:keywords>${escapeXml(data.keywords)}</itunes:keywords>`);
+  }
+
+  // Location
+  if (data.location) {
+    lines.push(`${indent(level)}<podcast:location>${escapeXml(data.location)}</podcast:location>`);
+  }
+
+  // Contact
+  if (data.managingEditor) {
+    lines.push(`${indent(level)}<managingEditor>${escapeXml(data.managingEditor)}</managingEditor>`);
+  }
+  if (data.webMaster) {
+    lines.push(`${indent(level)}<webMaster>${escapeXml(data.webMaster)}</webMaster>`);
+  }
+
+  // Image
+  if (data.imageUrl) {
+    lines.push(`${indent(level)}<image>`);
+    lines.push(`${indent(level + 1)}<url>${escapeXml(data.imageUrl)}</url>`);
+    lines.push(`${indent(level + 1)}<title>${escapeXml(data.imageTitle || data.title)}</title>`);
+    if (data.imageDescription) {
+      lines.push(`${indent(level + 1)}<description>${escapeXml(data.imageDescription)}</description>`);
+    }
+    lines.push(`${indent(level)}</image>`);
+  }
+
+  // iTunes image
+  if (data.imageUrl) {
+    lines.push(`${indent(level)}<itunes:image href="${escapeXml(data.imageUrl)}" />`);
+  }
+
+  // Medium
+  lines.push(`${indent(level)}<podcast:medium>${medium}</podcast:medium>`);
+
+  // Explicit
+  lines.push(`${indent(level)}<itunes:explicit>${data.explicit ? 'true' : 'false'}</itunes:explicit>`);
+
+  // Owner
+  if (data.ownerName || data.ownerEmail) {
+    lines.push(`${indent(level)}<itunes:owner>`);
+    if (data.ownerName) {
+      lines.push(`${indent(level + 1)}<itunes:name>${escapeXml(data.ownerName)}</itunes:name>`);
+    }
+    if (data.ownerEmail) {
+      lines.push(`${indent(level + 1)}<itunes:email>${escapeXml(data.ownerEmail)}</itunes:email>`);
+    }
+    lines.push(`${indent(level)}</itunes:owner>`);
+  }
+
+  // Persons
+  data.persons.forEach(p => lines.push(generatePersonXml(p, level)));
+
+  // Value block
+  if (data.value.recipients.length > 0) {
+    lines.push(generateValueXml(data.value, level));
+  }
+
+  // Funding
+  (data.funding || []).forEach(f => {
+    const fundingXml = generateFundingXml(f, level);
+    if (fundingXml) lines.push(fundingXml);
+  });
+
+  return lines;
+};
+
 // Generate track/item XML
 const generateTrackXml = (track: Track, album: Album, level: number): string => {
   const lines: string[] = [];
@@ -342,112 +456,8 @@ export const generateRssFeed = (album: Album): string => {
   // Channel
   lines.push(`${indent(1)}<channel>`);
 
-  // Title
-  lines.push(`${indent(2)}<title>${escapeXml(album.title)}</title>`);
-
-  // Author
-  lines.push(`${indent(2)}<itunes:author>${escapeXml(album.author)}</itunes:author>`);
-
-  // Description
-  lines.push(`${indent(2)}<description>`);
-  lines.push(`${indent(3)}${escapeXml(album.description)}`);
-  lines.push(`${indent(2)}</description>`);
-
-  // Link
-  if (album.link) {
-    lines.push(`${indent(2)}<link>${escapeXml(album.link)}</link>`);
-  }
-
-  // Language
-  lines.push(`${indent(2)}<language>${album.language}</language>`);
-
-  // Generator
-  lines.push(`${indent(2)}<generator>${escapeXml(album.generator)}</generator>`);
-
-  // Dates
-  lines.push(`${indent(2)}<pubDate>${formatRFC822Date(album.pubDate)}</pubDate>`);
-  lines.push(`${indent(2)}<lastBuildDate>${formatRFC822Date(album.lastBuildDate)}</lastBuildDate>`);
-
-  // Locked
-  if (album.locked && album.lockedOwner) {
-    lines.push(`${indent(2)}<podcast:locked owner="${escapeXml(album.lockedOwner)}">yes</podcast:locked>`);
-  }
-
-  // GUID
-  if (album.podcastGuid) {
-    lines.push(`${indent(2)}<podcast:guid>${escapeXml(album.podcastGuid)}</podcast:guid>`);
-  }
-
-  // Categories
-  album.categories.forEach(cat => {
-    lines.push(`${indent(2)}<itunes:category text="${escapeXml(cat)}" />`);
-  });
-
-  // Keywords
-  if (album.keywords) {
-    lines.push(`${indent(2)}<itunes:keywords>${escapeXml(album.keywords)}</itunes:keywords>`);
-  }
-
-  // Location
-  if (album.location) {
-    lines.push(`${indent(2)}<podcast:location>${escapeXml(album.location)}</podcast:location>`);
-  }
-
-  // Contact
-  if (album.managingEditor) {
-    lines.push(`${indent(2)}<managingEditor>${escapeXml(album.managingEditor)}</managingEditor>`);
-  }
-  if (album.webMaster) {
-    lines.push(`${indent(2)}<webMaster>${escapeXml(album.webMaster)}</webMaster>`);
-  }
-
-  // Image
-  if (album.imageUrl) {
-    lines.push(`${indent(2)}<image>`);
-    lines.push(`${indent(3)}<url>${escapeXml(album.imageUrl)}</url>`);
-    lines.push(`${indent(3)}<title>${escapeXml(album.imageTitle || album.title)}</title>`);
-    if (album.imageDescription) {
-      lines.push(`${indent(3)}<description>${escapeXml(album.imageDescription)}</description>`);
-    }
-    lines.push(`${indent(2)}</image>`);
-  }
-
-  // iTunes image
-  if (album.imageUrl) {
-    lines.push(`${indent(2)}<itunes:image href="${escapeXml(album.imageUrl)}" />`);
-  }
-
-  // Medium
-  lines.push(`${indent(2)}<podcast:medium>${album.medium}</podcast:medium>`);
-
-  // Explicit
-  lines.push(`${indent(2)}<itunes:explicit>${album.explicit ? 'true' : 'false'}</itunes:explicit>`);
-
-  // Owner
-  if (album.ownerName || album.ownerEmail) {
-    lines.push(`${indent(2)}<itunes:owner>`);
-    if (album.ownerName) {
-      lines.push(`${indent(3)}<itunes:name>${escapeXml(album.ownerName)}</itunes:name>`);
-    }
-    if (album.ownerEmail) {
-      lines.push(`${indent(3)}<itunes:email>${escapeXml(album.ownerEmail)}</itunes:email>`);
-    }
-    lines.push(`${indent(2)}</itunes:owner>`);
-  }
-
-  // Persons
-  album.persons.forEach(p => lines.push(generatePersonXml(p, 2)));
-
-  // Value block
-  if (album.value.recipients.length > 0) {
-    lines.push(generateValueXml(album.value, 2));
-  }
-
-  // Funding
-  (album.funding || []).forEach(f => {
-    const fundingXml = generateFundingXml(f, 2);
-    if (fundingXml) lines.push(fundingXml);
-  });
+  // Common channel elements
+  lines.push(...generateCommonChannelElements(album, album.medium, 2));
 
   // Publisher reference (if this album belongs to a publisher)
   if (album.publisher) {
@@ -493,114 +503,10 @@ export const generatePublisherRssFeed = (publisher: PublisherFeed): string => {
   // Channel
   lines.push(`${indent(1)}<channel>`);
 
-  // Title
-  lines.push(`${indent(2)}<title>${escapeXml(publisher.title)}</title>`);
+  // Common channel elements (medium is always "publisher" for publisher feeds)
+  lines.push(...generateCommonChannelElements(publisher, 'publisher', 2));
 
-  // Author
-  lines.push(`${indent(2)}<itunes:author>${escapeXml(publisher.author)}</itunes:author>`);
-
-  // Description
-  lines.push(`${indent(2)}<description>`);
-  lines.push(`${indent(3)}${escapeXml(publisher.description)}`);
-  lines.push(`${indent(2)}</description>`);
-
-  // Link
-  if (publisher.link) {
-    lines.push(`${indent(2)}<link>${escapeXml(publisher.link)}</link>`);
-  }
-
-  // Language
-  lines.push(`${indent(2)}<language>${publisher.language}</language>`);
-
-  // Generator
-  lines.push(`${indent(2)}<generator>${escapeXml(publisher.generator)}</generator>`);
-
-  // Dates
-  lines.push(`${indent(2)}<pubDate>${formatRFC822Date(publisher.pubDate)}</pubDate>`);
-  lines.push(`${indent(2)}<lastBuildDate>${formatRFC822Date(publisher.lastBuildDate)}</lastBuildDate>`);
-
-  // Locked
-  if (publisher.locked && publisher.lockedOwner) {
-    lines.push(`${indent(2)}<podcast:locked owner="${escapeXml(publisher.lockedOwner)}">yes</podcast:locked>`);
-  }
-
-  // GUID
-  if (publisher.podcastGuid) {
-    lines.push(`${indent(2)}<podcast:guid>${escapeXml(publisher.podcastGuid)}</podcast:guid>`);
-  }
-
-  // Categories
-  publisher.categories.forEach(cat => {
-    lines.push(`${indent(2)}<itunes:category text="${escapeXml(cat)}" />`);
-  });
-
-  // Keywords
-  if (publisher.keywords) {
-    lines.push(`${indent(2)}<itunes:keywords>${escapeXml(publisher.keywords)}</itunes:keywords>`);
-  }
-
-  // Location
-  if (publisher.location) {
-    lines.push(`${indent(2)}<podcast:location>${escapeXml(publisher.location)}</podcast:location>`);
-  }
-
-  // Contact
-  if (publisher.managingEditor) {
-    lines.push(`${indent(2)}<managingEditor>${escapeXml(publisher.managingEditor)}</managingEditor>`);
-  }
-  if (publisher.webMaster) {
-    lines.push(`${indent(2)}<webMaster>${escapeXml(publisher.webMaster)}</webMaster>`);
-  }
-
-  // Image
-  if (publisher.imageUrl) {
-    lines.push(`${indent(2)}<image>`);
-    lines.push(`${indent(3)}<url>${escapeXml(publisher.imageUrl)}</url>`);
-    lines.push(`${indent(3)}<title>${escapeXml(publisher.imageTitle || publisher.title)}</title>`);
-    if (publisher.imageDescription) {
-      lines.push(`${indent(3)}<description>${escapeXml(publisher.imageDescription)}</description>`);
-    }
-    lines.push(`${indent(2)}</image>`);
-  }
-
-  // iTunes image
-  if (publisher.imageUrl) {
-    lines.push(`${indent(2)}<itunes:image href="${escapeXml(publisher.imageUrl)}" />`);
-  }
-
-  // Medium - always "publisher" for publisher feeds
-  lines.push(`${indent(2)}<podcast:medium>publisher</podcast:medium>`);
-
-  // Explicit
-  lines.push(`${indent(2)}<itunes:explicit>${publisher.explicit ? 'true' : 'false'}</itunes:explicit>`);
-
-  // Owner
-  if (publisher.ownerName || publisher.ownerEmail) {
-    lines.push(`${indent(2)}<itunes:owner>`);
-    if (publisher.ownerName) {
-      lines.push(`${indent(3)}<itunes:name>${escapeXml(publisher.ownerName)}</itunes:name>`);
-    }
-    if (publisher.ownerEmail) {
-      lines.push(`${indent(3)}<itunes:email>${escapeXml(publisher.ownerEmail)}</itunes:email>`);
-    }
-    lines.push(`${indent(2)}</itunes:owner>`);
-  }
-
-  // Persons
-  publisher.persons.forEach(p => lines.push(generatePersonXml(p, 2)));
-
-  // Value block
-  if (publisher.value.recipients.length > 0) {
-    lines.push(generateValueXml(publisher.value, 2));
-  }
-
-  // Funding
-  (publisher.funding || []).forEach(f => {
-    const fundingXml = generateFundingXml(f, 2);
-    if (fundingXml) lines.push(fundingXml);
-  });
-
-  // Remote items - the feeds this publisher owns (wrapped in podroll-style listing)
+  // Remote items - the feeds this publisher owns
   if (publisher.remoteItems.length > 0) {
     publisher.remoteItems.forEach(item => {
       lines.push(generateRemoteItemXml(item, 2));
