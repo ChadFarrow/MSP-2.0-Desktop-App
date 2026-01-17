@@ -73,6 +73,7 @@ export interface Track {
   persons: Person[];
   overrideValue: boolean;
   value?: ValueBlock;
+  unknownItemElements?: Record<string, unknown>;
 }
 
 export interface Album {
@@ -117,6 +118,9 @@ export interface Album {
 
   // Funding
   funding: Funding[];
+
+  // Unknown/unsupported XML elements (preserved for round-trip)
+  unknownChannelElements?: Record<string, unknown>;
 
   // Tracks
   tracks: Track[];

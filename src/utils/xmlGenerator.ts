@@ -19,6 +19,158 @@ const escapeXml = (str: string): string => {
 // Generate indent
 const indent = (level: number): string => '    '.repeat(level);
 
+// Common namespace declarations for RSS extensions
+const NAMESPACE_URIS: Record<string, string> = {
+  'content': 'http://purl.org/rss/1.0/modules/content/',
+  'dc': 'http://purl.org/dc/elements/1.1/',
+  'atom': 'http://www.w3.org/2005/Atom',
+  'media': 'http://search.yahoo.com/mrss/',
+  'sy': 'http://purl.org/rss/1.0/modules/syndication/',
+  'slash': 'http://purl.org/rss/1.0/modules/slash/',
+  'rawvoice': 'http://www.rawvoice.com/rawvoiceRssModule/',
+  'googleplay': 'http://www.google.com/schemas/play-podcasts/1.0',
+  'spotify': 'http://www.spotify.com/ns/rss',
+  'psc': 'http://podlove.org/simple-chapters',
+  'wfw': 'http://wellformedweb.org/CommentAPI/',
+  'cc': 'http://creativecommons.org/ns#'
+};
+
+// Collect namespace prefixes from unknown elements recursively
+const collectNamespacePrefixes = (obj: unknown, prefixes: Set<string>): void => {
+  if (!obj || typeof obj !== 'object') return;
+
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      collectNamespacePrefixes(item, prefixes);
+    }
+    return;
+  }
+
+  const record = obj as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    // Check if key has a namespace prefix (e.g., "content:encoded")
+    const colonIndex = key.indexOf(':');
+    if (colonIndex > 0 && !key.startsWith('@_')) {
+      const prefix = key.slice(0, colonIndex);
+      // Only add if it's not already a known namespace (podcast, itunes)
+      if (prefix !== 'podcast' && prefix !== 'itunes') {
+        prefixes.add(prefix);
+      }
+    }
+    // Recurse into nested objects
+    collectNamespacePrefixes(record[key], prefixes);
+  }
+};
+
+// Collect all namespaces needed for unknown elements in an album
+const collectAlbumNamespaces = (album: { unknownChannelElements?: Record<string, unknown>; tracks: { unknownItemElements?: Record<string, unknown> }[] }): Set<string> => {
+  const prefixes = new Set<string>();
+
+  if (album.unknownChannelElements) {
+    collectNamespacePrefixes(album.unknownChannelElements, prefixes);
+  }
+
+  for (const track of album.tracks) {
+    if (track.unknownItemElements) {
+      collectNamespacePrefixes(track.unknownItemElements, prefixes);
+    }
+  }
+
+  return prefixes;
+};
+
+// Generate xmlns declarations for additional namespaces
+const generateNamespaceDeclarations = (prefixes: Set<string>): string => {
+  const declarations: string[] = [];
+  for (const prefix of prefixes) {
+    const uri = NAMESPACE_URIS[prefix];
+    if (uri) {
+      declarations.push(`xmlns:${prefix}="${uri}"`);
+    }
+  }
+  return declarations.join(' ');
+};
+
+// Convert parsed XML object back to XML string (for unknown/unsupported elements)
+const generateUnknownXml = (elements: Record<string, unknown>, level: number): string => {
+  const lines: string[] = [];
+
+  for (const [tagName, value] of Object.entries(elements)) {
+    if (value === null || value === undefined) continue;
+
+    if (Array.isArray(value)) {
+      // Multiple elements with same tag name
+      for (const item of value) {
+        lines.push(generateSingleElementXml(tagName, item, level));
+      }
+    } else {
+      lines.push(generateSingleElementXml(tagName, value, level));
+    }
+  }
+
+  return lines.join('\n');
+};
+
+// Generate XML for a single element (handles attributes, text content, and nested elements)
+const generateSingleElementXml = (tagName: string, value: unknown, level: number): string => {
+  if (value === null || value === undefined) return '';
+
+  // Simple text value
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return `${indent(level)}<${tagName}>${escapeXml(String(value))}</${tagName}>`;
+  }
+
+  // Object with potential attributes and nested content
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    const attrs: string[] = [];
+    const children: string[] = [];
+    let textContent = '';
+
+    for (const [key, val] of Object.entries(obj)) {
+      if (key.startsWith('@_')) {
+        // Attribute
+        const attrName = key.slice(2);
+        attrs.push(`${attrName}="${escapeXml(String(val))}"`);
+      } else if (key === '#text') {
+        // Text content
+        textContent = String(val);
+      } else if (val !== null && val !== undefined) {
+        // Nested element
+        if (Array.isArray(val)) {
+          for (const item of val) {
+            children.push(generateSingleElementXml(key, item, level + 1));
+          }
+        } else {
+          children.push(generateSingleElementXml(key, val, level + 1));
+        }
+      }
+    }
+
+    const attrStr = attrs.length > 0 ? ' ' + attrs.join(' ') : '';
+
+    if (children.length === 0 && !textContent) {
+      // Self-closing tag
+      return `${indent(level)}<${tagName}${attrStr} />`;
+    } else if (children.length === 0) {
+      // Tag with text content only
+      return `${indent(level)}<${tagName}${attrStr}>${escapeXml(textContent)}</${tagName}>`;
+    } else {
+      // Tag with nested elements
+      const lines: string[] = [];
+      lines.push(`${indent(level)}<${tagName}${attrStr}>`);
+      if (textContent) {
+        lines.push(`${indent(level + 1)}${escapeXml(textContent)}`);
+      }
+      lines.push(...children);
+      lines.push(`${indent(level)}</${tagName}>`);
+      return lines.join('\n');
+    }
+  }
+
+  return '';
+};
+
 // Generate person XML - outputs one <podcast:person> tag per role
 const generatePersonXml = (person: Person, level: number): string => {
   // Generate one tag per role (per Podcasting 2.0 spec)
@@ -128,6 +280,12 @@ const generateTrackXml = (track: Track, album: Album, level: number): string => 
     lines.push(generateValueXml(value, level + 1));
   }
 
+  // Unknown/unsupported item elements (preserved from import)
+  if (track.unknownItemElements) {
+    const unknownXml = generateUnknownXml(track.unknownItemElements, level + 1);
+    if (unknownXml) lines.push(unknownXml);
+  }
+
   lines.push(`${indent(level)}</item>`);
 
   return lines.join('\n');
@@ -140,8 +298,14 @@ export const generateRssFeed = (album: Album): string => {
   // XML declaration
   lines.push('<?xml version="1.0" encoding="UTF-8"?>');
 
+  // Collect additional namespaces needed for unknown elements
+  const additionalNamespaces = collectAlbumNamespaces(album);
+  const additionalNsDecl = generateNamespaceDeclarations(additionalNamespaces);
+
   // RSS root with namespaces
-  lines.push('<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">');
+  const baseNs = 'xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"';
+  const rssAttrs = additionalNsDecl ? `${baseNs} ${additionalNsDecl}` : baseNs;
+  lines.push(`<rss ${rssAttrs} version="2.0">`);
 
   // Channel
   lines.push(`${indent(1)}<channel>`);
@@ -252,6 +416,12 @@ export const generateRssFeed = (album: Album): string => {
     const fundingXml = generateFundingXml(f, 2);
     if (fundingXml) lines.push(fundingXml);
   });
+
+  // Unknown/unsupported channel elements (preserved from import)
+  if (album.unknownChannelElements) {
+    const unknownXml = generateUnknownXml(album.unknownChannelElements, 2);
+    if (unknownXml) lines.push(unknownXml);
+  }
 
   // Tracks
   album.tracks.forEach(track => lines.push(generateTrackXml(track, album, 2)));

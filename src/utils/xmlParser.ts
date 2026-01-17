@@ -4,6 +4,52 @@ import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Fun
 import { createEmptyAlbum, createEmptyTrack } from '../types/feed';
 import { areValueBlocksStrictEqual, arePersonsEqual } from './comparison';
 
+// Known channel keys that we explicitly parse (don't capture as unknown)
+const KNOWN_CHANNEL_KEYS = new Set([
+  'title',
+  'description',
+  'link',
+  'language',
+  'generator',
+  'pubDate',
+  'lastBuildDate',
+  'managingEditor',
+  'webMaster',
+  'image',
+  'item',
+  'itunes:author',
+  'itunes:category',
+  'itunes:keywords',
+  'itunes:explicit',
+  'itunes:owner',
+  'itunes:image',
+  'podcast:guid',
+  'podcast:medium',
+  'podcast:location',
+  'podcast:locked',
+  'podcast:person',
+  'podcast:value',
+  'podcast:funding'
+]);
+
+// Known item keys that we explicitly parse (don't capture as unknown)
+const KNOWN_ITEM_KEYS = new Set([
+  'title',
+  'description',
+  'pubDate',
+  'guid',
+  'enclosure',
+  'itunes:duration',
+  'itunes:explicit',
+  'itunes:image',
+  'podcast:season',
+  'podcast:episode',
+  'podcast:images',
+  'podcast:transcript',
+  'podcast:person',
+  'podcast:value'
+]);
+
 // Parse XML string to Album object
 export const parseRssFeed = (xmlString: string): Album => {
   const parser = new XMLParser({
@@ -101,6 +147,9 @@ export const parseRssFeed = (xmlString: string): Album => {
     album.funding = fundingArray.map(parseFunding).filter(Boolean) as Funding[];
   }
 
+  // Capture unknown channel elements
+  album.unknownChannelElements = captureUnknownElements(channel, KNOWN_CHANNEL_KEYS);
+
   // Tracks
   const items = channel.item;
   if (items) {
@@ -130,6 +179,22 @@ function getAttr(node: unknown, attr: string): string {
     if (key in node) return String((node as Record<string, unknown>)[key]);
   }
   return '';
+}
+
+// Capture unknown elements from a parsed XML object
+function captureUnknownElements(obj: Record<string, unknown>, knownKeys: Set<string>): Record<string, unknown> | undefined {
+  const unknown: Record<string, unknown> = {};
+
+  for (const key of Object.keys(obj)) {
+    // Skip known keys and XML parser internals (attributes start with @_)
+    if (knownKeys.has(key) || key.startsWith('@_')) {
+      continue;
+    }
+    unknown[key] = obj[key];
+  }
+
+  // Return undefined if no unknown elements found
+  return Object.keys(unknown).length > 0 ? unknown : undefined;
 }
 
 // Intermediate type for parsing a single person tag (has one role)
@@ -314,6 +379,9 @@ function parseTrack(node: unknown, trackNumber: number, albumValue: ValueBlock, 
     track.value = parseValueBlock(value);
     track.overrideValue = !areValueBlocksStrictEqual(track.value, albumValue);
   }
+
+  // Capture unknown item elements
+  track.unknownItemElements = captureUnknownElements(item, KNOWN_ITEM_KEYS);
 
   return track;
 }
