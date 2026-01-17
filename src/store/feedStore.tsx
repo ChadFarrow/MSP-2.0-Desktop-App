@@ -42,6 +42,7 @@ type FeedAction =
   | { type: 'ADD_REMOTE_ITEM'; payload?: RemoteItem }
   | { type: 'UPDATE_REMOTE_ITEM'; payload: { index: number; item: RemoteItem } }
   | { type: 'REMOVE_REMOTE_ITEM'; payload: number }
+  | { type: 'REORDER_REMOTE_ITEMS'; payload: { fromIndex: number; toIndex: number } }
   | { type: 'CREATE_NEW_PUBLISHER_FEED' }
   | { type: 'ADD_PUBLISHER_RECIPIENT'; payload?: ValueRecipient }
   | { type: 'UPDATE_PUBLISHER_RECIPIENT'; payload: { index: number; recipient: ValueRecipient } }
@@ -383,6 +384,22 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
         },
         isDirty: true
       };
+
+    case 'REORDER_REMOTE_ITEMS': {
+      if (!state.publisherFeed) return state;
+      const { fromIndex, toIndex } = action.payload;
+      const items = [...state.publisherFeed.remoteItems];
+      const [removed] = items.splice(fromIndex, 1);
+      items.splice(toIndex, 0, removed);
+      return {
+        ...state,
+        publisherFeed: {
+          ...state.publisherFeed,
+          remoteItems: items
+        },
+        isDirty: true
+      };
+    }
 
     case 'CREATE_NEW_PUBLISHER_FEED':
       return {

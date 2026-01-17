@@ -58,6 +58,7 @@ export interface RemoteItem {
   itemGuid?: string;
   medium?: string;
   title?: string;
+  image?: string;
 }
 
 // Publisher reference - allows a feed to link to its parent publisher feed

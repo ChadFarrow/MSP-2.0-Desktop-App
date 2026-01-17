@@ -92,7 +92,8 @@ export function PublisherEditor() {
         ...createEmptyRemoteItem(),
         feedGuid: result.podcastGuid,
         feedUrl: result.url,
-        title: result.title
+        title: result.title,
+        image: result.image
       }
     });
     setSearchResults(prev => prev.filter(r => r.id !== result.id));
@@ -363,46 +364,98 @@ export function PublisherEditor() {
           <div className="repeatable-list">
             {publisherFeed.remoteItems.map((item, index) => (
               <div key={index} className="repeatable-item">
-                <div className="repeatable-item-content">
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label className="form-label">Feed GUID <span className="required">*</span><InfoIcon text={PUBLISHER_FIELD_INFO.remoteItemFeedGuid} /></label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                        value={item.feedGuid || ''}
-                        onChange={e => dispatch({
-                          type: 'UPDATE_REMOTE_ITEM',
-                          payload: { index, item: { ...item, feedGuid: e.target.value } }
-                        })}
+                <div className="repeatable-item-content" style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                  {/* Album Art Preview */}
+                  <div style={{ flexShrink: 0 }}>
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.title || 'Feed artwork'}
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          borderRadius: '8px',
+                          objectFit: 'cover',
+                          backgroundColor: 'var(--surface-color)',
+                          border: '1px solid var(--border-color)'
+                        }}
+                        onError={e => (e.target as HTMLImageElement).style.display = 'none'}
                       />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Feed URL<InfoIcon text={PUBLISHER_FIELD_INFO.remoteItemFeedUrl} /></label>
-                      <input
-                        type="url"
-                        className="form-input"
-                        placeholder="https://example.com/feed.xml"
-                        value={item.feedUrl || ''}
-                        onChange={e => dispatch({
-                          type: 'UPDATE_REMOTE_ITEM',
-                          payload: { index, item: { ...item, feedUrl: e.target.value } }
-                        })}
-                      />
-                    </div>
-                    <div className="form-group full-width">
-                      <label className="form-label">Display Title<InfoIcon text={PUBLISHER_FIELD_INFO.remoteItemTitle} /></label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="Optional display title"
-                        value={item.title || ''}
-                        onChange={e => dispatch({
-                          type: 'UPDATE_REMOTE_ITEM',
-                          payload: { index, item: { ...item, title: e.target.value } }
-                        })}
-                      />
+                    ) : (
+                      <div style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--surface-color)',
+                        border: '1px solid var(--border-color)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--text-secondary)',
+                        fontSize: '24px'
+                      }}>
+                        &#127911;
+                      </div>
+                    )}
+                  </div>
+                  {/* Form Fields */}
+                  <div style={{ flex: 1 }}>
+                    <div className="form-grid">
+                      <div className="form-group" style={{ width: '80px' }}>
+                        <label className="form-label">Order</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          min="1"
+                          value={index + 1}
+                          onChange={e => {
+                            const newIndex = parseInt(e.target.value) - 1;
+                            if (!isNaN(newIndex) && newIndex >= 0 && newIndex < publisherFeed.remoteItems.length && newIndex !== index) {
+                              dispatch({ type: 'REORDER_REMOTE_ITEMS', payload: { fromIndex: index, toIndex: newIndex } });
+                            }
+                          }}
+                          style={{ textAlign: 'center' }}
+                        />
+                      </div>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label className="form-label">Display Title<InfoIcon text={PUBLISHER_FIELD_INFO.remoteItemTitle} /></label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="Optional display title"
+                          value={item.title || ''}
+                          onChange={e => dispatch({
+                            type: 'UPDATE_REMOTE_ITEM',
+                            payload: { index, item: { ...item, title: e.target.value } }
+                          })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Feed GUID <span className="required">*</span><InfoIcon text={PUBLISHER_FIELD_INFO.remoteItemFeedGuid} /></label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                          value={item.feedGuid || ''}
+                          onChange={e => dispatch({
+                            type: 'UPDATE_REMOTE_ITEM',
+                            payload: { index, item: { ...item, feedGuid: e.target.value } }
+                          })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Feed URL<InfoIcon text={PUBLISHER_FIELD_INFO.remoteItemFeedUrl} /></label>
+                        <input
+                          type="url"
+                          className="form-input"
+                          placeholder="https://example.com/feed.xml"
+                          value={item.feedUrl || ''}
+                          onChange={e => dispatch({
+                            type: 'UPDATE_REMOTE_ITEM',
+                            payload: { index, item: { ...item, feedUrl: e.target.value } }
+                          })}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

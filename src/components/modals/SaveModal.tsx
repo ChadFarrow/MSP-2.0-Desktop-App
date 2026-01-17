@@ -100,9 +100,12 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
     try {
       const res = await fetch(`/api/pubnotify?url=${encodeURIComponent(feedUrl)}`);
       const data = await res.json();
-      if (data.success && data.podcastIndexUrl) {
-        setPodcastIndexPageUrl(data.podcastIndexUrl);
-        return data.podcastIndexUrl;
+      if (data.success) {
+        // Use returned URL or fall back to search URL
+        const searchUrl = `https://podcastindex.org/search?q=${encodeURIComponent(feedUrl)}`;
+        const pageUrl = data.podcastIndexUrl || searchUrl;
+        setPodcastIndexPageUrl(pageUrl);
+        return pageUrl;
       }
     } catch (err) {
       console.warn('Failed to notify Podcast Index:', err);
@@ -485,12 +488,10 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
         throw new Error(data.error || 'Failed to submit to Podcast Index');
       }
 
-      if (data.podcastIndexUrl) {
-        setPodcastIndexPageUrl(data.podcastIndexUrl);
-        setMessage({ type: 'success', text: 'Feed submitted to Podcast Index!' });
-      } else {
-        setMessage({ type: 'success', text: 'Feed submitted! It may take a moment to appear in the index.' });
-      }
+      // Generate search URL so user can view their feed on Podcast Index
+      const searchUrl = `https://podcastindex.org/search?q=${encodeURIComponent(podcastIndexUrl.trim())}`;
+      setPodcastIndexPageUrl(data.podcastIndexUrl || searchUrl);
+      setMessage({ type: 'success', text: 'Feed submitted! It may take a moment to appear in the index.' });
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to submit to Podcast Index' });
     } finally {
@@ -841,7 +842,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                   {podcastIndexPageUrl && (
                     <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
                       <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        Your Podcast Index Page
+                        View on Podcast Index
                       </label>
                       <a
                         href={podcastIndexPageUrl}
@@ -1066,7 +1067,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                   border: '1px solid var(--success)'
                 }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--success)' }}>
-                    Your Podcast Index Page
+                    View on Podcast Index
                   </label>
                   <a
                     href={podcastIndexPageUrl}
