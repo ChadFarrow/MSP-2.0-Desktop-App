@@ -235,6 +235,7 @@ const generateRemoteItemXml = (item: RemoteItem, level: number): string => {
   if (item.feedUrl) attrs.push(`feedUrl="${escapeXml(item.feedUrl)}"`);
   if (item.itemGuid) attrs.push(`itemGuid="${escapeXml(item.itemGuid)}"`);
   if (item.medium) attrs.push(`medium="${escapeXml(item.medium)}"`);
+  if (item.image) attrs.push(`image="${escapeXml(item.image)}"`);
 
   if (item.title) {
     return `${indent(level)}<podcast:remoteItem ${attrs.join(' ')}>${escapeXml(item.title)}</podcast:remoteItem>`;

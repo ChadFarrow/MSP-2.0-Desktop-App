@@ -595,12 +595,9 @@ export function PublisherEditor() {
                         <input
                           type="text"
                           className="form-input"
-                          placeholder="Optional display title"
                           value={item.title || ''}
-                          onChange={e => dispatch({
-                            type: 'UPDATE_REMOTE_ITEM',
-                            payload: { index, item: { ...item, title: e.target.value } }
-                          })}
+                          readOnly
+                          style={{ backgroundColor: 'var(--bg-secondary)', cursor: 'default' }}
                         />
                       </div>
                       <div className="form-group">
@@ -608,12 +605,9 @@ export function PublisherEditor() {
                         <input
                           type="text"
                           className="form-input"
-                          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                           value={item.feedGuid || ''}
-                          onChange={e => dispatch({
-                            type: 'UPDATE_REMOTE_ITEM',
-                            payload: { index, item: { ...item, feedGuid: e.target.value } }
-                          })}
+                          readOnly
+                          style={{ backgroundColor: 'var(--bg-secondary)', cursor: 'default' }}
                         />
                       </div>
                       <div className="form-group">
@@ -621,12 +615,9 @@ export function PublisherEditor() {
                         <input
                           type="url"
                           className="form-input"
-                          placeholder="https://example.com/feed.xml"
                           value={item.feedUrl || ''}
-                          onChange={e => dispatch({
-                            type: 'UPDATE_REMOTE_ITEM',
-                            payload: { index, item: { ...item, feedUrl: e.target.value } }
-                          })}
+                          readOnly
+                          style={{ backgroundColor: 'var(--bg-secondary)', cursor: 'default' }}
                         />
                       </div>
                     </div>
