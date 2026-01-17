@@ -117,7 +117,7 @@ export function PublisherEditor() {
         <Section title="Publisher Info" icon="&#127970;">
           <div className="form-grid">
             <div className="form-group">
-              <label className="form-label">Publisher Name <span className="required">*</span><InfoIcon text={FIELD_INFO.author} /></label>
+              <label className="form-label">Publisher Name <span className="required">*</span><InfoIcon text={FIELD_INFO.publisherName} /></label>
               <input
                 type="text"
                 className="form-input"
@@ -127,7 +127,7 @@ export function PublisherEditor() {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Catalog Title <span className="required">*</span><InfoIcon text={FIELD_INFO.title} /></label>
+              <label className="form-label">Catalog Title <span className="required">*</span><InfoIcon text={FIELD_INFO.catalogTitle} /></label>
               <input
                 type="text"
                 className="form-input"

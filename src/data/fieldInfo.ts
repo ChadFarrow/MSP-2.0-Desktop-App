@@ -42,6 +42,10 @@ export const FIELD_INFO = {
   publisherGuid: "The GUID of your publisher feed. This links your album to a parent publisher feed that aggregates multiple releases.",
   publisherUrl: "Optional URL to your publisher feed. Helps apps locate the publisher feed if the GUID lookup fails.",
 
+  // Publisher Feed
+  catalogTitle: "The name of this catalog feed. A publisher can have multiple catalogs (e.g., 'Jazz Collection', 'New Releases 2024').",
+  publisherName: "The publisher, label, or entity name. This appears in the <itunes:author> tag.",
+
   // Tracks
   trackTitle: "The song title.",
   trackDescription: "Optional description or notes about the track.",
