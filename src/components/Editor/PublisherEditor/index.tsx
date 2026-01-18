@@ -5,7 +5,8 @@ import { CatalogFeedsSection } from './CatalogFeedsSection';
 import { PublisherValueSection } from './PublisherValueSection';
 import { PublisherFundingSection } from './PublisherFundingSection';
 import { DownloadCatalogSection } from './DownloadCatalogSection';
-// import { PublishSection } from './PublishSection'; // Hidden for now
+import { PublishSection } from './PublishSection';
+import { getCatalogFeedsStatus } from '../../../utils/publisherPublish';
 
 export function PublisherEditor() {
   const { state, dispatch } = useFeed();
@@ -23,6 +24,10 @@ export function PublisherEditor() {
     );
   }
 
+  // Only show PublishSection if all catalog feeds are MSP-hosted
+  const catalogStatus = getCatalogFeedsStatus(publisherFeed.remoteItems);
+  const allFeedsHosted = catalogStatus.items.every(item => item.isHosted);
+
   return (
     <div className="main-content">
       <div className="editor-panel">
@@ -32,7 +37,7 @@ export function PublisherEditor() {
         <PublisherValueSection publisherFeed={publisherFeed} dispatch={dispatch} />
         <PublisherFundingSection publisherFeed={publisherFeed} dispatch={dispatch} />
         <DownloadCatalogSection publisherFeed={publisherFeed} />
-        {/* <PublishSection publisherFeed={publisherFeed} /> */}
+        {allFeedsHosted && <PublishSection publisherFeed={publisherFeed} />}
       </div>
     </div>
   );

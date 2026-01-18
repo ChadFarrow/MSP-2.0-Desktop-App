@@ -304,15 +304,12 @@ async function processCatalogFeed(
       }
     }
 
-    // No credentials or not MSP-hosted - download for manual upload
-    const safeTitle = feedTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'feed';
-    const filename = `${safeTitle}-with-publisher.xml`;
-    downloadXml(updatedXml, filename);
+    // No credentials - skip silently
     return {
       title: feedTitle,
       feedGuid: item.feedGuid,
-      status: 'downloaded',
-      message: 'Downloaded for manual upload'
+      status: 'skipped',
+      message: 'No credentials'
     };
   } catch (err) {
     const errMsg = err instanceof Error ? err.message.toLowerCase() : '';
