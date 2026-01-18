@@ -693,7 +693,6 @@ body {
   border-radius: var(--radius-lg);
   width: 90%;
   max-width: 600px;
-  max-height: 80vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -753,7 +752,7 @@ body {
 .modal-content {
   padding: 20px;
   overflow-y: auto;
-  min-height: 200px;
+  min-height: auto;
   max-height: 60vh;
 }
 
@@ -816,6 +815,65 @@ body {
 
 .info-content a:hover {
   text-decoration: underline;
+}
+
+/* Confirmation Modal */
+.confirm-modal {
+  max-width: 450px;
+  max-height: none;
+}
+
+.confirm-modal .modal-content {
+  min-height: auto;
+  max-height: none;
+  padding: 20px;
+}
+
+.confirm-modal-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 0;
+  min-height: auto;
+}
+
+.confirm-modal-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.confirm-modal-content p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.confirm-modal-warning {
+  /* Icon provides visual distinction */
+}
+
+.confirm-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btn-warning {
+  background: #ff9800;
+  border-color: #ff9800;
+  color: white;
+}
+
+.btn-warning:hover {
+  background: #f57c00;
+  border-color: #f57c00;
+}
+
+.btn-warning:active {
+  background: #e65100;
+  border-color: #e65100;
 }
 
 /* Modal Tabs */
@@ -972,6 +1030,34 @@ body {
     margin: 16px;
   }
 
+  .confirm-modal {
+    width: calc(100% - 32px);
+    max-width: 95%;
+    max-height: none;
+  }
+
+  .confirm-modal .modal-content {
+    min-height: auto;
+    max-height: none;
+  }
+
+  .confirm-modal-content {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    text-align: center;
+    padding: 0;
+  }
+
+  .confirm-modal-icon {
+    font-size: 2.5rem;
+    margin-top: 0;
+  }
+
+  .confirm-modal-content p {
+    margin: 0;
+  }
+
   .modal-header {
     padding: 14px 16px;
   }
@@ -983,6 +1069,16 @@ body {
   .modal-footer {
     padding: 14px 16px;
     flex-wrap: wrap;
+  }
+
+  .confirm-modal-footer {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .confirm-modal-footer .btn {
+    flex: 1;
+    min-width: 100px;
   }
 
   /* Track list improvements */
@@ -1607,5 +1703,130 @@ body {
   .qr-code-wrapper canvas {
     max-width: 200px;
     height: auto;
+  }
+}
+
+/* Person Preview Container - Two-column layout for roles + thumbnail */
+.person-preview-container {
+  margin-top: 16px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.person-thumbnail-preview {
+  width: 140px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Track Preview Container - Description + track art thumbnail */
+.track-preview-container {
+  margin-top: 0; /* already inside form-group spacing */
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.track-thumbnail-preview {
+  width: 140px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.track-description .form-textarea {
+  width: 100%;
+}
+
+.track-thumbnail-preview > div:first-child {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.track-thumbnail-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 768px) {
+  .track-preview-container {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .track-thumbnail-preview {
+    width: 120px;
+    align-self: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .track-preview-container {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .track-thumbnail-preview {
+    width: 100px;
+  }
+}
+
+.person-thumbnail-preview > div:first-child {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.person-thumbnail-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 768px) {
+  .person-preview-container {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .person-thumbnail-preview {
+    width: 120px;
+    align-self: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .person-preview-container {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .person-thumbnail-preview {
+    width: 100px;
+  }
+
+  .person-roles-section {
+    width: 100%;
   }
 }

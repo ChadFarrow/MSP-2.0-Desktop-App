@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Markdown from 'react-markdown';
+import { ModalWrapper } from './ModalWrapper';
 
 interface InfoModalProps {
   onClose: () => void;
@@ -22,21 +23,20 @@ export function InfoModal({ onClose }: InfoModalProps) {
   }, []);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal info-modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>About Music Side Project 2.0</h2>
-          <button className="modal-close" onClick={onClose}>&times;</button>
-        </div>
-        <div className="modal-content info-content">
-          <Markdown>{content}</Markdown>
-        </div>
-        <div className="modal-footer">
-          <button className="btn btn-primary" onClick={onClose}>
-            Got it!
-          </button>
-        </div>
+    <ModalWrapper
+      isOpen={true}
+      onClose={onClose}
+      title="About Music Side Project 2.0"
+      className="info-modal"
+      footer={
+        <button className="btn btn-primary" onClick={onClose}>
+          Got it!
+        </button>
+      }
+    >
+      <div className="info-content">
+        <Markdown>{content}</Markdown>
       </div>
-    </div>
+    </ModalWrapper>
   );
 }

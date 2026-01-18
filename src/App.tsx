@@ -12,6 +12,7 @@ import { ImportModal } from './components/modals/ImportModal';
 import { SaveModal } from './components/modals/SaveModal';
 import { InfoModal } from './components/modals/InfoModal';
 import { NostrConnectModal } from './components/modals/NostrConnectModal';
+import { ConfirmModal } from './components/modals/ConfirmModal';
 import { Editor } from './components/Editor/Editor';
 import { PublisherEditor } from './components/Editor/PublisherEditor';
 import { AdminPage } from './components/admin/AdminPage';
@@ -27,6 +28,8 @@ function AppContent() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showNostrConnectModal, setShowNostrConnectModal] = useState(false);
+  const [showConfirmNewModal, setShowConfirmNewModal] = useState(false);
+  const [pendingNewFeedType, setPendingNewFeedType] = useState<FeedType>('album');
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { state: nostrState, logout: nostrLogout } = useNostr();
@@ -77,14 +80,17 @@ function AppContent() {
   };
 
   const handleNew = (feedType: FeedType = 'album') => {
-    const typeName = feedType === 'publisher' ? 'Publisher Feed' : 'Album';
-    if (confirm(`Create a new ${typeName}? This will clear all current data for this feed type.`)) {
-      if (feedType === 'publisher') {
-        dispatch({ type: 'SET_PUBLISHER_FEED', payload: createEmptyPublisherFeed() });
-      } else {
-        dispatch({ type: 'SET_ALBUM', payload: createEmptyAlbum() });
-      }
+    setPendingNewFeedType(feedType);
+    setShowConfirmNewModal(true);
+  };
+
+  const handleConfirmNew = () => {
+    if (pendingNewFeedType === 'publisher') {
+      dispatch({ type: 'SET_PUBLISHER_FEED', payload: createEmptyPublisherFeed() });
+    } else {
+      dispatch({ type: 'SET_ALBUM', payload: createEmptyAlbum() });
     }
+    setShowConfirmNewModal(false);
   };
 
   const handleSwitchFeedType = (feedType: FeedType) => {
@@ -232,6 +238,17 @@ function AppContent() {
       {showNostrConnectModal && (
         <NostrConnectModal onClose={() => setShowNostrConnectModal(false)} />
       )}
+
+      <ConfirmModal
+        isOpen={showConfirmNewModal}
+        title={pendingNewFeedType === 'publisher' ? 'Create New Publisher Feed' : 'Create New Album'}
+        message={`Create a new ${pendingNewFeedType === 'publisher' ? 'Publisher Feed' : 'Album'}? This will clear all current data for this feed type.`}
+        confirmText="Create"
+        cancelText="Cancel"
+        variant="warning"
+        onConfirm={handleConfirmNew}
+        onCancel={() => setShowConfirmNewModal(false)}
+      />
     </>
   );
 }

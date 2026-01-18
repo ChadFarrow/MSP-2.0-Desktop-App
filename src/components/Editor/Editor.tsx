@@ -270,8 +270,11 @@ export function Editor() {
                         />
                       </div>
                     </div>
-                    {/* Roles section */}
-                    <div className="person-roles-section" style={{ marginTop: '12px' }}>
+
+                    {/* Two-column layout: Roles (left) + Thumbnail Preview (right) */}
+                    <div className="person-preview-container" style={{ marginTop: '16px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                      {/* Left column: Roles section */}
+                    <div className="person-roles-section" style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                         <label className="form-label" style={{ margin: 0 }}>Roles<InfoIcon text={FIELD_INFO.personRole} /></label>
                         <button
@@ -350,6 +353,62 @@ export function Editor() {
                         + Add Role
                       </button>
                     </div>
+                      {/* Right column: Thumbnail preview */}
+                      <div className="person-thumbnail-preview" style={{
+                        width: '140px',
+                        flexShrink: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <div style={{
+                          width: '100%',
+                          aspectRatio: '1',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          background: 'var(--bg-tertiary)',
+                          border: '1px solid var(--border-color)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {person.img ? (
+                            <img
+                              src={person.img}
+                              alt={person.name || 'Person thumbnail'}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                              onLoad={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'block';
+                              }}
+                            />
+                          ) : (
+                            <span style={{
+                              fontSize: '48px',
+                              color: 'var(--text-muted)'
+                            }}>
+                              &#128100;
+                            </span>
+                          )}
+                        </div>
+                        <span style={{
+                          fontSize: '12px',
+                          color: 'var(--text-muted)',
+                          textAlign: 'center',
+                          width: '100%'
+                        }}>
+                          {person.img ? 'Photo' : 'No photo'}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Close two-column container */}
                   </div>
                   <div className="repeatable-item-actions">
                     <button
@@ -603,16 +662,63 @@ export function Editor() {
                       />
                     </div>
                     <div className="form-group full-width">
-                      <label className="form-label">Description<InfoIcon text={FIELD_INFO.trackDescription} /></label>
-                      <textarea
-                        className="form-textarea"
-                        placeholder="Track description or notes"
-                        value={track.description || ''}
-                        onChange={e => dispatch({
-                          type: 'UPDATE_TRACK',
-                          payload: { index, track: { description: e.target.value } }
-                        })}
-                      />
+                      <div className="track-preview-container" style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                        {/* Left column: Description */}
+                        <div className="track-description" style={{ flex: 1, minWidth: 0 }}>
+                          <label className="form-label">Description<InfoIcon text={FIELD_INFO.trackDescription} /></label>
+                          <textarea
+                            className="form-textarea"
+                            placeholder="Track description or notes"
+                            value={track.description || ''}
+                            onChange={e => dispatch({
+                              type: 'UPDATE_TRACK',
+                              payload: { index, track: { description: e.target.value } }
+                            })}
+                          />
+                        </div>
+                        {/* Right column: Thumbnail preview (from Track Art URL) */}
+                        <div className="track-thumbnail-preview" style={{
+                          width: '140px',
+                          flexShrink: 0,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}>
+                          <div style={{
+                            width: '100%',
+                            aspectRatio: '1',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            background: 'var(--bg-tertiary)',
+                            border: '1px solid var(--border-color)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            {track.trackArtUrl ? (
+                              <img
+                                src={track.trackArtUrl}
+                                alt={track.title || 'Track art thumbnail'}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                                onLoad={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'block';
+                                }}
+                              />
+                            ) : (
+                              <span style={{ fontSize: '48px', color: 'var(--text-muted)' }}>
+                                &#9835;
+                              </span>
+                            )}
+                          </div>
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', width: '100%' }}>
+                            {track.trackArtUrl ? 'Track art' : 'No track art'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     <div className="form-group">
                       <label className="form-label">Track Art URL<InfoIcon text={FIELD_INFO.trackArtUrl} /></label>
@@ -626,14 +732,6 @@ export function Editor() {
                           payload: { index, track: { trackArtUrl: e.target.value } }
                         })}
                       />
-                      {track.trackArtUrl && (
-                        <img
-                          src={track.trackArtUrl}
-                          alt="Track art preview"
-                          style={{ marginTop: '8px', maxWidth: '100px', borderRadius: '4px', border: '1px solid var(--border-color)' }}
-                          onError={e => (e.target as HTMLImageElement).style.display = 'none'}
-                        />
-                      )}
                     </div>
                     <div className="form-group">
                       <label className="form-label">Lyrics URL<InfoIcon text={FIELD_INFO.transcriptUrl} /></label>

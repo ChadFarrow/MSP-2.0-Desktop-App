@@ -21,6 +21,7 @@ import {
 } from '../../utils/hostedFeed';
 import { albumStorage, publisherStorage, pendingHostedStorage } from '../../utils/storage';
 import { useNostr } from '../../store/nostrStore';
+import { ModalWrapper } from './ModalWrapper';
 
 const DEFAULT_BLOSSOM_SERVER = 'https://blossom.primal.net/';
 
@@ -518,10 +519,12 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   };
 
   return (
-    <div className="modal-overlay" onClick={handleClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <>
+      <ModalWrapper
+        isOpen={true}
+        onClose={handleClose}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             Save Feed
             <span
               className="import-help-icon"
@@ -530,10 +533,21 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
             >
               ℹ️
             </span>
-          </h2>
-          <button className="btn btn-icon" onClick={handleClose}>&#10005;</button>
-        </div>
-        <div className="modal-content">
+          </div>
+        }
+        footer={
+          <>
+            <button className="btn btn-secondary" onClick={handleClose}>Cancel</button>
+            <button
+              className="btn btn-primary"
+              onClick={mode === 'podcastIndex' ? handleSubmitToPodcastIndex : handleSave}
+              disabled={isButtonDisabled()}
+            >
+              {getButtonText()}
+            </button>
+          </>
+        }
+      >
           <div className="form-group" style={{ marginBottom: '16px' }}>
             <label className="form-label">Save Destination</label>
             <select
@@ -1117,28 +1131,20 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               {message.text}
             </div>
           )}
-        </div>
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={handleClose}>Cancel</button>
-          <button
-            className="btn btn-primary"
-            onClick={mode === 'podcastIndex' ? handleSubmitToPodcastIndex : handleSave}
-            disabled={isButtonDisabled()}
-          >
-            {getButtonText()}
-          </button>
-        </div>
-      </div>
+        </ModalWrapper>
 
       {showHelp && (
-        <div className="modal-overlay" style={{ zIndex: 1001 }} onClick={() => setShowHelp(false)}>
-          <div className="modal import-help-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Save Types</h2>
-              <button className="btn btn-icon" onClick={() => setShowHelp(false)}>&#10005;</button>
-            </div>
-            <div className="modal-content">
-              <ul className="import-help-list">
+        <ModalWrapper
+          isOpen={showHelp}
+          onClose={() => setShowHelp(false)}
+          title="Save Types"
+          className="import-help-modal"
+          style={{ zIndex: 1001 }}
+          footer={
+            <button className="btn btn-primary" onClick={() => setShowHelp(false)}>Got it</button>
+          }
+        >
+          <ul className="import-help-list">
                 <li><strong>Local Storage</strong> - Save to your browser's local storage. Data persists until you clear browser data.</li>
                 <li><strong>Download XML</strong> - Download the RSS feed as an XML file to your computer.</li>
                 <li><strong>Copy to Clipboard</strong> - Copy the RSS XML to your clipboard for pasting elsewhere.</li>
@@ -1148,13 +1154,8 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                 <li><strong>Publish Nostr Music</strong> - Publish tracks and playlist (kinds 36787 + 34139) for Nostr music clients (requires login).</li>
                 <li><strong>Publish to Blossom</strong> - Upload your feed to a Blossom server. Get a stable MSP URL that always points to your latest upload (requires login).</li>
               </ul>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-primary" onClick={() => setShowHelp(false)}>Got it</button>
-            </div>
-          </div>
-        </div>
+            </ModalWrapper>
       )}
-    </div>
+    </>
   );
 }
