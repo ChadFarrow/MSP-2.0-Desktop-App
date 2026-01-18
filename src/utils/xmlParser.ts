@@ -427,7 +427,7 @@ function parseRemoteItem(node: unknown): RemoteItem | null {
     itemGuid: getAttr(node, 'itemGuid') || undefined,
     medium: getAttr(node, 'medium') || undefined,
     title: getText(node) || undefined,
-    image: getAttr(node, 'image') || undefined
+    image: getAttr(node, 'feedImg') || getAttr(node, 'image') || undefined
   };
 }
 

@@ -235,7 +235,7 @@ const generateRemoteItemXml = (item: RemoteItem, level: number): string => {
   if (item.feedUrl) attrs.push(`feedUrl="${escapeXml(item.feedUrl)}"`);
   if (item.itemGuid) attrs.push(`itemGuid="${escapeXml(item.itemGuid)}"`);
   if (item.medium) attrs.push(`medium="${escapeXml(item.medium)}"`);
-  if (item.image) attrs.push(`image="${escapeXml(item.image)}"`);
+  if (item.image) attrs.push(`feedImg="${escapeXml(item.image)}"`);
 
   if (item.title) {
     return `${indent(level)}<podcast:remoteItem ${attrs.join(' ')}>${escapeXml(item.title)}</podcast:remoteItem>`;
@@ -300,8 +300,9 @@ const generateCommonChannelElements = (data: BaseChannelData, medium: string, le
     lines.push(`${indent(level)}<podcast:guid>${escapeXml(data.podcastGuid)}</podcast:guid>`);
   }
 
-  // Categories
-  data.categories.forEach(cat => {
+  // Categories (default to Music for music feeds)
+  const categories = data.categories.length > 0 ? data.categories : ['Music'];
+  categories.forEach(cat => {
     lines.push(`${indent(level)}<itunes:category text="${escapeXml(cat)}" />`);
   });
 
