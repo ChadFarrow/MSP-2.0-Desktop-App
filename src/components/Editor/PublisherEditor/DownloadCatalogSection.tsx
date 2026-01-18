@@ -150,11 +150,8 @@ export function DownloadCatalogSection({ publisherFeed }: DownloadCatalogSection
     setDownloadingAll(false);
   };
 
-  if (publisherFeed.remoteItems.length === 0) {
-    return null;
-  }
-
   const hasPublisherGuid = !!publisherFeed.podcastGuid;
+  const hasCatalogFeeds = publisherFeed.remoteItems.length > 0;
 
   return (
     <Section title="Add Publisher to Catalog Feeds" icon="&#128229;">
@@ -219,7 +216,7 @@ export function DownloadCatalogSection({ publisherFeed }: DownloadCatalogSection
         )}
       </div>
 
-      {(!hasPublisherGuid || !publisherFeedUrl.trim()) && (
+      {(!hasPublisherGuid || !publisherFeedUrl.trim() || !hasCatalogFeeds) && (
         <div style={{
           padding: '12px',
           marginBottom: '16px',
@@ -231,6 +228,7 @@ export function DownloadCatalogSection({ publisherFeed }: DownloadCatalogSection
         }}>
           {!hasPublisherGuid && <div>Please set a Publisher GUID in the Publisher Info section first.</div>}
           {!publisherFeedUrl.trim() && <div>Please enter the Publisher Feed URL above.</div>}
+          {!hasCatalogFeeds && <div>Please add catalog feeds in the Catalog Feeds section above.</div>}
         </div>
       )}
 
@@ -238,68 +236,70 @@ export function DownloadCatalogSection({ publisherFeed }: DownloadCatalogSection
         <button
           className="btn btn-primary"
           onClick={handleDownloadAll}
-          disabled={downloadingAll || !hasPublisherGuid || !publisherFeedUrl.trim()}
+          disabled={downloadingAll || !hasPublisherGuid || !publisherFeedUrl.trim() || !hasCatalogFeeds}
           style={{
             marginRight: '12px',
-            opacity: (!hasPublisherGuid || !publisherFeedUrl.trim()) ? 0.5 : 1,
-            cursor: (!hasPublisherGuid || !publisherFeedUrl.trim()) ? 'not-allowed' : 'pointer'
+            opacity: (!hasPublisherGuid || !publisherFeedUrl.trim() || !hasCatalogFeeds) ? 0.5 : 1,
+            cursor: (!hasPublisherGuid || !publisherFeedUrl.trim() || !hasCatalogFeeds) ? 'not-allowed' : 'pointer'
           }}
         >
           {downloadingAll ? 'Downloading...' : `Download All (${publisherFeed.remoteItems.length})`}
         </button>
       </div>
 
-      <div style={{
-        border: '1px solid var(--border-color)',
-        borderRadius: '8px',
-        overflow: 'hidden'
-      }}>
-        {publisherFeed.remoteItems.map((item, index) => (
-          <div
-            key={index}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '12px 16px',
-              gap: '12px',
-              borderBottom: index < publisherFeed.remoteItems.length - 1 ? '1px solid var(--border-color)' : 'none',
-              backgroundColor: downloadingIndex === index ? 'var(--bg-secondary)' : 'transparent'
-            }}
-          >
-            {item.image && (
-              <img
-                src={item.image}
-                alt=""
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '4px',
-                  objectFit: 'cover'
-                }}
-                onError={e => (e.target as HTMLImageElement).style.display = 'none'}
-              />
-            )}
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 500 }}>{item.title || 'Untitled'}</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                {item.feedGuid}
-              </div>
-            </div>
-            <button
-              className="btn btn-secondary"
-              onClick={() => handleDownloadFeed(index)}
-              disabled={downloadingIndex === index || !item.feedUrl || !hasPublisherGuid || !publisherFeedUrl.trim()}
+      {hasCatalogFeeds && (
+        <div style={{
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          overflow: 'hidden'
+        }}>
+          {publisherFeed.remoteItems.map((item, index) => (
+            <div
+              key={index}
               style={{
-                padding: '8px 16px',
-                opacity: (!hasPublisherGuid || !publisherFeedUrl.trim()) ? 0.5 : 1,
-                cursor: (!hasPublisherGuid || !publisherFeedUrl.trim()) ? 'not-allowed' : 'pointer'
+                display: 'flex',
+                alignItems: 'center',
+                padding: '12px 16px',
+                gap: '12px',
+                borderBottom: index < publisherFeed.remoteItems.length - 1 ? '1px solid var(--border-color)' : 'none',
+                backgroundColor: downloadingIndex === index ? 'var(--bg-secondary)' : 'transparent'
               }}
             >
-              {downloadingIndex === index ? 'Downloading...' : 'Download'}
-            </button>
-          </div>
-        ))}
-      </div>
+              {item.image && (
+                <img
+                  src={item.image}
+                  alt=""
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '4px',
+                    objectFit: 'cover'
+                  }}
+                  onError={e => (e.target as HTMLImageElement).style.display = 'none'}
+                />
+              )}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 500 }}>{item.title || 'Untitled'}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  {item.feedGuid}
+                </div>
+              </div>
+              <button
+                className="btn btn-secondary"
+                onClick={() => handleDownloadFeed(index)}
+                disabled={downloadingIndex === index || !item.feedUrl || !hasPublisherGuid || !publisherFeedUrl.trim()}
+                style={{
+                  padding: '8px 16px',
+                  opacity: (!hasPublisherGuid || !publisherFeedUrl.trim()) ? 0.5 : 1,
+                  cursor: (!hasPublisherGuid || !publisherFeedUrl.trim()) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {downloadingIndex === index ? 'Downloading...' : 'Download'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </Section>
   );
 }
