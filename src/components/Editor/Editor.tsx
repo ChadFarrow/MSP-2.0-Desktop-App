@@ -3,81 +3,15 @@ import { useFeed } from '../../store/feedStore';
 import { LANGUAGES, PERSON_GROUPS, PERSON_ROLES, createEmptyPersonRole } from '../../types/feed';
 import type { PersonGroup } from '../../types/feed';
 import { FIELD_INFO } from '../../data/fieldInfo';
+import { detectAddressType } from '../../utils/addressUtils';
+import { getAudioDuration, secondsToHHMMSS, formatDuration } from '../../utils/audioUtils';
 import { InfoIcon } from '../InfoIcon';
 import { Section } from '../Section';
 import { Toggle } from '../Toggle';
 import { AddRecipientSelect } from '../AddRecipientSelect';
-
-// Get MP3 duration from URL using Audio API (works without CORS)
-function getAudioDuration(url: string): Promise<number | null> {
-  return new Promise((resolve) => {
-    let resolved = false;
-    const audio = new Audio();
-    audio.preload = 'metadata';
-
-    const done = (duration: number | null) => {
-      if (resolved) return;
-      resolved = true;
-      audio.src = '';
-      resolve(duration);
-    };
-
-    audio.onloadedmetadata = () => {
-      const duration = audio.duration;
-      done(isFinite(duration) && duration > 0 ? duration : null);
-    };
-
-    audio.onerror = () => {
-      done(null);
-    };
-
-    // Timeout after 10 seconds
-    setTimeout(() => {
-      done(null);
-    }, 10000);
-
-    audio.src = url;
-  });
-}
-
-
-// Convert seconds to HH:MM:SS format
-function secondsToHHMMSS(totalSeconds: number): string {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = Math.round(totalSeconds % 60);
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-
-// Format duration to HH:MM:SS
-function formatDuration(input: string): string {
-  const cleaned = input.replace(/[^\d:]/g, '');
-  const parts = cleaned.split(':').map(p => parseInt(p) || 0);
-
-  let hours = 0, minutes = 0, seconds = 0;
-
-  if (parts.length === 1) {
-    seconds = parts[0];
-  } else if (parts.length === 2) {
-    minutes = parts[0];
-    seconds = parts[1];
-  } else if (parts.length >= 3) {
-    hours = parts[0];
-    minutes = parts[1];
-    seconds = parts[2];
-  }
-
-  if (seconds >= 60) {
-    minutes += Math.floor(seconds / 60);
-    seconds = seconds % 60;
-  }
-  if (minutes >= 60) {
-    hours += Math.floor(minutes / 60);
-    minutes = minutes % 60;
-  }
-
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
+import { RecipientsList } from '../RecipientsList';
+import { FundingFields } from '../FundingFields';
+import { ArtworkFields } from '../ArtworkFields';
 
 // Roles Reference Modal
 function RolesModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -277,48 +211,16 @@ export function Editor() {
 
           {/* Artwork Section */}
           <Section title="Album Artwork" icon="&#127912;">
-            <div className="form-grid">
-              <div className="form-group">
-                <label className="form-label">Album Art URL <span className="required">*</span><InfoIcon text={FIELD_INFO.imageUrl} /></label>
-                <input
-                  type="url"
-                  className="form-input"
-                  placeholder="https://example.com/album-art.jpg"
-                  value={album.imageUrl || ''}
-                  onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { imageUrl: e.target.value } })}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Image Title<InfoIcon text={FIELD_INFO.imageTitle} /></label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Album cover description"
-                  value={album.imageTitle || ''}
-                  onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { imageTitle: e.target.value } })}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Image Description<InfoIcon text={FIELD_INFO.imageDescription} /></label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Optional description"
-                  value={album.imageDescription || ''}
-                  onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { imageDescription: e.target.value } })}
-                />
-              </div>
-              {album.imageUrl && (
-                <div className="form-group full-width">
-                  <img
-                    src={album.imageUrl}
-                    alt="Album preview"
-                    style={{ maxWidth: '200px', borderRadius: '8px', border: '1px solid var(--border-color)' }}
-                    onError={e => (e.target as HTMLImageElement).style.display = 'none'}
-                  />
-                </div>
-              )}
-            </div>
+            <ArtworkFields
+              imageUrl={album.imageUrl}
+              imageTitle={album.imageTitle}
+              imageDescription={album.imageDescription}
+              onUpdate={(field, value) => dispatch({ type: 'UPDATE_ALBUM', payload: { [field]: value } })}
+              urlLabel="Album Art URL"
+              urlPlaceholder="https://example.com/album-art.jpg"
+              titlePlaceholder="Album cover description"
+              previewAlt="Album preview"
+            />
           </Section>
 
           {/* Credits Section */}
@@ -467,134 +369,23 @@ export function Editor() {
 
           {/* Value Block Section */}
           <Section title="Value Block (Lightning)" icon="&#9889;">
-            <h4 style={{ marginBottom: '12px', color: 'var(--text-secondary)' }}>Recipients</h4>
-            <div className="repeatable-list">
-              {album.value.recipients.map((recipient, index) => (
-                <div key={index} className="repeatable-item">
-                  <div className="repeatable-item-content">
-                    <div className="form-grid">
-                      <div className="form-group">
-                        <label className="form-label">Name<InfoIcon text={FIELD_INFO.recipientName} /></label>
-                        <input
-                          type="text"
-                          className="form-input"
-                          placeholder="Recipient name"
-                          value={recipient.name || ''}
-                          onChange={e => dispatch({
-                            type: 'UPDATE_RECIPIENT',
-                            payload: { index, recipient: { ...recipient, name: e.target.value } }
-                          })}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Address<InfoIcon text={FIELD_INFO.recipientAddress} /></label>
-                        <input
-                          type="text"
-                          className="form-input"
-                          placeholder="Node pubkey or LN address"
-                          value={recipient.address || ''}
-                          onChange={e => {
-                            const address = e.target.value;
-                            const detectedType = address.includes('@') ? 'lnaddress' : 'node';
-                            dispatch({
-                              type: 'UPDATE_RECIPIENT',
-                              payload: { index, recipient: { ...recipient, address, type: detectedType } }
-                            });
-                          }}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Split %<InfoIcon text={FIELD_INFO.recipientSplit} /></label>
-                        <input
-                          type="number"
-                          className="form-input"
-                          placeholder="50"
-                          min="0"
-                          max="100"
-                          value={recipient.split ?? 0}
-                          onChange={e => dispatch({
-                            type: 'UPDATE_RECIPIENT',
-                            payload: { index, recipient: { ...recipient, split: parseInt(e.target.value) || 0 } }
-                          })}
-                        />
-                      </div>
-                      {recipient.type === 'node' && recipient.address && (
-                        <>
-                          <div className="form-group">
-                            <label className="form-label">Custom Key<InfoIcon text={FIELD_INFO.recipientCustomKey} /></label>
-                            <input
-                              type="text"
-                              className="form-input"
-                              placeholder="696969"
-                              value={recipient.customKey || ''}
-                              onChange={e => dispatch({
-                                type: 'UPDATE_RECIPIENT',
-                                payload: { index, recipient: { ...recipient, customKey: e.target.value || undefined } }
-                              })}
-                            />
-                          </div>
-                          <div className="form-group">
-                            <label className="form-label">Custom Value<InfoIcon text={FIELD_INFO.recipientCustomValue} /></label>
-                            <input
-                              type="text"
-                              className="form-input"
-                              placeholder="Optional TLV value"
-                              value={recipient.customValue || ''}
-                              onChange={e => dispatch({
-                                type: 'UPDATE_RECIPIENT',
-                                payload: { index, recipient: { ...recipient, customValue: e.target.value || undefined } }
-                              })}
-                            />
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="repeatable-item-actions">
-                    <button
-                      className="btn btn-icon btn-danger"
-                      onClick={() => dispatch({ type: 'REMOVE_RECIPIENT', payload: index })}
-                    >
-                      &#10005;
-                    </button>
-                  </div>
-                </div>
-              ))}
-              <AddRecipientSelect onAdd={recipient => dispatch({ type: 'ADD_RECIPIENT', payload: recipient })} />
-            </div>
+            <RecipientsList
+              recipients={album.value.recipients}
+              onUpdate={(index, recipient) => dispatch({
+                type: 'UPDATE_RECIPIENT',
+                payload: { index, recipient }
+              })}
+              onRemove={index => dispatch({ type: 'REMOVE_RECIPIENT', payload: index })}
+              onAdd={recipient => dispatch({ type: 'ADD_RECIPIENT', payload: recipient })}
+            />
           </Section>
 
           {/* Funding Section */}
           <Section title="Funding" icon="&#128176;">
-            <div className="form-grid">
-              <div className="form-group">
-                <label className="form-label">URL<InfoIcon text={FIELD_INFO.fundingUrl} /></label>
-                <input
-                  type="url"
-                  className="form-input"
-                  placeholder="https://patreon.com/yourshow"
-                  value={album.funding?.[0]?.url || ''}
-                  onChange={e => dispatch({
-                    type: 'UPDATE_ALBUM',
-                    payload: { funding: [{ url: e.target.value, text: album.funding?.[0]?.text || '' }] }
-                  })}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Text<InfoIcon text={FIELD_INFO.fundingText} /></label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Support the show!"
-                  maxLength={128}
-                  value={album.funding?.[0]?.text || ''}
-                  onChange={e => dispatch({
-                    type: 'UPDATE_ALBUM',
-                    payload: { funding: [{ url: album.funding?.[0]?.url || '', text: e.target.value }] }
-                  })}
-                />
-              </div>
-            </div>
+            <FundingFields
+              funding={album.funding}
+              onUpdate={funding => dispatch({ type: 'UPDATE_ALBUM', payload: { funding } })}
+            />
           </Section>
 
           {/* Publisher Section - Hidden for now
@@ -917,7 +708,7 @@ export function Editor() {
                                     value={recipient.address || ''}
                                     onChange={e => {
                                       const address = e.target.value;
-                                      const detectedType = address.includes('@') ? 'lnaddress' : 'node';
+                                      const detectedType = detectAddressType(address);
                                       const newRecipients = [...(track.value?.recipients || [])];
                                       newRecipients[rIndex] = { ...recipient, address, type: detectedType };
                                       dispatch({
