@@ -52,8 +52,9 @@ function AppContent() {
       // Parse as regular album feed
       const album = parseRssFeed(xml);
 
-      // Warn if not a music feed
-      if (!album.medium || (album.medium !== 'music' && album.medium !== 'musicL')) {
+      // Warn if not a music feed (case-insensitive check)
+      const normalizedMedium = album.medium?.toLowerCase();
+      if (!normalizedMedium || (normalizedMedium !== 'music' && normalizedMedium !== 'musicl')) {
         const mediumMsg = album.medium
           ? `This feed has medium "${album.medium}" which is not a music feed.`
           : `This feed has no medium tag specified.`;

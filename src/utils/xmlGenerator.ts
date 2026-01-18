@@ -283,8 +283,8 @@ const generateCommonChannelElements = (data: BaseChannelData, medium: string, le
   // Language
   lines.push(`${indent(level)}<language>${data.language}</language>`);
 
-  // Generator
-  lines.push(`${indent(level)}<generator>${escapeXml(data.generator)}</generator>`);
+  // Generator - always use MSP 2.0 since we're generating the feed
+  lines.push(`${indent(level)}<generator>MSP 2.0 - Music Side Project Studio</generator>`);
 
   // Dates
   lines.push(`${indent(level)}<pubDate>${formatRFC822Date(data.pubDate)}</pubDate>`);
