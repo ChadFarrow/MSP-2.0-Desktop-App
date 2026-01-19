@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { PublisherFeed } from '../../../types/feed';
 import { Section } from '../../Section';
-import { generatePublisherRssFeed } from '../../../utils/xmlGenerator';
+import { generatePublisherRssFeed, downloadXml } from '../../../utils/xmlGenerator';
 import {
   createHostedFeed,
   createHostedFeedWithNostr,
@@ -97,34 +97,55 @@ export function PublisherFeedReminderSection({ publisherFeed }: PublisherFeedRem
     }
   };
 
+  const handleDownload = () => {
+    const xml = generatePublisherRssFeed(publisherFeed);
+    const safeTitle = (publisherFeed.title || 'publisher-feed')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 50);
+    downloadXml(xml, `${safeTitle}.xml`);
+  };
+
   return (
     <Section title="Before adding the publisher feed to the catalog feeds" icon="&#9888;">
       <div style={{
-        backgroundColor: 'rgba(255, 153, 0, 0.1)',
-        border: '1px solid rgba(255, 153, 0, 0.3)',
+        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        border: '1px solid rgba(139, 92, 246, 0.3)',
         borderRadius: '8px',
         padding: '16px'
       }}>
-        <p style={{ margin: 0, marginBottom: '12px', fontWeight: 500 }}>
+        <p style={{ margin: 0, marginBottom: '16px', fontWeight: 500 }}>
           Your publisher feed must be hosted and submitted to the Podcast Index before continuing.
         </p>
-        <ol style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-secondary)' }}>
-          <li style={{ marginBottom: '8px' }}>
-            Download, host and submit your publisher feed like you did your music.
-          </li>
-          <li style={{ marginBottom: '12px' }}>
-            Or click the button below to host your Publisher Feed on MSP and auto-submit it to Podcast Index.
-          </li>
-        </ol>
 
-        <button
-          className="btn btn-primary"
-          onClick={handleHostOnMSP}
-          disabled={isHosting || !podcastGuid || isAlreadyHosted}
-          style={{ marginTop: '8px' }}
-        >
-          {isHosting ? 'Hosting...' : isAlreadyHosted ? 'Already Hosted on MSP' : 'Host on MSP'}
-        </button>
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, marginBottom: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+              Host it yourself
+            </p>
+            <button
+              className="btn btn-secondary"
+              onClick={handleDownload}
+              style={{ width: '100%' }}
+            >
+              Download Feed
+            </button>
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, marginBottom: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+              Or let MSP handle it
+            </p>
+            <button
+              className="btn btn-secondary"
+              onClick={handleHostOnMSP}
+              disabled={isHosting || !podcastGuid || isAlreadyHosted}
+              style={{ width: '100%' }}
+            >
+              {isHosting ? 'Hosting...' : isAlreadyHosted ? 'Already Hosted' : 'Host on MSP'}
+            </button>
+          </div>
+        </div>
 
         {isAlreadyHosted && existingInfo && (
           <p style={{ color: 'var(--success-color, #22c55e)', fontSize: '13px', marginTop: '8px' }}>
