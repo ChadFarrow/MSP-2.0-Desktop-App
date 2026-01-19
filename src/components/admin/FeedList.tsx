@@ -93,6 +93,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
               <th>Title</th>
               <th>Author</th>
               <th>Feed ID</th>
+              <th>RSS URL</th>
               <th>Created</th>
               <th>Updated</th>
               <th>Actions</th>
@@ -104,6 +105,16 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
                 <td>{feed.title || 'Untitled'}</td>
                 <td className="feed-author">{feed.author || '-'}</td>
                 <td className="feed-id">{feed.feedId}</td>
+                <td>
+                  <a
+                    href={`${window.location.origin}/api/hosted/${feed.feedId}.xml`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rss-link"
+                  >
+                    View RSS
+                  </a>
+                </td>
                 <td>{formatDate(feed.createdAt)}</td>
                 <td>{formatDate(feed.lastUpdated)}</td>
                 <td>
@@ -132,6 +143,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
                 <th>Title</th>
                 <th>Author</th>
                 <th>Feed ID</th>
+                <th>RSS URL</th>
                 <th>Owner</th>
                 <th>Created</th>
                 <th>Updated</th>
@@ -144,6 +156,16 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
                   <td>{feed.title || 'Untitled'}</td>
                   <td className="feed-author">{feed.author || '-'}</td>
                   <td className="feed-id">{feed.feedId}</td>
+                  <td>
+                    <a
+                      href={`${window.location.origin}/api/hosted/${feed.feedId}.xml`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rss-link"
+                    >
+                      View RSS
+                    </a>
+                  </td>
                   <td className="feed-id">{feed.ownerPubkey ? truncatePubkey(feed.ownerPubkey) : 'Unknown'}</td>
                   <td>{formatDate(feed.createdAt)}</td>
                   <td>{formatDate(feed.lastUpdated)}</td>

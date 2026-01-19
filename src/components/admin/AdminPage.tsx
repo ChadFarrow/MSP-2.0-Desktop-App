@@ -190,6 +190,13 @@ export function AdminPage() {
         .btn-delete-other:hover {
           background-color: #dc3545;
         }
+        .rss-link {
+          color: #ff9900;
+          text-decoration: none;
+        }
+        .rss-link:hover {
+          text-decoration: underline;
+        }
       `}</style>
     </div>
   );
