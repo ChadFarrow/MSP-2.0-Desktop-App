@@ -3,6 +3,7 @@ import type { PublisherFeed } from '../../../types/feed';
 import { Section } from '../../Section';
 import { fetchFeedFromUrl, parseRssFeed } from '../../../utils/xmlParser';
 import { generateRssFeed, downloadXml } from '../../../utils/xmlGenerator';
+import { getHostedFeedInfo, buildHostedUrl } from '../../../utils/hostedFeed';
 
 interface DownloadCatalogSectionProps {
   publisherFeed: PublisherFeed;
@@ -15,6 +16,26 @@ export function DownloadCatalogSection({ publisherFeed }: DownloadCatalogSection
   const [urlValidation, setUrlValidation] = useState<'idle' | 'checking' | 'found' | 'not-found'>('idle');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Auto-populate URL if publisher feed is hosted on MSP
+  // Check periodically in case user hosts from the reminder section above
+  useEffect(() => {
+    const checkHostedUrl = () => {
+      if (publisherFeed.podcastGuid && !publisherFeedUrl) {
+        const hostedInfo = getHostedFeedInfo(publisherFeed.podcastGuid);
+        if (hostedInfo) {
+          setPublisherFeedUrl(buildHostedUrl(hostedInfo.feedId));
+        }
+      }
+    };
+
+    // Check immediately
+    checkHostedUrl();
+
+    // Check periodically (in case hosted from another section)
+    const interval = setInterval(checkHostedUrl, 1000);
+    return () => clearInterval(interval);
+  }, [publisherFeed.podcastGuid, publisherFeedUrl]);
 
   const handleSubmitToPI = async () => {
     if (!publisherFeedUrl.trim()) return;

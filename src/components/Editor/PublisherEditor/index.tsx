@@ -4,6 +4,7 @@ import { PublisherArtworkSection } from './PublisherArtworkSection';
 import { CatalogFeedsSection } from './CatalogFeedsSection';
 import { PublisherValueSection } from './PublisherValueSection';
 import { PublisherFundingSection } from './PublisherFundingSection';
+import { PublisherFeedReminderSection } from './PublisherFeedReminderSection';
 import { DownloadCatalogSection } from './DownloadCatalogSection';
 import { PublishSection } from './PublishSection';
 import { getCatalogFeedsStatus } from '../../../utils/publisherPublish';
@@ -36,6 +37,7 @@ export function PublisherEditor() {
         <CatalogFeedsSection publisherFeed={publisherFeed} dispatch={dispatch} />
         <PublisherValueSection publisherFeed={publisherFeed} dispatch={dispatch} />
         <PublisherFundingSection publisherFeed={publisherFeed} dispatch={dispatch} />
+        <PublisherFeedReminderSection publisherFeed={publisherFeed} />
         <DownloadCatalogSection publisherFeed={publisherFeed} />
         {allFeedsHosted && <PublishSection publisherFeed={publisherFeed} />}
       </div>
