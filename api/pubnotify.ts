@@ -48,7 +48,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)'
       }
     });
-    const notifyData = await notifyResponse.json();
+
+    // Handle potentially empty response body
+    const notifyText = await notifyResponse.text();
+    let notifyData: any = {};
+    if (notifyText) {
+      try {
+        notifyData = JSON.parse(notifyText);
+      } catch {
+        // Response is not JSON, treat as success if status is ok
+      }
+    }
 
     if (!notifyResponse.ok) {
       return res.status(notifyResponse.status).json({
