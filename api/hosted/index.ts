@@ -37,7 +37,23 @@ async function notifyPodcastIndex(feedUrl: string): Promise<PINotifyResult> {
       headers
     });
 
-    const data = await response.json();
+    // Handle potentially empty response body
+    const responseText = await response.text();
+    let data: any = {};
+    if (responseText) {
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        // Response is not JSON - if status is ok, treat as success
+        if (response.ok) {
+          return { success: true, message: 'Feed submitted to Podcast Index' };
+        }
+        return { success: false, message: 'Podcast Index returned invalid response' };
+      }
+    } else if (response.ok) {
+      // Empty response but status ok - treat as success
+      return { success: true, message: 'Feed submitted to Podcast Index' };
+    }
 
     if (data.status === true || data.status === 'true') {
       return {
