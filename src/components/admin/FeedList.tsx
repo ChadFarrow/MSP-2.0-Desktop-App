@@ -94,6 +94,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
               <th>Author</th>
               <th>Feed ID</th>
               <th>RSS URL</th>
+              <th>Podcast Index</th>
               <th>Created</th>
               <th>Updated</th>
               <th>Actions</th>
@@ -113,6 +114,16 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
                     className="rss-link"
                   >
                     View RSS
+                  </a>
+                </td>
+                <td>
+                  <a
+                    href={`https://podcastindex.org/search?q=${encodeURIComponent(`${window.location.origin}/api/hosted/${feed.feedId}.xml`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rss-link"
+                  >
+                    View on PI
                   </a>
                 </td>
                 <td>{formatDate(feed.createdAt)}</td>
@@ -144,6 +155,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
                 <th>Author</th>
                 <th>Feed ID</th>
                 <th>RSS URL</th>
+                <th>Podcast Index</th>
                 <th>Owner</th>
                 <th>Created</th>
                 <th>Updated</th>
@@ -164,6 +176,16 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
                       className="rss-link"
                     >
                       View RSS
+                    </a>
+                  </td>
+                  <td>
+                    <a
+                      href={`https://podcastindex.org/search?q=${encodeURIComponent(`${window.location.origin}/api/hosted/${feed.feedId}.xml`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rss-link"
+                    >
+                      View on PI
                     </a>
                   </td>
                   <td className="feed-id">{feed.ownerPubkey ? truncatePubkey(feed.ownerPubkey) : 'Unknown'}</td>
