@@ -45,8 +45,8 @@ async function notifyPodcastIndex(feedUrl: string): Promise<number | null> {
   return null;
 }
 
-// Look up existing feed's PI ID from Podcast Index
-async function lookupPodcastIndexId(feedUrl: string): Promise<number | null> {
+// Look up existing feed's PI ID from Podcast Index by GUID
+async function lookupPodcastIndexId(podcastGuid: string): Promise<number | null> {
   if (!PI_API_KEY || !PI_API_SECRET) return null;
 
   try {
@@ -62,7 +62,7 @@ async function lookupPodcastIndexId(feedUrl: string): Promise<number | null> {
       'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)'
     };
 
-    const response = await fetch(`https://api.podcastindex.org/api/1.0/podcasts/byfeedurl?url=${encodeURIComponent(feedUrl)}`, {
+    const response = await fetch(`https://api.podcastindex.org/api/1.0/podcasts/byguid?guid=${encodeURIComponent(podcastGuid)}`, {
       headers
     });
 
@@ -115,8 +115,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const baseUrl = getBaseUrl(req);
-
     try {
       const { blobs } = await list({ prefix: 'feeds/' });
       const metaBlobs = blobs.filter(b => b.pathname.endsWith('.meta.json'));
@@ -148,8 +146,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // Look up PI ID if missing and update metadata in background
           let podcastIndexId = meta.podcastIndexId;
           if (!podcastIndexId) {
-            const feedUrl = `${baseUrl}/api/hosted/${feedId}.xml`;
-            podcastIndexId = await lookupPodcastIndexId(feedUrl);
+            // feedId is the podcast GUID, use it to lookup on PI
+            podcastIndexId = await lookupPodcastIndexId(feedId);
             if (podcastIndexId) {
               // Update metadata with PI ID (don't await - fire and forget)
               put(`feeds/${feedId}.meta.json`, JSON.stringify({
