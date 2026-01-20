@@ -81,12 +81,13 @@ export function Editor() {
   // Determine if this is a video feed
   const isVideo = isVideoMedium(album.medium);
 
-  // Collapse all tracks by default when album changes (e.g., on import)
+  // Collapse all tracks by default when album is replaced (e.g., on import)
+  // Only trigger on podcastGuid change, not on every field update
   useEffect(() => {
     if (album?.tracks) {
       setCollapsedTracks(new Set(album.tracks.map(t => t.id)));
     }
-  }, [album]);
+  }, [album?.podcastGuid]);
 
   const toggleTrackCollapse = (trackId: string) => {
     setCollapsedTracks(prev => {
