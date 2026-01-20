@@ -1,6 +1,6 @@
 // MSP 2.0 - XML Parser for importing Demu RSS Feeds
 import { XMLParser } from 'fast-xml-parser';
-import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData } from '../types/feed';
+import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData, AlternateEnclosure, AlternateEnclosureSource, AlternateEnclosureIntegrity } from '../types/feed';
 import { createEmptyTrack } from '../types/feed';
 import { areValueBlocksStrictEqual, arePersonsEqual } from './comparison';
 
@@ -49,7 +49,8 @@ const KNOWN_ITEM_KEYS = new Set([
   'podcast:images',
   'podcast:transcript',
   'podcast:person',
-  'podcast:value'
+  'podcast:value',
+  'podcast:alternateEnclosure'
 ]);
 
 // Parse XML string to Album object
@@ -306,6 +307,77 @@ function parseValueBlock(node: unknown): ValueBlock {
   };
 }
 
+// Parse alternate enclosure source (podcast:source)
+function parseAlternateEnclosureSource(node: unknown): AlternateEnclosureSource | null {
+  if (!node) return null;
+  const uri = getAttr(node, 'uri');
+  if (!uri) return null;
+
+  return {
+    uri,
+    contentType: getAttr(node, 'contentType') || undefined
+  };
+}
+
+// Parse alternate enclosure integrity (podcast:integrity)
+function parseAlternateEnclosureIntegrity(node: unknown): AlternateEnclosureIntegrity | null {
+  if (!node) return null;
+  const value = getAttr(node, 'value');
+  if (!value) return null;
+
+  return {
+    type: 'sri',
+    value
+  };
+}
+
+// Parse alternate enclosure (podcast:alternateEnclosure)
+function parseAlternateEnclosure(node: unknown): AlternateEnclosure | null {
+  if (!node) return null;
+
+  const type = getAttr(node, 'type');
+  if (!type) return null; // type is required
+
+  const enclosureNode = node as Record<string, unknown>;
+
+  // Parse sources
+  const sourcesNode = enclosureNode['podcast:source'];
+  let sources: AlternateEnclosureSource[] = [];
+  if (sourcesNode) {
+    const sourcesArray = Array.isArray(sourcesNode) ? sourcesNode : [sourcesNode];
+    sources = sourcesArray.map(parseAlternateEnclosureSource).filter(Boolean) as AlternateEnclosureSource[];
+  }
+
+  // Must have at least one source
+  if (sources.length === 0) return null;
+
+  // Parse integrity
+  const integrityNode = enclosureNode['podcast:integrity'];
+  const integrity = integrityNode ? parseAlternateEnclosureIntegrity(integrityNode) : undefined;
+
+  return {
+    id: crypto.randomUUID(),
+    type,
+    length: getAttr(node, 'length') || undefined,
+    bitrate: getAttr(node, 'bitrate') || undefined,
+    height: getAttr(node, 'height') || undefined,
+    lang: getAttr(node, 'lang') || undefined,
+    title: getAttr(node, 'title') || undefined,
+    rel: getAttr(node, 'rel') || undefined,
+    codecs: getAttr(node, 'codecs') || undefined,
+    default: getAttr(node, 'default') === 'true',
+    sources,
+    integrity: integrity || undefined
+  };
+}
+
+// Parse alternate enclosures array
+function parseAlternateEnclosures(nodes: unknown): AlternateEnclosure[] {
+  if (!nodes) return [];
+  const nodeArray = Array.isArray(nodes) ? nodes : [nodes];
+  return nodeArray.map(parseAlternateEnclosure).filter(Boolean) as AlternateEnclosure[];
+}
+
 // Parse common channel elements shared between Album and PublisherFeed
 function parseCommonChannelElements(channel: Record<string, unknown>): Omit<BaseChannelData, 'unknownChannelElements'> {
   // Basic info
@@ -538,6 +610,12 @@ function parseTrack(node: unknown, trackNumber: number, albumValue: ValueBlock, 
   if (value) {
     track.value = parseValueBlock(value);
     track.overrideValue = !areValueBlocksStrictEqual(track.value, albumValue);
+  }
+
+  // Alternate enclosures (e.g., music video for audio track)
+  const alternateEnclosures = item['podcast:alternateEnclosure'];
+  if (alternateEnclosures) {
+    track.alternateEnclosures = parseAlternateEnclosures(alternateEnclosures);
   }
 
   // Capture unknown item elements

@@ -60,4 +60,8 @@ export const FIELD_INFO = {
   trackExplicit: "Mark if this specific track contains explicit content.",
   overridePersons: "Enable to set different credits for this track than the album level. Track-level persons replace album-level.",
   overrideValue: "Enable to set different payment splits for this track. Used for featuring guest artists or different producers per track.",
+
+  // Music Video (Alternate Enclosure)
+  musicVideoUrl: "Optional URL to a music video for this track. Creates a podcast:alternateEnclosure tag so apps can offer both audio and video versions.",
+  musicVideoLength: "File size of the music video in bytes. Optional but recommended for podcast apps to show download size.",
 };

@@ -61,6 +61,32 @@ export interface RemoteItem {
   image?: string;
 }
 
+// Alternate enclosure types (podcast:alternateEnclosure)
+export interface AlternateEnclosureSource {
+  uri: string;
+  contentType?: string;
+}
+
+export interface AlternateEnclosureIntegrity {
+  type: 'sri';
+  value: string;
+}
+
+export interface AlternateEnclosure {
+  id: string;
+  type: string;                    // Required: MIME type
+  length?: string;                 // File size in bytes
+  bitrate?: string;                // bits/sec
+  height?: string;                 // Video height
+  lang?: string;                   // BCP 47 language tag
+  title?: string;                  // Max 32 chars
+  rel?: string;                    // Grouping ID, max 32 chars
+  codecs?: string;                 // RFC 6381
+  default?: boolean;
+  sources: AlternateEnclosureSource[];
+  integrity?: AlternateEnclosureIntegrity;
+}
+
 // Base channel data shared between Album and PublisherFeed
 export interface BaseChannelData {
   title: string;
@@ -122,6 +148,7 @@ export interface Track {
   persons: Person[];
   overrideValue: boolean;
   value?: ValueBlock;
+  alternateEnclosures?: AlternateEnclosure[];
   unknownItemElements?: Record<string, unknown>;
 }
 
@@ -374,6 +401,27 @@ export const createEmptyRemoteItem = (): RemoteItem => ({
   feedUrl: '',
   title: ''
 });
+
+// Default empty alternate enclosure source
+export const createEmptyAlternateEnclosureSource = (): AlternateEnclosureSource => ({
+  uri: ''
+});
+
+// Default empty alternate enclosure
+export const createEmptyAlternateEnclosure = (mimeType = 'video/mp4'): AlternateEnclosure => ({
+  id: crypto.randomUUID(),
+  type: mimeType,
+  sources: [createEmptyAlternateEnclosureSource()]
+});
+
+// Common MIME types for alternate enclosures
+export const ALTERNATE_ENCLOSURE_MIME_TYPES = [
+  { value: 'video/mp4', label: 'Video (MP4)' },
+  { value: 'video/webm', label: 'Video (WebM)' },
+  { value: 'audio/mpeg', label: 'Audio (MP3)' },
+  { value: 'audio/ogg', label: 'Audio (OGG)' },
+  { value: 'audio/flac', label: 'Audio (FLAC)' }
+];
 
 // Default empty publisher reference
 export const createEmptyPublisherReference = (): PublisherReference => ({
