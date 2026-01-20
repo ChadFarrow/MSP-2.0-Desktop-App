@@ -780,6 +780,13 @@ export function Editor() {
                     {/* Music Video fields - only shown on Album page (not Video page) */}
                     {!isVideo && (
                       <>
+                        <div className="form-group full-width" style={{ marginTop: '8px' }}>
+                          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '0 0 12px 0' }}>
+                            <strong>Alternate Enclosure:</strong> Add an optional music video for this track. The audio file remains the main enclosure,
+                            while the video is offered as an alternate version via <code style={{ background: 'var(--bg-tertiary)', padding: '2px 4px', borderRadius: '3px' }}>&lt;podcast:alternateEnclosure&gt;</code>.
+                            Apps that support this tag can let listeners choose between audio and video.
+                          </p>
+                        </div>
                         <div className="form-group">
                           <label className="form-label">Music Video URL<InfoIcon text={FIELD_INFO.musicVideoUrl} /></label>
                           <input
