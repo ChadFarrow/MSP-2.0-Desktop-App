@@ -102,30 +102,6 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
     return false;
   };
 
-  // Notify Podcast Index and return the PI page URL if available
-  const notifyPodcastIndex = async (feedUrl: string): Promise<string | null> => {
-    try {
-      const res = await fetch(`/api/pubnotify?url=${encodeURIComponent(feedUrl)}`);
-      const data = await res.json();
-      if (data.success) {
-        if (data.podcastIndexUrl) {
-          // Feed is already indexed - we have a direct page URL
-          setPodcastIndexPageUrl(data.podcastIndexUrl);
-          setPodcastIndexPending(false);
-          return data.podcastIndexUrl;
-        } else {
-          // Feed submitted but not yet indexed
-          setPodcastIndexPending(true);
-          setPodcastIndexPageUrl(null);
-          return 'pending';
-        }
-      }
-    } catch (err) {
-      console.warn('Failed to notify Podcast Index:', err);
-    }
-    return null;
-  };
-
   // Auto-populate Podcast Index URL when a hosted URL becomes available
   useEffect(() => {
     if (mode === 'blossom' && stableUrl) {
@@ -394,17 +370,23 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
 
           if (hostedInfo) {
             // Update existing feed - use Nostr auth if linked, otherwise token
+            let updateResult;
             if (isNostrLinked) {
-              await updateHostedFeedWithNostr(hostedInfo.feedId, hostedXml, currentFeedTitle);
+              updateResult = await updateHostedFeedWithNostr(hostedInfo.feedId, hostedXml, currentFeedTitle);
             } else {
-              await updateHostedFeed(hostedInfo.feedId, hostedInfo.editToken, hostedXml, currentFeedTitle);
+              updateResult = await updateHostedFeed(hostedInfo.feedId, hostedInfo.editToken, hostedXml, currentFeedTitle);
             }
             const updatedInfo = { ...hostedInfo, lastUpdated: Date.now() };
             saveHostedFeedInfo(currentFeedGuid, updatedInfo);
             setHostedInfo(updatedInfo);
-            const piUrl = await notifyPodcastIndex(buildHostedUrl(hostedInfo.feedId));
-            if (piUrl) {
-              setMessage({ type: 'success', text: 'Feed updated and Podcast Index notified!' });
+
+            // Show PI notification result
+            const piResult = updateResult.podcastIndex;
+            if (piResult?.success) {
+              setPodcastIndexPending(true);
+              setMessage({ type: 'success', text: `Feed updated! Podcast Index: ${piResult.message}` });
+            } else if (piResult) {
+              setMessage({ type: 'success', text: `Feed updated! Podcast Index notification failed: ${piResult.message}` });
             } else {
               showSuccessAndClose('Feed updated!');
             }
@@ -444,12 +426,18 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
             setPendingToken(null);
             setLegacyHostedInfo(null);
             setTokenAcknowledged(false);
-            const piUrl = await notifyPodcastIndex(hostedResult.url);
+
+            // Build success message with PI result
             let successMsg = legacyHostedInfo
               ? 'Feed migrated to new URL and legacy URL updated!'
               : (shouldLinkNostr ? 'Feed created and linked to your Nostr identity!' : 'Feed created!');
-            if (piUrl) {
-              successMsg += ' Podcast Index notified!';
+
+            const piResult = hostedResult.podcastIndex;
+            if (piResult?.success) {
+              setPodcastIndexPending(true);
+              successMsg += ` Podcast Index: ${piResult.message}`;
+            } else if (piResult) {
+              successMsg += ` Podcast Index notification failed: ${piResult.message}`;
             }
             setMessage({ type: 'success', text: successMsg });
           }

@@ -6,9 +6,18 @@ import { parseAuthHeader, parseFeedAuthHeader } from '../_utils/adminAuth.js';
 const PI_API_KEY = process.env.PODCASTINDEX_API_KEY;
 const PI_API_SECRET = process.env.PODCASTINDEX_API_SECRET;
 
-// Submit feed to Podcast Index (fire and forget)
-async function notifyPodcastIndex(feedUrl: string): Promise<void> {
-  if (!PI_API_KEY || !PI_API_SECRET) return;
+// Podcast Index notification result
+interface PINotifyResult {
+  success: boolean;
+  message: string;
+  podcastIndexId?: number;
+}
+
+// Submit feed to Podcast Index and return result
+async function notifyPodcastIndex(feedUrl: string): Promise<PINotifyResult> {
+  if (!PI_API_KEY || !PI_API_SECRET) {
+    return { success: false, message: 'Podcast Index API not configured' };
+  }
 
   try {
     const apiHeaderTime = Math.floor(Date.now() / 1000);
@@ -23,12 +32,28 @@ async function notifyPodcastIndex(feedUrl: string): Promise<void> {
       'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)'
     };
 
-    await fetch(`https://api.podcastindex.org/api/1.0/add/byfeedurl?url=${encodeURIComponent(feedUrl)}`, {
+    const response = await fetch(`https://api.podcastindex.org/api/1.0/add/byfeedurl?url=${encodeURIComponent(feedUrl)}`, {
       method: 'POST',
       headers
     });
-  } catch {
-    // Silent fail - don't block feed creation
+
+    const data = await response.json();
+
+    if (data.status === true || data.status === 'true') {
+      return {
+        success: true,
+        message: data.description || 'Feed submitted to Podcast Index',
+        podcastIndexId: data.feed?.id
+      };
+    } else {
+      return {
+        success: false,
+        message: data.description || 'Podcast Index returned an error'
+      };
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to notify Podcast Index';
+    return { success: false, message };
   }
 }
 
@@ -191,14 +216,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Build stable URL
     const stableUrl = `${getBaseUrl(req)}/api/hosted/${feedId}.xml`;
 
-    // Notify Podcast Index (fire and forget)
-    notifyPodcastIndex(stableUrl);
+    // Notify Podcast Index and get result
+    const piResult = await notifyPodcastIndex(stableUrl);
 
     return res.status(201).json({
       feedId,
       editToken, // Only returned once at creation!
       url: stableUrl,
-      blobUrl: blob.url
+      blobUrl: blob.url,
+      podcastIndex: piResult
     });
   } catch (error) {
     console.error('Error creating hosted feed:', error);

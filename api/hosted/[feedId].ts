@@ -6,9 +6,18 @@ import { parseAuthHeader, parseFeedAuthHeader } from '../_utils/adminAuth.js';
 const PI_API_KEY = process.env.PODCASTINDEX_API_KEY;
 const PI_API_SECRET = process.env.PODCASTINDEX_API_SECRET;
 
-// Notify Podcast Index to refresh feed (fire and forget)
-async function notifyPodcastIndex(feedUrl: string): Promise<void> {
-  if (!PI_API_KEY || !PI_API_SECRET) return;
+// Podcast Index notification result
+interface PINotifyResult {
+  success: boolean;
+  message: string;
+  podcastIndexId?: number;
+}
+
+// Notify Podcast Index to refresh feed and return result
+async function notifyPodcastIndex(feedUrl: string): Promise<PINotifyResult> {
+  if (!PI_API_KEY || !PI_API_SECRET) {
+    return { success: false, message: 'Podcast Index API not configured' };
+  }
 
   try {
     const apiHeaderTime = Math.floor(Date.now() / 1000);
@@ -23,12 +32,28 @@ async function notifyPodcastIndex(feedUrl: string): Promise<void> {
       'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)'
     };
 
-    await fetch(`https://api.podcastindex.org/api/1.0/add/byfeedurl?url=${encodeURIComponent(feedUrl)}`, {
+    const response = await fetch(`https://api.podcastindex.org/api/1.0/add/byfeedurl?url=${encodeURIComponent(feedUrl)}`, {
       method: 'POST',
       headers
     });
-  } catch {
-    // Silent fail - don't block feed update
+
+    const data = await response.json();
+
+    if (data.status === true || data.status === 'true') {
+      return {
+        success: true,
+        message: data.description || 'Feed submitted to Podcast Index',
+        podcastIndexId: data.feed?.id
+      };
+    } else {
+      return {
+        success: false,
+        message: data.description || 'Podcast Index returned an error'
+      };
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to notify Podcast Index';
+    return { success: false, message };
   }
 }
 
@@ -237,11 +262,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           addRandomSuffix: false
         });
 
-        // Notify Podcast Index to refresh (fire and forget)
+        // Notify Podcast Index to refresh and get result
         const stableUrl = `${getBaseUrl(req)}/api/hosted/${feedId}.xml`;
-        notifyPodcastIndex(stableUrl);
+        const piResult = await notifyPodcastIndex(stableUrl);
 
-        return res.status(200).json({ success: true });
+        return res.status(200).json({ success: true, podcastIndex: piResult });
       }
 
       case 'PATCH': {
