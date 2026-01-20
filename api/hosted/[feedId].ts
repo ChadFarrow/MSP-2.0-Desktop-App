@@ -62,9 +62,11 @@ async function notifyPodcastIndex(feedUrl: string): Promise<PINotifyResult> {
         podcastIndexId: data.feed?.id
       };
     } else {
+      // PI uses 'description' for messages, but check 'message' as fallback
+      const errorMsg = data.description || data.message || data.error;
       return {
         success: false,
-        message: data.description || 'Podcast Index returned an error'
+        message: errorMsg || 'Podcast Index rejected the feed (video feeds are not supported)'
       };
     }
   } catch (error) {
