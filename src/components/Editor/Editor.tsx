@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useFeed } from '../../store/feedStore';
 import { LANGUAGES, PERSON_GROUPS, PERSON_ROLES, createEmptyPersonRole, createEmptyTrack, isVideoMedium, createEmptyAlternateEnclosure } from '../../types/feed';
 import type { PersonGroup, AlternateEnclosure } from '../../types/feed';
@@ -12,6 +12,10 @@ import { AddRecipientSelect } from '../AddRecipientSelect';
 import { RecipientsList } from '../RecipientsList';
 import { FundingFields } from '../FundingFields';
 import { ArtworkFields } from '../ArtworkFields';
+
+// Module-level cache for collapsed track IDs per album GUID
+// This persists across component remounts (e.g., HMR) to prevent unwanted collapse
+const collapsedCache = new Map<string, Set<string>>();
 
 // Roles Reference Modal
 function RolesModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -75,19 +79,52 @@ export function Editor() {
   const { state, dispatch } = useFeed();
   // Get the active album based on feedType (album or videoFeed)
   const album = state.feedType === 'video' && state.videoFeed ? state.videoFeed : state.album;
-  const [collapsedTracks, setCollapsedTracks] = useState<Set<string>>(new Set());
+  const albumGuid = album?.podcastGuid;
+
+  const [collapsedTracks, setCollapsedTracks] = useState<Set<string>>(() => {
+    // Check cache first - restores state after remount (e.g., HMR)
+    if (albumGuid && collapsedCache.has(albumGuid)) {
+      return new Set(collapsedCache.get(albumGuid)!);
+    }
+    // First time seeing this album - collapse tracks with content (imported)
+    // Empty tracks (new album) stay expanded
+    if (album?.tracks) {
+      const tracksWithContent = album.tracks.filter(t => t.title || t.enclosureUrl);
+      const collapsed = new Set(tracksWithContent.map(t => t.id));
+      if (albumGuid) collapsedCache.set(albumGuid, collapsed);
+      return collapsed;
+    }
+    return new Set();
+  });
   const [showRolesModal, setShowRolesModal] = useState(false);
+  const lastProcessedGuidRef = useRef<string | undefined>(albumGuid);
 
   // Determine if this is a video feed
   const isVideo = isVideoMedium(album.medium);
 
-  // Collapse all tracks by default when album is replaced (e.g., on import)
-  // Only trigger on podcastGuid change, not on every field update
+  // Update cache whenever collapsed tracks change
   useEffect(() => {
-    if (album?.tracks) {
-      setCollapsedTracks(new Set(album.tracks.map(t => t.id)));
+    if (albumGuid) {
+      collapsedCache.set(albumGuid, collapsedTracks);
     }
-  }, [album?.podcastGuid]);
+  }, [collapsedTracks, albumGuid]);
+
+  // Handle album changes during session (e.g., importing a new album)
+  useEffect(() => {
+    if (album?.tracks && albumGuid !== lastProcessedGuidRef.current) {
+      lastProcessedGuidRef.current = albumGuid;
+      // Check cache first
+      if (albumGuid && collapsedCache.has(albumGuid)) {
+        setCollapsedTracks(new Set(collapsedCache.get(albumGuid)!));
+      } else {
+        // New album - collapse tracks with content
+        const tracksWithContent = album.tracks.filter(t => t.title || t.enclosureUrl);
+        const collapsed = new Set(tracksWithContent.map(t => t.id));
+        if (albumGuid) collapsedCache.set(albumGuid, collapsed);
+        setCollapsedTracks(collapsed);
+      }
+    }
+  }, [albumGuid, album?.tracks]);
 
   const toggleTrackCollapse = (trackId: string) => {
     setCollapsedTracks(prev => {
