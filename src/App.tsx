@@ -230,7 +230,7 @@ function AppContent() {
             </div>
           </div>
         </header>
-        {state.feedType === 'publisher' ? <PublisherEditor /> : <Editor key={state.feedType} />}
+        {state.feedType === 'publisher' ? <PublisherEditor /> : <Editor key={`${state.feedType}-${state.album?.podcastGuid}-${state.videoFeed?.podcastGuid}`} />}
       </div>
 
       {showImportModal && (

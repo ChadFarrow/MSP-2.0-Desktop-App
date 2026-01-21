@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useFeed } from '../../store/feedStore';
 import { LANGUAGES, PERSON_GROUPS, PERSON_ROLES, createEmptyPersonRole, createEmptyTrack, isVideoMedium, createEmptyAlternateEnclosure } from '../../types/feed';
 import type { PersonGroup, AlternateEnclosure } from '../../types/feed';
@@ -77,14 +77,9 @@ export function Editor() {
   const album = state.feedType === 'video' && state.videoFeed ? state.videoFeed : state.album;
 
   // Simple collapse state - all tracks start expanded
-  // User can use "Collapse All" button if needed
+  // Editor remounts on album change (via key prop), so this always starts fresh
   const [collapsedTracks, setCollapsedTracks] = useState<Set<string>>(new Set());
   const [showRolesModal, setShowRolesModal] = useState(false);
-
-  // Reset collapsed state when album changes (new album, import, load, etc.)
-  useEffect(() => {
-    setCollapsedTracks(new Set());
-  }, [album?.podcastGuid]);
 
   // Determine if this is a video feed
   const isVideo = isVideoMedium(album.medium);
