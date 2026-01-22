@@ -76,33 +76,30 @@ export function Editor() {
   // Get the active album based on feedType (album or videoFeed)
   const album = state.feedType === 'video' && state.videoFeed ? state.videoFeed : state.album;
 
-  // Simple collapse state - all tracks start expanded
+  // Simple collapse state - all tracks start expanded (empty object = nothing collapsed)
   // Editor remounts on album change (via key prop), so this always starts fresh
-  const [collapsedTracks, setCollapsedTracks] = useState<Set<string>>(new Set());
+  const [collapsedTracks, setCollapsedTracks] = useState<Record<string, boolean>>({});
   const [showRolesModal, setShowRolesModal] = useState(false);
 
   // Determine if this is a video feed
   const isVideo = isVideoMedium(album.medium);
 
   const toggleTrackCollapse = (trackId: string) => {
-    setCollapsedTracks(prev => {
-      const next = new Set(prev);
-      if (next.has(trackId)) {
-        next.delete(trackId);
-      } else {
-        next.add(trackId);
-      }
-      return next;
-    });
+    setCollapsedTracks(prev => ({
+      ...prev,
+      [trackId]: !prev[trackId]
+    }));
   };
 
-  const allTracksCollapsed = album?.tracks?.length > 0 && album.tracks.every(t => collapsedTracks.has(t.id));
+  const allTracksCollapsed = album?.tracks?.length > 0 && album.tracks.every(t => collapsedTracks[t.id]);
 
   const toggleAllTracks = () => {
     if (allTracksCollapsed) {
-      setCollapsedTracks(new Set());
+      setCollapsedTracks({});
     } else {
-      setCollapsedTracks(new Set(album?.tracks?.map(t => t.id) || []));
+      const allCollapsed: Record<string, boolean> = {};
+      album?.tracks?.forEach(t => { allCollapsed[t.id] = true; });
+      setCollapsedTracks(allCollapsed);
     }
   };
 
@@ -531,7 +528,7 @@ export function Editor() {
                         <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{track.duration}</span>
                       )}
                       <span style={{ color: 'var(--text-secondary)' }}>
-                        {collapsedTracks.has(track.id) ? '▶' : '▼'}
+                        {collapsedTracks[track.id] ? '▶' : '▼'}
                       </span>
                     </div>
                     <button
@@ -541,7 +538,7 @@ export function Editor() {
                       &#10005;
                     </button>
                   </div>
-                  {!collapsedTracks.has(track.id) && (
+                  {!collapsedTracks[track.id] && (
                   <div className="form-grid" style={{ marginTop: '12px' }}>
                     <div className="form-group">
                       <label className="form-label">{isVideo ? 'Video Title' : 'Track Title'} <span className="required">*</span><InfoIcon text={FIELD_INFO.trackTitle} /></label>
@@ -899,7 +896,7 @@ export function Editor() {
                   )}
 
                   {/* Track-specific Value Block */}
-                  {track.overrideValue && !collapsedTracks.has(track.id) && (
+                  {track.overrideValue && !collapsedTracks[track.id] && (
                     <div style={{ marginTop: '12px', padding: '12px', background: 'var(--bg-primary)', borderRadius: '8px' }}>
                       <h5 style={{ marginBottom: '12px', color: 'var(--text-secondary)' }}>Track Value Recipients</h5>
                       <div className="repeatable-list">
