@@ -138,7 +138,7 @@ export interface Album {
 
   // Podcast Index
   podcastGuid: string;
-  medium: 'music' | 'musicL';
+  medium: 'music';
   locked: boolean;
   lockedOwner: string;
   location: string;

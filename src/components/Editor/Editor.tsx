@@ -202,17 +202,6 @@ export function Editor() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Medium<InfoIcon text={FIELD_INFO.medium} /></label>
-                <select
-                  className="form-select"
-                  value={album.medium || 'music'}
-                  onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { medium: e.target.value as 'music' | 'musicL' } })}
-                >
-                  <option value="music">Music</option>
-                  <option value="musicL">Music (Long-form)</option>
-                </select>
-              </div>
-              <div className="form-group">
                 <label className="form-label">Owner Name<InfoIcon text={FIELD_INFO.ownerName} /></label>
                 <input
                   type="text"
