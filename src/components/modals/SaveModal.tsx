@@ -419,7 +419,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
             }
             saveHostedFeedInfo(currentFeedGuid, newInfo);
             setHostedInfo(newInfo);
-            setHostedUrl(hostedResult.url);
+            setHostedUrl(buildHostedUrl(hostedResult.feedId));
             setPendingToken(null);
             setLegacyHostedInfo(null);
             setTokenAcknowledged(false);
