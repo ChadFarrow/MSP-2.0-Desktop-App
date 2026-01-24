@@ -75,6 +75,18 @@ const extractFeedIdFromUrl = (url: string): string | null => {
   return match ? match[1] : null;
 };
 
+// Helper to check if an error is a CORS or network error
+const isCorsOrNetworkError = (errMsg: string): boolean => {
+  return (
+    errMsg.includes('failed to fetch') ||
+    errMsg.includes('networkerror') ||
+    errMsg.includes('network error') ||
+    errMsg.includes('cors') ||
+    errMsg.includes('blocked') ||
+    errMsg.includes('paste the xml')
+  );
+};
+
 // Notify Podcast Index about a feed update
 async function notifyPodcastIndex(feedUrl: string): Promise<{ status: 'indexed' | 'pending' | 'failed'; pageUrl?: string }> {
   try {
@@ -188,7 +200,7 @@ async function hostCatalogFeed(
       saveHostedFeedInfo(item.feedGuid, hostedInfo);
 
       // Notify PI in background
-      notifyPodcastIndex(result.url).catch(() => {});
+      notifyPodcastIndex(result.url).catch(err => console.warn('PI notification failed:', err));
 
       return {
         title: feedTitle,
@@ -221,17 +233,12 @@ async function hostCatalogFeed(
     if (isMspHosted(item.feedUrl)) {
       // If it's a CORS error, network error, or 404 for an MSP URL,
       // the feed likely exists but we just can't access it from the browser
-      const isCorsOrNetworkError =
-        errMsg.includes('failed to fetch') ||
-        errMsg.includes('networkerror') ||
-        errMsg.includes('network error') ||
-        errMsg.includes('cors') ||
-        errMsg.includes('blocked') ||
+      const isNetworkIssue =
+        isCorsOrNetworkError(errMsg) ||
         errMsg.includes('404') ||
-        errMsg.includes('not found') ||
-        errMsg.includes('paste the xml');
+        errMsg.includes('not found');
 
-      if (isCorsOrNetworkError) {
+      if (isNetworkIssue) {
         return {
           title,
           feedGuid: item.feedGuid,
@@ -293,10 +300,25 @@ async function processCatalogFeed(
       if (feedId) {
         const hostedInfo = getHostedFeedInfo(album.podcastGuid);
         if (hostedInfo && hostedInfo.feedId === feedId) {
-          // We have credentials - update directly
-          await updateHostedFeed(feedId, hostedInfo.editToken, updatedXml, feedTitle);
+          // Check if we can use Nostr auth
+          const isNostrLinked = hostedInfo.ownerPubkey && hasSigner();
+
+          if (isNostrLinked) {
+            await updateHostedFeedWithNostr(feedId, updatedXml, feedTitle);
+          } else if (hostedInfo.editToken) {
+            await updateHostedFeed(feedId, hostedInfo.editToken, updatedXml, feedTitle);
+          } else {
+            // No valid auth method
+            return {
+              title: feedTitle,
+              feedGuid: item.feedGuid,
+              status: 'skipped',
+              message: 'No credentials'
+            };
+          }
+
           // Notify PI in background (don't wait)
-          notifyPodcastIndex(feedUrl).catch(() => {});
+          notifyPodcastIndex(feedUrl).catch(err => console.warn('PI notification failed:', err));
           return {
             title: feedTitle,
             feedGuid: item.feedGuid,
@@ -319,15 +341,7 @@ async function processCatalogFeed(
 
     // Check if this is an MSP-hosted URL with CORS/network error
     if (isMspHosted(feedUrl)) {
-      const isCorsOrNetworkError =
-        errMsg.includes('failed to fetch') ||
-        errMsg.includes('networkerror') ||
-        errMsg.includes('network error') ||
-        errMsg.includes('cors') ||
-        errMsg.includes('blocked') ||
-        errMsg.includes('paste the xml');
-
-      if (isCorsOrNetworkError) {
+      if (isCorsOrNetworkError(errMsg)) {
         // We have credentials, we just can't fetch due to CORS
         // Try to update directly using the feed GUID
         const hostedInfo = getHostedFeedInfo(item.feedGuid);

@@ -2,12 +2,24 @@ import { useState } from 'react';
 import { fetchFeedFromUrl } from '../../utils/xmlParser';
 import { loadAlbumsFromNostr, loadAlbumByDTag, fetchNostrMusicTracks, groupTracksByAlbum } from '../../utils/nostrSync';
 import { convertNostrMusicToAlbum, parseNostrEventJson } from '../../utils/nostrMusicConverter';
-import { buildHostedUrl, type HostedFeedInfo } from '../../utils/hostedFeed';
+import { type HostedFeedInfo } from '../../utils/hostedFeed';
+import { fetchAdminFeeds } from '../../utils/adminAuth';
 import { pendingHostedStorage } from '../../utils/storage';
 import { formatTimestamp } from '../../utils/dateUtils';
+import { useNostr } from '../../store/nostrStore';
 import type { SavedAlbumInfo, NostrMusicAlbumGroup } from '../../types/nostr';
 import type { Album } from '../../types/feed';
 import { ModalWrapper } from './ModalWrapper';
+
+interface HostedFeedListItem {
+  feedId: string;
+  title?: string;
+  author?: string;
+  medium?: string;
+  createdAt?: string;
+  lastUpdated?: string;
+  ownerPubkey?: string;
+}
 
 interface ImportModalProps {
   onClose: () => void;
@@ -17,6 +29,7 @@ interface ImportModalProps {
 }
 
 export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: ImportModalProps) {
+  const { state: nostrState } = useNostr();
   const [mode, setMode] = useState<'file' | 'paste' | 'url' | 'nostr' | 'nostrMusic' | 'nostrEvent' | 'hosted'>('file');
   const [xmlContent, setXmlContent] = useState('');
   const [jsonContent, setJsonContent] = useState('');
@@ -31,6 +44,8 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
   const [hostedFeedId, setHostedFeedId] = useState('');
   const [hostedToken, setHostedToken] = useState('');
   const [showHelp, setShowHelp] = useState(false);
+  const [hostedFeeds, setHostedFeeds] = useState<HostedFeedListItem[]>([]);
+  const [loadingHostedFeeds, setLoadingHostedFeeds] = useState(false);
 
   const fetchSavedAlbums = async () => {
     setLoadingAlbums(true);
@@ -45,6 +60,29 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
       }
     } else {
       setError(result.message);
+    }
+  };
+
+  const fetchHostedFeeds = async () => {
+    if (!isLoggedIn || !nostrState.user?.pubkey) return;
+
+    setLoadingHostedFeeds(true);
+    setError('');
+
+    try {
+      const result = await fetchAdminFeeds();
+      // Filter to only show feeds owned by the current user
+      const myFeeds = result.feeds.filter(
+        (f: HostedFeedListItem) => f.ownerPubkey === nostrState.user?.pubkey
+      );
+      setHostedFeeds(myFeeds);
+      if (myFeeds.length === 0) {
+        setError('No hosted feeds found for your account');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch hosted feeds');
+    } finally {
+      setLoadingHostedFeeds(false);
     }
   };
 
@@ -124,9 +162,8 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
     setError('');
 
     try {
-      // Fetch the feed XML (public, no auth needed)
-      const feedUrl = buildHostedUrl(hostedFeedId.trim());
-      const response = await fetch(feedUrl);
+      // Fetch the feed XML using relative URL (works on localhost and production)
+      const response = await fetch(`/api/hosted/${hostedFeedId.trim()}.xml`);
       if (!response.ok) {
         throw new Error('Feed not found');
       }
@@ -143,6 +180,37 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
         // Store as pending - will be associated with the album's GUID after import
         pendingHostedStorage.save(newInfo);
       }
+
+      onImport(xml);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to import hosted feed');
+      setLoading(false);
+    }
+  };
+
+  const handleImportHostedFeed = async (feed: HostedFeedListItem) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      // Fetch using relative URL (works on localhost and production)
+      const response = await fetch(`/api/hosted/${feed.feedId}.xml`);
+      if (!response.ok) {
+        throw new Error('Feed not found');
+      }
+      const xml = await response.text();
+
+      // Store feed info as pending (linked to Nostr, no token needed)
+      const newInfo: HostedFeedInfo = {
+        feedId: feed.feedId,
+        editToken: '', // No token needed - linked to Nostr
+        createdAt: Date.now(),
+        lastUpdated: Date.now(),
+        ownerPubkey: feed.ownerPubkey,
+        linkedAt: Date.now()
+      };
+      pendingHostedStorage.save(newInfo);
 
       onImport(xml);
       onClose();
@@ -227,9 +295,16 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
                 {loading ? 'Importing...' : 'Import Event'}
               </button>
             ) : mode === 'hosted' ? (
-              <button className="btn btn-primary" onClick={handleImportHosted} disabled={loading}>
-                {loading ? 'Importing...' : 'Import Hosted'}
-              </button>
+              <>
+                {isLoggedIn && (
+                  <button className="btn btn-secondary" onClick={fetchHostedFeeds} disabled={loadingHostedFeeds}>
+                    {loadingHostedFeeds ? 'Loading...' : 'Refresh'}
+                  </button>
+                )}
+                <button className="btn btn-primary" onClick={handleImportHosted} disabled={loading || !hostedFeedId.trim()}>
+                  {loading ? 'Importing...' : 'Import by ID'}
+                </button>
+              </>
             ) : (
               <button className="btn btn-primary" onClick={handleImport} disabled={loading}>
                 {loading ? 'Importing...' : 'Import Feed'}
@@ -248,6 +323,7 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
                 setMode(newMode);
                 if (newMode === 'nostr') fetchSavedAlbums();
                 if (newMode === 'nostrMusic') fetchMusicTracks();
+                if (newMode === 'hosted' && isLoggedIn) fetchHostedFeeds();
               }}
             >
               <option value="file">Upload File</option>
@@ -407,9 +483,53 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
             </div>
           ) : mode === 'hosted' ? (
             <div className="form-group">
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '12px' }}>
-                Import a feed hosted on MSP. Upload your backup file or enter details manually.
-              </p>
+              {/* Show user's hosted feeds if logged in */}
+              {isLoggedIn && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label className="form-label">My Hosted Feeds</label>
+                  <select
+                    className="form-select"
+                    value=""
+                    onChange={(e) => {
+                      const feedId = e.target.value;
+                      if (feedId) {
+                        const feed = hostedFeeds.find(f => f.feedId === feedId);
+                        if (feed) handleImportHostedFeed(feed);
+                      }
+                    }}
+                    disabled={loading || loadingHostedFeeds}
+                  >
+                    <option value="">
+                      {loadingHostedFeeds
+                        ? 'Loading...'
+                        : hostedFeeds.length > 0
+                          ? `Select a feed (${hostedFeeds.length})`
+                          : 'No feeds found'}
+                    </option>
+                    {hostedFeeds.map((feed) => {
+                      const feedType = feed.medium === 'publisher' ? '[Publisher]' : '[Album]';
+                      return (
+                        <option key={feed.feedId} value={feed.feedId}>
+                          {feedType} {feed.title || 'Untitled Feed'} {feed.author ? `- ${feed.author}` : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+
+                  {/* Divider */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '16px 0' }}>
+                    <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>OR IMPORT BY BACKUP/ID</span>
+                    <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
+                  </div>
+                </div>
+              )}
+
+              {!isLoggedIn && (
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '12px' }}>
+                  Import a feed hosted on MSP. Upload your backup file or enter details manually.
+                </p>
+              )}
 
               {/* Upload backup file */}
               <label

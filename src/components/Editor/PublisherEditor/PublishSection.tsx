@@ -392,8 +392,7 @@ export function PublishSection({ publisherFeed }: PublishSectionProps) {
                 downloadHostedFeedBackup(
                   pendingHostedInfo.feedId,
                   pendingHostedInfo.editToken,
-                  publisherFeed.title || 'Publisher Feed',
-                  publisherFeed.podcastGuid
+                  publisherFeed.title || 'Publisher Feed'
                 );
               }}
             >

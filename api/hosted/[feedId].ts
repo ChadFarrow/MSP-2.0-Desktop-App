@@ -1,66 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { put, del, list } from '@vercel/blob';
-import { createHash } from 'crypto';
 import { parseAuthHeader, parseFeedAuthHeader } from '../_utils/adminAuth.js';
-
-const PI_API_KEY = process.env.PODCASTINDEX_API_KEY;
-const PI_API_SECRET = process.env.PODCASTINDEX_API_SECRET;
-
-// Notify Podcast Index to refresh feed and return PI ID if available
-async function notifyPodcastIndex(feedUrl: string): Promise<number | null> {
-  if (!PI_API_KEY || !PI_API_SECRET) return null;
-
-  try {
-    const apiHeaderTime = Math.floor(Date.now() / 1000);
-    const hash = createHash('sha1')
-      .update(PI_API_KEY + PI_API_SECRET + apiHeaderTime)
-      .digest('hex');
-
-    const headers = {
-      'X-Auth-Key': PI_API_KEY,
-      'X-Auth-Date': apiHeaderTime.toString(),
-      'Authorization': hash,
-      'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)'
-    };
-
-    const response = await fetch(`https://api.podcastindex.org/api/1.0/add/byfeedurl?url=${encodeURIComponent(feedUrl)}`, {
-      method: 'POST',
-      headers
-    });
-
-    const text = await response.text();
-    if (text) {
-      try {
-        const data = JSON.parse(text);
-        if (data.feed?.id) {
-          return data.feed.id;
-        }
-      } catch {
-        // JSON parse failed, ignore
-      }
-    }
-  } catch {
-    // Silent fail - don't block feed update
-  }
-  return null;
-}
-
-// Get base URL from request
-function getBaseUrl(req: VercelRequest): string {
-  const proto = req.headers['x-forwarded-proto'] || 'https';
-  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
-  return `${proto}://${host}`;
-}
-
-// Hash token for comparison
-function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
-}
-
-// Validate feedId format (UUID)
-function isValidFeedId(feedId: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(feedId);
-}
+import {
+  notifyPodcastIndex,
+  getBaseUrl,
+  hashToken,
+  isValidFeedId
+} from '../_utils/feedUtils.js';
 
 // Metadata stored in separate .meta.json blob
 interface FeedMetadata {
@@ -70,6 +16,7 @@ interface FeedMetadata {
   title?: string;
   ownerPubkey?: string;  // Nostr pubkey (hex) - if linked
   linkedAt?: string;     // When Nostr was linked
+  podcastIndexId?: number;
 }
 
 // Helper to fetch metadata from .meta.json blob

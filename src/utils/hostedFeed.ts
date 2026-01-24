@@ -139,8 +139,7 @@ export interface HostedFeedBackup {
 export function downloadHostedFeedBackup(
   feedId: string,
   editToken: string,
-  albumTitle: string,
-  _podcastGuid: string
+  albumTitle: string
 ): void {
   const backup: HostedFeedBackup = {
     _info: 'MSP Hosted Feed Backup - Keep this file safe!',

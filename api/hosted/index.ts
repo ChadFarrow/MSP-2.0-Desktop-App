@@ -1,103 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { put, list } from '@vercel/blob';
-import { createHash, randomBytes } from 'crypto';
+import { randomBytes } from 'crypto';
 import { parseAuthHeader, parseFeedAuthHeader } from '../_utils/adminAuth.js';
-
-const PI_API_KEY = process.env.PODCASTINDEX_API_KEY;
-const PI_API_SECRET = process.env.PODCASTINDEX_API_SECRET;
-
-// Submit feed to Podcast Index and return PI ID if available
-async function notifyPodcastIndex(feedUrl: string): Promise<number | null> {
-  if (!PI_API_KEY || !PI_API_SECRET) return null;
-
-  try {
-    const apiHeaderTime = Math.floor(Date.now() / 1000);
-    const hash = createHash('sha1')
-      .update(PI_API_KEY + PI_API_SECRET + apiHeaderTime)
-      .digest('hex');
-
-    const headers = {
-      'X-Auth-Key': PI_API_KEY,
-      'X-Auth-Date': apiHeaderTime.toString(),
-      'Authorization': hash,
-      'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)'
-    };
-
-    const response = await fetch(`https://api.podcastindex.org/api/1.0/add/byfeedurl?url=${encodeURIComponent(feedUrl)}`, {
-      method: 'POST',
-      headers
-    });
-
-    const text = await response.text();
-    if (text) {
-      try {
-        const data = JSON.parse(text);
-        if (data.feed?.id) {
-          return data.feed.id;
-        }
-      } catch {
-        // JSON parse failed, ignore
-      }
-    }
-  } catch {
-    // Silent fail - don't block feed creation
-  }
-  return null;
-}
-
-// Look up existing feed's PI ID from Podcast Index by GUID
-async function lookupPodcastIndexId(podcastGuid: string): Promise<number | null> {
-  if (!PI_API_KEY || !PI_API_SECRET) return null;
-
-  try {
-    const apiHeaderTime = Math.floor(Date.now() / 1000);
-    const hash = createHash('sha1')
-      .update(PI_API_KEY + PI_API_SECRET + apiHeaderTime)
-      .digest('hex');
-
-    const headers = {
-      'X-Auth-Key': PI_API_KEY,
-      'X-Auth-Date': apiHeaderTime.toString(),
-      'Authorization': hash,
-      'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)'
-    };
-
-    const response = await fetch(`https://api.podcastindex.org/api/1.0/podcasts/byguid?guid=${encodeURIComponent(podcastGuid)}`, {
-      headers
-    });
-
-    const text = await response.text();
-    if (text) {
-      try {
-        const data = JSON.parse(text);
-        if (data.feed?.id) {
-          return data.feed.id;
-        }
-      } catch {
-        // JSON parse failed, ignore
-      }
-    }
-  } catch {
-    // Silent fail
-  }
-  return null;
-}
+import {
+  notifyPodcastIndex,
+  lookupPodcastIndexId,
+  getBaseUrl,
+  hashToken
+} from '../_utils/feedUtils.js';
 
 // Generate a secure edit token
 function generateEditToken(): string {
   return randomBytes(32).toString('base64url');
-}
-
-// Hash token for storage (never store raw token)
-function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
-}
-
-// Get base URL from request
-function getBaseUrl(req: VercelRequest): string {
-  const proto = req.headers['x-forwarded-proto'] || 'https';
-  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
-  return `${proto}://${host}`;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -126,8 +40,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const meta = await response.json();
           const feedId = blob.pathname.replace('feeds/', '').replace('.meta.json', '');
 
-          // Try to extract author from the XML feed
+          // Try to extract author and medium from the XML feed
           let author: string | undefined;
+          let medium: string | undefined;
           const xmlBlob = xmlBlobs.find(b => b.pathname === `feeds/${feedId}.xml`);
           if (xmlBlob) {
             try {
@@ -138,8 +53,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               if (authorMatch) {
                 author = authorMatch[1];
               }
+              // Extract podcast:medium using regex
+              const mediumMatch = xml.match(/<podcast:medium>([^<]+)<\/podcast:medium>/);
+              if (mediumMatch) {
+                medium = mediumMatch[1];
+              }
             } catch {
-              // Ignore errors extracting author
+              // Ignore errors extracting metadata
             }
           }
 
@@ -157,11 +77,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 access: 'public',
                 contentType: 'application/json',
                 addRandomSuffix: false
-              }).catch(() => {});
+              }).catch(err => console.warn('Failed to update metadata with PI ID:', err));
             }
           }
 
-          return { feedId, author, ...meta, podcastIndexId };
+          return { feedId, author, medium, ...meta, podcastIndexId };
         })
       );
 

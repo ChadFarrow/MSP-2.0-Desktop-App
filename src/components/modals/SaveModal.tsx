@@ -439,11 +439,11 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
             }
             saveHostedFeedInfo(currentFeedGuid, newInfo);
             setHostedInfo(newInfo);
-            setHostedUrl(hostedResult.url);
+            setHostedUrl(buildHostedUrl(hostedResult.feedId));
             setPendingToken(null);
             setLegacyHostedInfo(null);
             setTokenAcknowledged(false);
-            const piUrl = await notifyPodcastIndex(hostedResult.url);
+            const piUrl = await notifyPodcastIndex(buildHostedUrl(hostedResult.feedId));
             let successMsg = legacyHostedInfo
               ? 'Feed migrated to new URL and legacy URL updated!'
               : (shouldLinkNostr ? 'Feed created and linked to your Nostr identity!' : 'Feed created!');
@@ -763,7 +763,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                     <button
                       className="btn btn-secondary"
                       onClick={() => {
-                        downloadHostedFeedBackup(currentFeedGuid, pendingToken, currentFeedTitle, currentFeedGuid);
+                        downloadHostedFeedBackup(currentFeedGuid, pendingToken, currentFeedTitle);
                         setMessage({ type: 'success', text: 'Backup file downloaded' });
                       }}
                     >

@@ -1,0 +1,110 @@
+// Shared API utilities for hosted feed endpoints
+import type { VercelRequest } from '@vercel/node';
+import { createHash } from 'crypto';
+
+const PI_API_KEY = process.env.PODCASTINDEX_API_KEY;
+const PI_API_SECRET = process.env.PODCASTINDEX_API_SECRET;
+
+/**
+ * Generate Podcast Index API auth headers
+ */
+function getPodcastIndexHeaders(): Record<string, string> {
+  if (!PI_API_KEY || !PI_API_SECRET) {
+    throw new Error('Podcast Index API credentials not configured');
+  }
+
+  const apiHeaderTime = Math.floor(Date.now() / 1000);
+  const hash = createHash('sha1')
+    .update(PI_API_KEY + PI_API_SECRET + apiHeaderTime)
+    .digest('hex');
+
+  return {
+    'X-Auth-Key': PI_API_KEY,
+    'X-Auth-Date': apiHeaderTime.toString(),
+    'Authorization': hash,
+    'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)'
+  };
+}
+
+/**
+ * Submit feed to Podcast Index and return PI ID if available
+ */
+export async function notifyPodcastIndex(feedUrl: string): Promise<number | null> {
+  if (!PI_API_KEY || !PI_API_SECRET) return null;
+
+  try {
+    const headers = getPodcastIndexHeaders();
+    const response = await fetch(
+      `https://api.podcastindex.org/api/1.0/add/byfeedurl?url=${encodeURIComponent(feedUrl)}`,
+      { method: 'POST', headers }
+    );
+
+    const text = await response.text();
+    if (text) {
+      try {
+        const data = JSON.parse(text);
+        if (data.feed?.id) {
+          return data.feed.id;
+        }
+      } catch {
+        // JSON parse failed
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to notify Podcast Index:', err instanceof Error ? err.message : err);
+  }
+  return null;
+}
+
+/**
+ * Look up existing feed's PI ID from Podcast Index by GUID
+ */
+export async function lookupPodcastIndexId(podcastGuid: string): Promise<number | null> {
+  if (!PI_API_KEY || !PI_API_SECRET) return null;
+
+  try {
+    const headers = getPodcastIndexHeaders();
+    const response = await fetch(
+      `https://api.podcastindex.org/api/1.0/podcasts/byguid?guid=${encodeURIComponent(podcastGuid)}`,
+      { headers }
+    );
+
+    const text = await response.text();
+    if (text) {
+      try {
+        const data = JSON.parse(text);
+        if (data.feed?.id) {
+          return data.feed.id;
+        }
+      } catch {
+        // JSON parse failed
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to lookup Podcast Index ID:', err instanceof Error ? err.message : err);
+  }
+  return null;
+}
+
+/**
+ * Get base URL from request headers
+ */
+export function getBaseUrl(req: VercelRequest): string {
+  const proto = req.headers['x-forwarded-proto'] || 'https';
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
+  return `${proto}://${host}`;
+}
+
+/**
+ * Hash token for storage/comparison (never store raw token)
+ */
+export function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
+
+/**
+ * Validate feedId format (UUID)
+ */
+export function isValidFeedId(feedId: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(feedId);
+}
