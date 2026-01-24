@@ -88,10 +88,17 @@ export async function lookupPodcastIndexId(podcastGuid: string): Promise<number 
 
 /**
  * Get base URL from request headers
+ * Falls back to canonical URL for localhost (PI can't reach local dev servers)
  */
 export function getBaseUrl(req: VercelRequest): string {
-  const proto = req.headers['x-forwarded-proto'] || 'https';
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
+
+  // Use canonical URL for localhost since PI can't reach local dev servers
+  if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
+    return process.env.CANONICAL_URL || 'https://msp.podtards.com';
+  }
+
+  const proto = req.headers['x-forwarded-proto'] || 'https';
   return `${proto}://${host}`;
 }
 
