@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { PublisherFeed } from '../../../types/feed';
 import { createEmptyRemoteItem } from '../../../types/feed';
 import type { FeedAction } from '../../../store/feedStore';
+import { useNostr } from '../../../store/nostrStore';
+import { createAdminAuthHeader } from '../../../utils/adminAuth';
 import { InfoIcon } from '../../InfoIcon';
 import { Section } from '../../Section';
 
@@ -11,6 +13,14 @@ interface SearchResult {
   podcastGuid: string;
   url: string;
   image: string;
+}
+
+interface MspFeed {
+  feedId: string;
+  title: string;
+  author?: string;
+  medium?: string;
+  createdAt?: string;
 }
 
 // Field info for publisher-specific fields
@@ -26,6 +36,7 @@ interface CatalogFeedsSectionProps {
 }
 
 export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSectionProps) {
+  const { state: nostrState } = useNostr();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -33,6 +44,12 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
 
   // Refresh artwork state
   const [refreshingIndex, setRefreshingIndex] = useState<number | null>(null);
+
+  // My MSP Feeds state
+  const [myFeeds, setMyFeeds] = useState<MspFeed[]>([]);
+  const [loadingMyFeeds, setLoadingMyFeeds] = useState(false);
+  const [myFeedsError, setMyFeedsError] = useState('');
+  const [showMyFeeds, setShowMyFeeds] = useState(false);
 
   // Refresh feed info from Podcast Index by GUID
   const handleRefreshArtwork = async (index: number) => {
@@ -64,6 +81,82 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
     } finally {
       setRefreshingIndex(null);
     }
+  };
+
+  // Fetch user's own MSP-hosted feeds
+  const handleFetchMyFeeds = async () => {
+    if (!nostrState.isLoggedIn || !nostrState.user?.pubkey) return;
+
+    setLoadingMyFeeds(true);
+    setMyFeedsError('');
+    setMyFeeds([]);
+    setShowMyFeeds(true);
+
+    try {
+      const url = `${window.location.origin}/api/hosted/`;
+      const authHeader = await createAdminAuthHeader(url, 'GET');
+
+      const response = await fetch('/api/hosted/', {
+        headers: { 'Authorization': authHeader }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch feeds');
+      }
+
+      const data = await response.json();
+
+      // Filter to only show feeds owned by the current user
+      const userFeeds = (data.feeds || []).filter(
+        (feed: MspFeed & { ownerPubkey?: string }) => feed.ownerPubkey === nostrState.user?.pubkey
+      );
+
+      // For each feed, try to extract medium from the XML
+      const feedsWithMedium = await Promise.all(
+        userFeeds.map(async (feed: MspFeed) => {
+          try {
+            const feedResponse = await fetch(`/api/hosted/${feed.feedId}.xml`);
+            if (feedResponse.ok) {
+              const xml = await feedResponse.text();
+              // Extract medium from XML
+              const mediumMatch = xml.match(/<podcast:medium>([^<]+)<\/podcast:medium>/);
+              return { ...feed, medium: mediumMatch?.[1] || 'music' };
+            }
+          } catch {
+            // Silent fail - default to music
+          }
+          return { ...feed, medium: 'music' };
+        })
+      );
+
+      setMyFeeds(feedsWithMedium);
+    } catch (err) {
+      setMyFeedsError(err instanceof Error ? err.message : 'Failed to fetch feeds');
+    } finally {
+      setLoadingMyFeeds(false);
+    }
+  };
+
+  // Add feed from My MSP Feeds
+  const handleAddFromMyFeeds = (feed: MspFeed) => {
+    // Check if already in catalog
+    const alreadyExists = publisherFeed.remoteItems.some(item => item.feedGuid === feed.feedId);
+    if (alreadyExists) return;
+
+    dispatch({
+      type: 'ADD_REMOTE_ITEM',
+      payload: {
+        ...createEmptyRemoteItem(),
+        feedGuid: feed.feedId,
+        feedUrl: `${window.location.origin}/api/hosted/${feed.feedId}.xml`,
+        title: feed.title || 'Untitled Feed',
+        medium: feed.medium
+      }
+    });
+
+    // Remove from displayed list
+    setMyFeeds(prev => prev.filter(f => f.feedId !== feed.feedId));
   };
 
   const handleSearch = async () => {
@@ -199,6 +292,108 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
               </div>
             ))}
             </div>
+          </div>
+        )}
+
+        {/* My MSP Feeds Section */}
+        {nostrState.isLoggedIn && (
+          <div style={{ marginBottom: '16px' }}>
+            <button
+              className="btn btn-secondary"
+              onClick={handleFetchMyFeeds}
+              disabled={loadingMyFeeds}
+              style={{ marginBottom: '12px' }}
+            >
+              {loadingMyFeeds ? 'Loading...' : '📂 Browse My MSP Feeds'}
+            </button>
+
+            {myFeedsError && (
+              <p style={{ color: 'var(--danger-color)', fontSize: '14px', marginBottom: '12px' }}>{myFeedsError}</p>
+            )}
+
+            {showMyFeeds && myFeeds.length === 0 && !loadingMyFeeds && !myFeedsError && (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '12px' }}>
+                No MSP-hosted feeds found linked to your Nostr identity.
+              </p>
+            )}
+
+            {myFeeds.length > 0 && (
+              <div style={{
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                marginBottom: '16px'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                  backgroundColor: 'var(--surface-color)',
+                  borderBottom: '1px solid var(--border-color)'
+                }}>
+                  <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                    My MSP Feeds ({myFeeds.length})
+                  </span>
+                  <button
+                    className="btn btn-icon"
+                    onClick={() => { setMyFeeds([]); setShowMyFeeds(false); }}
+                    style={{ padding: '4px 8px', fontSize: '12px' }}
+                  >
+                    Close
+                  </button>
+                </div>
+                <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                  {myFeeds.map(feed => {
+                    const alreadyInCatalog = publisherFeed.remoteItems.some(item => item.feedGuid === feed.feedId);
+                    return (
+                      <div
+                        key={feed.feedId}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '12px',
+                          gap: '12px',
+                          borderBottom: '1px solid var(--border-color)',
+                          opacity: alreadyInCatalog ? 0.5 : 1
+                        }}
+                      >
+                        <span style={{
+                          fontSize: '20px',
+                          width: '32px',
+                          textAlign: 'center'
+                        }}>
+                          {feed.medium === 'video' ? '🎬' : '🎵'}
+                        </span>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontWeight: 500, display: 'block' }}>{feed.title || 'Untitled Feed'}</span>
+                          {feed.author && (
+                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{feed.author}</span>
+                          )}
+                        </div>
+                        <span style={{
+                          fontSize: '11px',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          backgroundColor: feed.medium === 'video' ? 'rgba(139, 92, 246, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                          color: feed.medium === 'video' ? '#a78bfa' : '#60a5fa'
+                        }}>
+                          {feed.medium || 'music'}
+                        </span>
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => handleAddFromMyFeeds(feed)}
+                          disabled={alreadyInCatalog}
+                          style={{ padding: '6px 16px' }}
+                        >
+                          {alreadyInCatalog ? 'Added' : 'Add'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

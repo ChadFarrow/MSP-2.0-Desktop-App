@@ -66,7 +66,7 @@ async function notifyPodcastIndex(feedUrl: string): Promise<PINotifyResult> {
       const errorMsg = data.description || data.message || data.error;
       return {
         success: false,
-        message: errorMsg || 'Podcast Index rejected the feed (video feeds are not supported)'
+        message: errorMsg || 'Podcast Index rejected the feed'
       };
     }
   } catch (error) {

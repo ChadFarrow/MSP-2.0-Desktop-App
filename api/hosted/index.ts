@@ -66,7 +66,7 @@ async function notifyPodcastIndex(feedUrl: string): Promise<PINotifyResult> {
       const errorMsg = data.description || data.message || data.error;
       return {
         success: false,
-        message: errorMsg || 'Podcast Index rejected the feed (video feeds are not supported)'
+        message: errorMsg || 'Podcast Index rejected the feed'
       };
     }
   } catch (error) {
@@ -93,17 +93,21 @@ function getBaseUrl(req: VercelRequest): string {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // GET - List all feeds (admin only)
+  // GET - List feeds (admin sees all, regular users see their own)
   if (req.method === 'GET') {
     // Check legacy admin key
     const adminKey = req.headers['x-admin-key'];
     const hasLegacyAdmin = process.env.MSP_ADMIN_KEY && adminKey === process.env.MSP_ADMIN_KEY;
 
-    // Check Nostr auth header
+    // Check Nostr auth header - first try admin, then regular user
     const authHeader = req.headers['authorization'] as string | undefined;
-    const nostrAuth = await parseAuthHeader(authHeader);
+    const nostrAdminAuth = await parseAuthHeader(authHeader);
+    const nostrUserAuth = !nostrAdminAuth.valid ? await parseFeedAuthHeader(authHeader) : nostrAdminAuth;
 
-    if (!hasLegacyAdmin && !nostrAuth.valid) {
+    const isAdmin = hasLegacyAdmin || nostrAdminAuth.valid;
+    const userPubkey = nostrUserAuth.valid ? nostrUserAuth.pubkey : undefined;
+
+    if (!isAdmin && !userPubkey) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -112,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const metaBlobs = blobs.filter(b => b.pathname.endsWith('.meta.json'));
       const xmlBlobs = blobs.filter(b => b.pathname.endsWith('.xml'));
 
-      const feeds = await Promise.all(
+      let feeds = await Promise.all(
         metaBlobs.map(async (blob) => {
           const response = await fetch(blob.url);
           const meta = await response.json();
@@ -138,6 +142,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return { feedId, author, ...meta };
         })
       );
+
+      // If not admin, filter to only show user's own feeds
+      if (!isAdmin && userPubkey) {
+        feeds = feeds.filter((feed: { ownerPubkey?: string }) => feed.ownerPubkey === userPubkey);
+      }
 
       return res.status(200).json({ feeds, count: feeds.length });
     } catch (error) {
