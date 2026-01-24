@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useFeed } from '../../store/feedStore';
-import { LANGUAGES, PERSON_GROUPS, PERSON_ROLES, createEmptyPersonRole, createEmptyTrack, isVideoMedium, createEmptyAlternateEnclosure } from '../../types/feed';
-import type { PersonGroup, AlternateEnclosure } from '../../types/feed';
+import { LANGUAGES, PERSON_GROUPS, PERSON_ROLES, createEmptyPersonRole, createEmptyTrack, isVideoMedium } from '../../types/feed';
+import type { PersonGroup } from '../../types/feed';
 import { FIELD_INFO } from '../../data/fieldInfo';
 import { detectAddressType } from '../../utils/addressUtils';
 import { getMediaDuration, secondsToHHMMSS, formatDuration } from '../../utils/audioUtils';
@@ -769,107 +769,6 @@ export function Editor() {
                         })}
                       />
                     </div>
-                    {/* Music Video fields - only shown on Album page (not Video page) */}
-                    {!isVideo && (
-                      <>
-                        <div className="form-group full-width" style={{ marginTop: '8px' }}>
-                          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '0 0 12px 0' }}>
-                            <strong>Alternate Enclosure:</strong> Add an optional music video for this track. The audio file remains the main enclosure,
-                            while the video is offered as an alternate version via <code style={{ background: 'var(--bg-tertiary)', padding: '2px 4px', borderRadius: '3px' }}>&lt;podcast:alternateEnclosure&gt;</code>.
-                            Apps that support this tag can let listeners choose between audio and video.
-                          </p>
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Music Video URL<InfoIcon text={FIELD_INFO.musicVideoUrl} /></label>
-                          <input
-                            type="url"
-                            className="form-input"
-                            placeholder="https://example.com/video.mp4"
-                            value={track.alternateEnclosures?.[0]?.sources?.[0]?.uri || ''}
-                            onChange={e => {
-                              const videoUrl = e.target.value;
-                              if (videoUrl) {
-                                // Create or update alternate enclosure for music video
-                                const existingAltEnc = track.alternateEnclosures?.[0];
-                                const altEnc: AlternateEnclosure = existingAltEnc
-                                  ? {
-                                      ...existingAltEnc,
-                                      sources: [{ uri: videoUrl }]
-                                    }
-                                  : {
-                                      ...createEmptyAlternateEnclosure('video/mp4'),
-                                      title: 'Music Video',
-                                      sources: [{ uri: videoUrl }]
-                                    };
-                                dispatch({
-                                  type: 'UPDATE_TRACK',
-                                  payload: { index, track: { alternateEnclosures: [altEnc] } }
-                                });
-                              } else {
-                                // Clear alternate enclosures if URL is empty
-                                dispatch({
-                                  type: 'UPDATE_TRACK',
-                                  payload: { index, track: { alternateEnclosures: undefined } }
-                                });
-                              }
-                            }}
-                            onPaste={async e => {
-                              const url = e.clipboardData.getData('text').trim();
-                              if (url && url.startsWith('http')) {
-                                // Detect MIME type from extension
-                                const ext = url.split('.').pop()?.toLowerCase();
-                                const mimeType = ext === 'webm' ? 'video/webm' : 'video/mp4';
-
-                                const altEnc: AlternateEnclosure = {
-                                  ...createEmptyAlternateEnclosure(mimeType),
-                                  title: 'Music Video',
-                                  sources: [{ uri: url }]
-                                };
-                                dispatch({
-                                  type: 'UPDATE_TRACK',
-                                  payload: { index, track: { alternateEnclosures: [altEnc] } }
-                                });
-                              }
-                            }}
-                          />
-                          {track.alternateEnclosures?.[0]?.sources?.[0]?.uri && (
-                            <video
-                              src={track.alternateEnclosures[0].sources[0].uri}
-                              controls
-                              style={{ width: '100%', marginTop: '8px', maxHeight: '200px' }}
-                              onError={e => (e.target as HTMLVideoElement).style.display = 'none'}
-                            />
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Video File Size (bytes)<InfoIcon text={FIELD_INFO.musicVideoLength} /></label>
-                          <input
-                            type="text"
-                            className="form-input"
-                            placeholder="e.g., 58390859"
-                            value={track.alternateEnclosures?.[0]?.length || ''}
-                            onChange={e => {
-                              const existingAltEnc = track.alternateEnclosures?.[0];
-                              if (existingAltEnc) {
-                                dispatch({
-                                  type: 'UPDATE_TRACK',
-                                  payload: {
-                                    index,
-                                    track: {
-                                      alternateEnclosures: [{
-                                        ...existingAltEnc,
-                                        length: e.target.value || undefined
-                                      }]
-                                    }
-                                  }
-                                });
-                              }
-                            }}
-                            disabled={!track.alternateEnclosures?.[0]?.sources?.[0]?.uri}
-                          />
-                        </div>
-                      </>
-                    )}
                     <div className="form-group">
                       <Toggle
                         checked={track.explicit}
