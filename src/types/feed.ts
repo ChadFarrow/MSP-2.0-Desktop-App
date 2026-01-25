@@ -228,6 +228,9 @@ export interface PublisherFeed {
 
   // Remote items - the feeds this publisher owns
   remoteItems: RemoteItem[];
+
+  // URL feed was imported from (used to auto-populate Publisher Feed URL field)
+  sourceUrl?: string;
 }
 
 export interface FeedState {

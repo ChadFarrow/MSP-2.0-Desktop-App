@@ -17,14 +17,22 @@ export function DownloadCatalogSection({ publisherFeed }: DownloadCatalogSection
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // Auto-populate URL if publisher feed is hosted on MSP
+  // Auto-populate URL from sourceUrl (imported URL) or MSP hosted URL
   // Check periodically in case user hosts from the reminder section above
   useEffect(() => {
     const checkHostedUrl = () => {
-      if (publisherFeed.podcastGuid && !publisherFeedUrl) {
-        const hostedInfo = getHostedFeedInfo(publisherFeed.podcastGuid);
-        if (hostedInfo) {
-          setPublisherFeedUrl(buildHostedUrl(hostedInfo.feedId));
+      if (!publisherFeedUrl) {
+        // First priority: use sourceUrl if the feed was imported from a URL
+        if (publisherFeed.sourceUrl) {
+          setPublisherFeedUrl(publisherFeed.sourceUrl);
+          return;
+        }
+        // Second priority: check if hosted on MSP
+        if (publisherFeed.podcastGuid) {
+          const hostedInfo = getHostedFeedInfo(publisherFeed.podcastGuid);
+          if (hostedInfo) {
+            setPublisherFeedUrl(buildHostedUrl(hostedInfo.feedId));
+          }
         }
       }
     };
@@ -35,7 +43,7 @@ export function DownloadCatalogSection({ publisherFeed }: DownloadCatalogSection
     // Check periodically (in case hosted from another section)
     const interval = setInterval(checkHostedUrl, 1000);
     return () => clearInterval(interval);
-  }, [publisherFeed.podcastGuid, publisherFeedUrl]);
+  }, [publisherFeed.podcastGuid, publisherFeed.sourceUrl, publisherFeedUrl]);
 
   const handleSubmitToPI = async () => {
     if (!publisherFeedUrl.trim()) return;

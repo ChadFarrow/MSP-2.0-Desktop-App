@@ -45,11 +45,15 @@ function AppContent() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleImport = (xml: string) => {
+  const handleImport = (xml: string, sourceUrl?: string) => {
     try {
       // Check if this is a publisher feed
       if (isPublisherFeed(xml)) {
         const publisherFeed = parsePublisherRssFeed(xml);
+        // Attach source URL if provided (for auto-populating Publisher Feed URL field)
+        if (sourceUrl) {
+          publisherFeed.sourceUrl = sourceUrl;
+        }
         dispatch({ type: 'SET_PUBLISHER_FEED', payload: publisherFeed });
         return;
       }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { fetchFeedFromUrl } from '../../utils/xmlParser';
 import { loadAlbumsFromNostr, loadAlbumByDTag, fetchNostrMusicTracks, groupTracksByAlbum } from '../../utils/nostrSync';
 import { convertNostrMusicToAlbum, parseNostrEventJson } from '../../utils/nostrMusicConverter';
-import { type HostedFeedInfo } from '../../utils/hostedFeed';
+import { type HostedFeedInfo, buildHostedUrl } from '../../utils/hostedFeed';
 import { fetchAdminFeeds } from '../../utils/adminAuth';
 import { pendingHostedStorage } from '../../utils/storage';
 import { formatTimestamp } from '../../utils/dateUtils';
@@ -23,7 +23,7 @@ interface HostedFeedListItem {
 
 interface ImportModalProps {
   onClose: () => void;
-  onImport: (xml: string) => void;
+  onImport: (xml: string, sourceUrl?: string) => void;
   onLoadAlbum: (album: Album) => void;
   isLoggedIn: boolean;
 }
@@ -181,7 +181,8 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
         pendingHostedStorage.save(newInfo);
       }
 
-      onImport(xml);
+      // Pass the hosted URL as source URL
+      onImport(xml, buildHostedUrl(hostedFeedId.trim()));
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import hosted feed');
@@ -212,7 +213,8 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
       };
       pendingHostedStorage.save(newInfo);
 
-      onImport(xml);
+      // Pass the hosted URL as source URL
+      onImport(xml, buildHostedUrl(feed.feedId));
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import hosted feed');
@@ -253,7 +255,8 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
         throw new Error('No XML content provided');
       }
 
-      onImport(xml);
+      // Pass source URL when importing from URL mode
+      onImport(xml, mode === 'url' ? feedUrl : undefined);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import feed');
