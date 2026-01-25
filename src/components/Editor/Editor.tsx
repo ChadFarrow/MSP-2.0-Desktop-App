@@ -367,7 +367,7 @@ export function Editor() {
                       }}>
                         <div style={{
                           width: '100%',
-                          aspectRatio: '1',
+                          ...(!person.img && { aspectRatio: '1' }),
                           borderRadius: '8px',
                           overflow: 'hidden',
                           background: 'var(--bg-tertiary)',
@@ -382,8 +382,7 @@ export function Editor() {
                               alt={person.name || 'Person thumbnail'}
                               style={{
                                 width: '100%',
-                                height: '100%',
-                                objectFit: 'cover'
+                                display: 'block'
                               }}
                               onError={(e) => {
                                 (e.target as HTMLImageElement).style.display = 'none';
@@ -710,20 +709,21 @@ export function Editor() {
                         }}>
                           <div style={{
                             width: '100%',
-                            aspectRatio: '1',
+                            ...(!isVideo && { aspectRatio: '1' }),
                             borderRadius: '8px',
                             overflow: 'hidden',
                             background: 'var(--bg-tertiary)',
                             border: '1px solid var(--border-color)',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center'
+                            justifyContent: 'center',
+                            ...(isVideo && !track.trackArtUrl && { aspectRatio: '16 / 9' })
                           }}>
                             {track.trackArtUrl ? (
                               <img
                                 src={track.trackArtUrl}
                                 alt={track.title || 'Track art thumbnail'}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                style={{ width: '100%', display: 'block' }}
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).style.display = 'none';
                                 }}
@@ -733,7 +733,7 @@ export function Editor() {
                               />
                             ) : (
                               <span style={{ fontSize: '48px', color: 'var(--text-muted)' }}>
-                                &#9835;
+                                {isVideo ? '\u25B6' : '\u266B'}
                               </span>
                             )}
                           </div>

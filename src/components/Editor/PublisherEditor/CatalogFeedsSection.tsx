@@ -277,7 +277,7 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
                     width: '48px',
                     height: '48px',
                     borderRadius: '4px',
-                    objectFit: 'cover',
+                    objectFit: 'contain',
                     backgroundColor: 'var(--surface-color)'
                   }}
                   onError={e => (e.target as HTMLImageElement).style.display = 'none'}
@@ -411,9 +411,9 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
                     alt={item.title || 'Feed artwork'}
                     style={{
                       width: '80px',
-                      height: '80px',
+                      height: item.medium === 'video' ? '45px' : '80px',
                       borderRadius: '8px',
-                      objectFit: 'cover',
+                      objectFit: 'contain',
                       backgroundColor: 'var(--surface-color)',
                       border: '1px solid var(--border-color)'
                     }}
@@ -426,7 +426,7 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
                     title="Fetch artwork from Podcast Index"
                     style={{
                       width: '80px',
-                      height: '80px',
+                      height: item.medium === 'video' ? '45px' : '80px',
                       borderRadius: '8px',
                       backgroundColor: 'var(--surface-color)',
                       border: '1px solid var(--border-color)',

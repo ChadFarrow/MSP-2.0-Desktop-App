@@ -359,7 +359,7 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
                           <img
                             src={albumGroup.imageUrl}
                             alt={albumGroup.albumName}
-                            style={{ width: '48px', height: '48px', borderRadius: '4px', objectFit: 'cover' }}
+                            style={{ width: '48px', height: '48px', borderRadius: '4px', objectFit: 'contain', backgroundColor: 'var(--surface-color)' }}
                           />
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>

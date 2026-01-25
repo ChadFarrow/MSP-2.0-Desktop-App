@@ -300,9 +300,10 @@ export function DownloadCatalogSection({ publisherFeed }: DownloadCatalogSection
                   alt=""
                   style={{
                     width: '40px',
-                    height: '40px',
+                    height: item.medium === 'video' ? '22.5px' : '40px',
                     borderRadius: '4px',
-                    objectFit: 'cover'
+                    objectFit: 'contain',
+                    backgroundColor: 'var(--surface-color)'
                   }}
                   onError={e => (e.target as HTMLImageElement).style.display = 'none'}
                 />
