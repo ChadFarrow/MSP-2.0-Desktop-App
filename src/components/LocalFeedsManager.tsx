@@ -14,8 +14,8 @@ import {
   hasLocalStorage,
   formatFeedDate,
   type FeedSummary,
-  type LocalFeed,
-} from '../lib/local-storage';
+} from '../utils/localFeedStorage';
+import { extractErrorMessage } from '../utils/errorHandling';
 
 interface LocalFeedsManagerProps {
   onLoadFeed: (xml: string, id: string, feedType: 'album' | 'publisher') => void;
@@ -43,7 +43,7 @@ export function LocalFeedsManager({ onLoadFeed }: LocalFeedsManagerProps) {
       const list = await listFeedsLocal();
       setFeeds(list);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load feeds');
+      setError(extractErrorMessage(e, 'Failed to load feeds'));
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,7 @@ export function LocalFeedsManager({ onLoadFeed }: LocalFeedsManagerProps) {
       const fullFeed = await loadFeedLocal(feed.id);
       onLoadFeed(fullFeed.xml, fullFeed.id, fullFeed.feed_type as 'album' | 'publisher');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load feed');
+      setError(extractErrorMessage(e, 'Failed to load feed'));
     }
   };
 
@@ -69,7 +69,7 @@ export function LocalFeedsManager({ onLoadFeed }: LocalFeedsManagerProps) {
       setFeeds(feeds.filter(f => f.id !== id));
       setDeleteConfirm(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to delete feed');
+      setError(extractErrorMessage(e, 'Failed to delete feed'));
     }
   };
 

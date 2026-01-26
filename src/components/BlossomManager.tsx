@@ -13,8 +13,10 @@ import {
   DEFAULT_BLOSSOM_SERVERS,
   checkBlossomServer,
   type BlossomBlob,
-} from '../lib/blossom';
-import { isTauri } from '../lib/tauri-nostr';
+} from '../utils/tauriBlossom';
+import { isTauri } from '../utils/tauriNostr';
+import { extractErrorMessage } from '../utils/errorHandling';
+import { formatBytes } from '../utils/formatting';
 
 interface BlossomManagerProps {
   feedXml?: string;
@@ -69,7 +71,7 @@ export function BlossomManager({ feedXml, feedTitle, onUploadComplete }: Blossom
       // Refresh blob list
       loadBlobs();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Upload failed');
+      setError(extractErrorMessage(e, 'Upload failed'));
     } finally {
       setUploading(false);
     }
@@ -96,7 +98,7 @@ export function BlossomManager({ feedXml, feedTitle, onUploadComplete }: Blossom
       await blossomDelete(activeServer, sha256);
       setBlobs(blobs.filter(b => b.sha256 !== sha256));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Delete failed');
+      setError(extractErrorMessage(e, 'Delete failed'));
     }
   };
 
@@ -129,7 +131,7 @@ export function BlossomManager({ feedXml, feedTitle, onUploadComplete }: Blossom
             value={serverUrl}
             onChange={(e) => setServerUrl(e.target.value)}
           >
-            {DEFAULT_BLOSSOM_SERVERS.map(server => (
+            {DEFAULT_BLOSSOM_SERVERS.map((server: string) => (
               <option key={server} value={server}>{server}</option>
             ))}
           </select>
@@ -208,12 +210,6 @@ export function BlossomManager({ feedXml, feedTitle, onUploadComplete }: Blossom
       </p>
     </div>
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // CSS styles

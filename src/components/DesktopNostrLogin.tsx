@@ -6,14 +6,15 @@
  */
 
 import { useState, useEffect } from 'react';
-import { 
-  isTauri, 
-  loginWithNsec, 
-  loginWithHex, 
-  logout, 
+import {
+  isTauri,
+  loginWithNsec,
+  loginWithHex,
+  logout,
   getPubkey,
-  type NostrProfile 
-} from '../lib/tauri-nostr';
+  type NostrProfile
+} from '../utils/tauriNostr';
+import { extractErrorMessage } from '../utils/errorHandling';
 
 interface DesktopNostrLoginProps {
   onLogin?: (profile: NostrProfile) => void;
@@ -30,7 +31,7 @@ export function DesktopNostrLogin({ onLogin, onLogout }: DesktopNostrLoginProps)
   // Check for existing session on mount
   useEffect(() => {
     if (isTauri()) {
-      getPubkey().then(p => {
+      getPubkey().then((p: NostrProfile | null) => {
         if (p) {
           setProfile(p);
           onLogin?.(p);
@@ -64,7 +65,7 @@ export function DesktopNostrLogin({ onLogin, onLogout }: DesktopNostrLoginProps)
       setShowInput(false);
       onLogin?.(result);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Login failed');
+      setError(extractErrorMessage(e, 'Login failed'));
     } finally {
       setLoading(false);
     }

@@ -4,12 +4,20 @@
 use directories::ProjectDirs;
 use nostr_sdk::prelude::*;
 use serde::{Deserialize, Serialize};
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
 use uuid::Uuid;
+
+/// Default Nostr relays for publishing and fetching events
+const DEFAULT_RELAYS: &[&str] = &[
+    "wss://relay.damus.io",
+    "wss://relay.primal.net",
+    "wss://nos.lol",
+    "wss://relay.nostr.band",
+];
 
 // Store for the Nostr client and keys
 struct NostrState {
@@ -54,6 +62,51 @@ struct FeedSummary {
     updated_at: u64,
 }
 
+/// Get the current Unix timestamp in seconds
+fn get_current_timestamp() -> Result<u64, String> {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| e.to_string())
+        .map(|d| d.as_secs())
+}
+
+/// Normalize a server URL by removing trailing slashes
+fn normalize_server_url(url: &str) -> &str {
+    url.trim_end_matches('/')
+}
+
+/// Convert a nostr_sdk Event to our SignedEvent struct
+fn event_to_signed_event(event: &Event) -> SignedEvent {
+    SignedEvent {
+        id: event.id.to_hex(),
+        pubkey: event.pubkey.to_hex(),
+        created_at: event.created_at.as_u64(),
+        kind: event.kind.as_u16(),
+        tags: event.tags.iter().map(|t| t.as_slice().to_vec()).collect(),
+        content: event.content.to_string(),
+        sig: event.sig.to_string(),
+    }
+}
+
+/// Login helper that sets up the client with keys and connects to relays
+async fn login_with_keys(keys: Keys, state: &NostrState) -> Result<NostrProfile, String> {
+    let pubkey = keys.public_key().to_hex();
+    let npub = keys.public_key().to_bech32().map_err(|e| e.to_string())?;
+
+    let client = Client::new(keys.clone());
+
+    for relay in DEFAULT_RELAYS {
+        let _ = client.add_relay(*relay).await;
+    }
+
+    client.connect().await;
+
+    *state.keys.lock().unwrap() = Some(keys);
+    *state.client.lock().unwrap() = Some(client);
+
+    Ok(NostrProfile { pubkey, npub })
+}
+
 /// Get the app data directory
 fn get_data_dir() -> Result<PathBuf, String> {
     let proj_dirs = ProjectDirs::from("com", "podtards", "msp-studio")
@@ -77,11 +130,7 @@ fn save_feed_local(
     xml: String,
 ) -> Result<LocalFeed, String> {
     let feeds_dir = get_data_dir()?;
-    
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_err(|e| e.to_string())?
-        .as_secs();
+    let now = get_current_timestamp()?;
     
     // Use existing ID or generate new one
     let feed_id = id.unwrap_or_else(|| Uuid::new_v4().to_string());
@@ -199,11 +248,7 @@ fn create_blossom_auth(
     action: &str,
     expiration_secs: u64,
 ) -> Result<Event, String> {
-    let expiration = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_err(|e| e.to_string())?
-        .as_secs()
-        + expiration_secs;
+    let expiration = get_current_timestamp()? + expiration_secs;
 
     let event = EventBuilder::new(Kind::from(24242), "")
         .tag(Tag::parse(["t", action]).map_err(|e| e.to_string())?)
@@ -248,7 +293,8 @@ async fn blossom_upload(
 
     // Upload to Blossom server
     let client = reqwest::Client::new();
-    let upload_url = format!("{}/upload", server_url.trim_end_matches('/'));
+    let base_url = normalize_server_url(&server_url);
+    let upload_url = format!("{}/upload", base_url);
 
     let response = client
         .put(&upload_url)
@@ -266,7 +312,7 @@ async fn blossom_upload(
     }
 
     // Parse response to get URL
-    let blob_url = format!("{}/{}", server_url.trim_end_matches('/'), sha256);
+    let blob_url = format!("{}/{}", base_url, sha256);
 
     Ok(BlossomUploadResult {
         url: blob_url,
@@ -319,7 +365,8 @@ async fn blossom_upload_file(
 
     // Upload
     let client = reqwest::Client::new();
-    let upload_url = format!("{}/upload", server_url.trim_end_matches('/'));
+    let base_url = normalize_server_url(&server_url);
+    let upload_url = format!("{}/upload", base_url);
 
     let response = client
         .put(&upload_url)
@@ -336,7 +383,7 @@ async fn blossom_upload_file(
         return Err(format!("Blossom server error {}: {}", status, error_text));
     }
 
-    let blob_url = format!("{}/{}", server_url.trim_end_matches('/'), sha256);
+    let blob_url = format!("{}/{}", base_url, sha256);
 
     Ok(BlossomUploadResult {
         url: blob_url,
@@ -364,7 +411,7 @@ async fn blossom_delete(
     let auth_base64 = base64_encode(&auth_json);
 
     let client = reqwest::Client::new();
-    let delete_url = format!("{}/{}", server_url.trim_end_matches('/'), sha256);
+    let delete_url = format!("{}/{}", normalize_server_url(&server_url), sha256);
 
     let response = client
         .delete(&delete_url)
@@ -398,7 +445,7 @@ async fn blossom_list(
     let pubkey = keys.public_key().to_hex();
 
     let client = reqwest::Client::new();
-    let list_url = format!("{}/list/{}", server_url.trim_end_matches('/'), pubkey);
+    let list_url = format!("{}/list/{}", normalize_server_url(&server_url), pubkey);
 
     let response = client
         .get(&list_url)
@@ -476,32 +523,7 @@ async fn nostr_login_nsec(
 ) -> Result<NostrProfile, String> {
     let secret_key = SecretKey::from_bech32(&nsec).map_err(|e| e.to_string())?;
     let keys = Keys::new(secret_key);
-    
-    let pubkey = keys.public_key().to_hex();
-    let npub = keys.public_key().to_bech32().map_err(|e| e.to_string())?;
-    
-    // Create and connect client
-    let client = Client::new(keys.clone());
-    
-    // Add default relays
-    let relays = vec![
-        "wss://relay.damus.io",
-        "wss://relay.primal.net",
-        "wss://nos.lol",
-        "wss://relay.nostr.band",
-    ];
-    
-    for relay in relays {
-        let _ = client.add_relay(relay).await;
-    }
-    
-    client.connect().await;
-    
-    // Store keys and client
-    *state.keys.lock().unwrap() = Some(keys);
-    *state.client.lock().unwrap() = Some(client);
-    
-    Ok(NostrProfile { pubkey, npub })
+    login_with_keys(keys, &state).await
 }
 
 /// Login with hex private key
@@ -512,29 +534,7 @@ async fn nostr_login_hex(
 ) -> Result<NostrProfile, String> {
     let secret_key = SecretKey::from_hex(&hex_key).map_err(|e| e.to_string())?;
     let keys = Keys::new(secret_key);
-    
-    let pubkey = keys.public_key().to_hex();
-    let npub = keys.public_key().to_bech32().map_err(|e| e.to_string())?;
-    
-    let client = Client::new(keys.clone());
-    
-    let relays = vec![
-        "wss://relay.damus.io",
-        "wss://relay.primal.net",
-        "wss://nos.lol",
-        "wss://relay.nostr.band",
-    ];
-    
-    for relay in relays {
-        let _ = client.add_relay(relay).await;
-    }
-    
-    client.connect().await;
-    
-    *state.keys.lock().unwrap() = Some(keys);
-    *state.client.lock().unwrap() = Some(client);
-    
-    Ok(NostrProfile { pubkey, npub })
+    login_with_keys(keys, &state).await
 }
 
 /// Logout - clear keys and disconnect
@@ -586,16 +586,8 @@ async fn nostr_sign_event(
     }
     
     let event = builder.sign_with_keys(&keys).map_err(|e| e.to_string())?;
-    
-    Ok(SignedEvent {
-        id: event.id.to_hex(),
-        pubkey: event.pubkey.to_hex(),
-        created_at: event.created_at.as_u64(),
-        kind: event.kind.as_u16(),
-        tags: event.tags.iter().map(|t| t.as_slice().to_vec()).collect(),
-        content: event.content.to_string(),
-        sig: event.sig.to_string(),
-    })
+
+    Ok(event_to_signed_event(&event))
 }
 
 /// Publish an event to relays
@@ -677,19 +669,8 @@ async fn nostr_fetch_events(
         .fetch_events(vec![filter], None)
         .await
         .map_err(|e| e.to_string())?;
-    
-    Ok(events
-        .iter()
-        .map(|e| SignedEvent {
-            id: e.id.to_hex(),
-            pubkey: e.pubkey.to_hex(),
-            created_at: e.created_at.as_u64(),
-            kind: e.kind.as_u16(),
-            tags: e.tags.iter().map(|t| t.as_slice().to_vec()).collect(),
-            content: e.content.to_string(),
-            sig: e.sig.to_string(),
-        })
-        .collect())
+
+    Ok(events.iter().map(event_to_signed_event).collect())
 }
 
 fn main() {
