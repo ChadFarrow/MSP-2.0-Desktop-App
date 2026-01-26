@@ -518,11 +518,26 @@ export function Editor() {
               {album.tracks.map((track, index) => (
                 <div key={track.id} className="repeatable-item" style={{ flexDirection: 'column' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
+                    <input
+                      type="number"
+                      className="track-number"
+                      min="1"
+                      max={album.tracks.length}
+                      value={index + 1}
+                      onClick={e => e.stopPropagation()}
+                      onChange={e => {
+                        const newIndex = parseInt(e.target.value) - 1;
+                        if (!isNaN(newIndex) && newIndex >= 0 && newIndex < album.tracks.length && newIndex !== index) {
+                          dispatch({ type: 'REORDER_TRACKS', payload: { fromIndex: index, toIndex: newIndex } });
+                        }
+                      }}
+                      style={{ width: '40px', textAlign: 'center', cursor: 'text' }}
+                      title="Change order"
+                    />
                     <div
                       style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, cursor: 'pointer' }}
                       onClick={() => toggleTrackCollapse(track.id)}
                     >
-                      <span className="track-number">{track.trackNumber}</span>
                       <span style={{ flex: 1, fontWeight: 500 }}>{track.title || (isVideo ? 'Untitled Video' : 'Untitled Track')}</span>
                       {track.duration && track.duration !== '00:00:00' && (
                         <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{track.duration}</span>
