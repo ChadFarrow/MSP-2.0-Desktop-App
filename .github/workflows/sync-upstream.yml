@@ -1,0 +1,56 @@
+name: Sync from Web Repo
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # Daily at 6 AM UTC
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/ChadFarrow/MSP-2.0.git || true
+          git fetch upstream
+
+      - name: Check for updates
+        id: check
+        run: |
+          UPSTREAM_COMMITS=$(git rev-list master..upstream/master --count)
+          echo "new_commits=$UPSTREAM_COMMITS" >> $GITHUB_OUTPUT
+
+      - name: Create sync branch and PR
+        if: steps.check.outputs.new_commits != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          BRANCH="sync-upstream-$(date +%Y%m%d)"
+          git checkout -b $BRANCH
+
+          if git merge upstream/master --no-edit; then
+            git push origin $BRANCH
+            gh pr create \
+              --title "Sync updates from web repo" \
+              --body "Automated sync from [MSP-2.0 web repo](https://github.com/ChadFarrow/MSP-2.0).
+
+          **New commits:** ${{ steps.check.outputs.new_commits }}
+
+          Review for conflicts in:
+          - \`package.json\`
+          - \`src/App.tsx\`
+          - \`CLAUDE.md\`" \
+              --base master
+          else
+            echo "Merge conflicts detected - manual intervention needed"
+            git merge --abort
+            exit 1
+          fi
