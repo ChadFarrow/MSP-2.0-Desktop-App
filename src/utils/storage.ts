@@ -7,6 +7,7 @@ export const STORAGE_KEYS = {
   ALBUM_DATA: 'msp2-album-data',
   VIDEO_DATA: 'msp2-video-data',
   PUBLISHER_DATA: 'msp2-publisher-data',
+  FEED_TYPE: 'msp2-feed-type',
   NOSTR_USER: 'msp2-nostr-user',
   HOSTED_PREFIX: 'msp2-hosted-',
   PENDING_HOSTED: 'msp2-pending-hosted'
@@ -129,6 +130,16 @@ export const publisherStorage = {
   load: (): PublisherFeed | null => getItem<PublisherFeed>(STORAGE_KEYS.PUBLISHER_DATA),
   save: (feed: PublisherFeed): boolean => setItem(STORAGE_KEYS.PUBLISHER_DATA, feed),
   clear: (): boolean => removeItem(STORAGE_KEYS.PUBLISHER_DATA)
+};
+
+// Feed type storage operations
+export type FeedType = 'album' | 'video' | 'publisher';
+export const feedTypeStorage = {
+  load: (): FeedType => {
+    const stored = getItem<FeedType>(STORAGE_KEYS.FEED_TYPE);
+    return stored && ['album', 'video', 'publisher'].includes(stored) ? stored : 'album';
+  },
+  save: (feedType: FeedType): boolean => setItem(STORAGE_KEYS.FEED_TYPE, feedType)
 };
 
 // Nostr user storage operations
