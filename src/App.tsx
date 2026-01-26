@@ -16,6 +16,7 @@ import { ConfirmModal } from './components/modals/ConfirmModal';
 import { Editor } from './components/Editor/Editor';
 import { PublisherEditor } from './components/Editor/PublisherEditor';
 import { AdminPage } from './components/admin/AdminPage';
+import { openUrl } from './utils/openUrl';
 import type { Album } from './types/feed';
 import mspLogo from './assets/msp-logo.png';
 import './App.css';
@@ -175,24 +176,18 @@ function AppContent() {
                   >
                     ℹ️ Info
                   </button>
-                  <a
+                  <button
                     className="dropdown-item"
-                    href="https://podtards.com/bae35f5f42e952ff9e3f9fa0fc4c6c0de179cce6a6e08dd1f4cc19d9b2120dfe.mp4"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setShowDropdown(false)}
+                    onClick={() => { openUrl('https://podtards.com/bae35f5f42e952ff9e3f9fa0fc4c6c0de179cce6a6e08dd1f4cc19d9b2120dfe.mp4'); setShowDropdown(false); }}
                   >
                     🎬 Overview Video
-                  </a>
-                  <a
+                  </button>
+                  <button
                     className="dropdown-item"
-                    href="https://podtards.com/579676ff386928d3eb1275ead3d11be25200707dccc20f40ad95c3192f5faf0c.mp4"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setShowDropdown(false)}
+                    onClick={() => { openUrl('https://podtards.com/579676ff386928d3eb1275ead3d11be25200707dccc20f40ad95c3192f5faf0c.mp4'); setShowDropdown(false); }}
                   >
                     🎬 Publisher Overview
-                  </a>
+                  </button>
                   <button
                     className="dropdown-item"
                     onClick={() => { toggleTheme(); setShowDropdown(false); }}
@@ -229,16 +224,6 @@ function AppContent() {
                       </button>
                     </>
                   )}
-                  <div className="dropdown-divider" />
-                  <a
-                    className="dropdown-item"
-                    href="https://msp-2-0-git-fafo-chadfs-projects.vercel.app/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setShowDropdown(false)}
-                  >
-                    🧪 Experimental (FAFO)
-                  </a>
                 </div>
               )}
             </div>
