@@ -1,0 +1,148 @@
+From e3095f9f2dbc1d20da5af8ef9f165e3dc5a286db Mon Sep 17 00:00:00 2001
+From: Chad <chad.farrow@gmail.com>
+Date: Mon, 26 Jan 2026 14:57:32 -0500
+Subject: [PATCH] Fix URL paste duplication and improve NIP-46 session
+ persistence
+
+- Fix paste handler in Editor to prevent URL duplication by adding
+  e.preventDefault() when handling URL pastes
+- Store NIP-46 client secret in localStorage instead of sessionStorage
+  so it persists across app restarts
+- Add 10-second timeout to NIP-46 reconnection to prevent indefinite
+  hangs when signer is unavailable
+- Don't clear credentials on timeout so users can retry manually
+- Add debug logging for NIP-46 reconnection flow
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+---
+ src/components/Editor/Editor.tsx |  1 +
+ src/store/nostrStore.tsx         |  7 ++++++-
+ src/utils/nostrSigner.ts         | 28 ++++++++++++++++++++--------
+ 3 files changed, 27 insertions(+), 9 deletions(-)
+
+diff --git a/src/components/Editor/Editor.tsx b/src/components/Editor/Editor.tsx
+index f44afb0..d639d92 100644
+--- a/src/components/Editor/Editor.tsx
++++ b/src/components/Editor/Editor.tsx
+@@ -577,6 +577,7 @@ export function Editor() {
+                         onPaste={async e => {
+                           const url = e.clipboardData.getData('text').trim();
+                           if (url && url.startsWith('http')) {
++                            e.preventDefault();
+                             const isNewUrl = url !== track.enclosureUrl;
+                             // Update the URL field immediately
+                             dispatch({
+diff --git a/src/store/nostrStore.tsx b/src/store/nostrStore.tsx
+index 299d588..279202b 100644
+--- a/src/store/nostrStore.tsx
++++ b/src/store/nostrStore.tsx
+@@ -112,6 +112,7 @@ export function NostrProvider({ children }: { children: ReactNode }) {
+       // Check for stored session
+       const storedUser = loadStoredUser();
+       const storedMethod = loadConnectionMethod();
++      console.log('[Nostr] Init - storedUser:', storedUser?.npub, 'storedMethod:', storedMethod);
+ 
+       // Check for NIP-07 extension
+       // Wait a bit for extension to inject
+@@ -124,9 +125,12 @@ export function NostrProvider({ children }: { children: ReactNode }) {
+         if (storedMethod === 'nip46') {
+           // Try to reconnect NIP-46
+           const bunkerPointer = loadBunkerPointer();
++          console.log('[Nostr] Attempting NIP-46 reconnect, bunkerPointer:', !!bunkerPointer);
+           if (bunkerPointer) {
+             try {
++              console.log('[Nostr] Calling reconnectNip46...');
+               const pubkey = await reconnectNip46();
++              console.log('[Nostr] reconnectNip46 returned:', pubkey);
+               if (pubkey && pubkey === storedUser.pubkey) {
+                 dispatch({ type: 'RESTORE_SESSION', payload: { user: storedUser, method: 'nip46' } });
+ 
+@@ -146,10 +150,11 @@ export function NostrProvider({ children }: { children: ReactNode }) {
+                 return;
+               }
+             } catch (e) {
+-              console.error('Failed to reconnect NIP-46:', e);
++              console.error('[Nostr] Failed to reconnect NIP-46:', e);
+             }
+           }
+           // Failed to reconnect, clear stored session
++          console.log('[Nostr] Reconnection failed, clearing stored session');
+           clearStoredUser();
+           clearSigner();
+           dispatch({ type: 'SET_LOADING', payload: false });
+diff --git a/src/utils/nostrSigner.ts b/src/utils/nostrSigner.ts
+index da4ef60..95213e1 100644
+--- a/src/utils/nostrSigner.ts
++++ b/src/utils/nostrSigner.ts
+@@ -74,18 +74,18 @@ class Nip46SignerWrapper implements NostrSigner {
+ 
+ // Get or generate client secret key for NIP-46
+ function getClientSecretKey(): Uint8Array {
+-  const stored = sessionStorage.getItem(CLIENT_SECRET_KEY);
++  const stored = localStorage.getItem(CLIENT_SECRET_KEY);
+   if (stored) {
+     return hexToBytes(stored);
+   }
+   const sk = generateSecretKey();
+-  sessionStorage.setItem(CLIENT_SECRET_KEY, bytesToHex(sk));
++  localStorage.setItem(CLIENT_SECRET_KEY, bytesToHex(sk));
+   return sk;
+ }
+ 
+ // Clear client secret key
+ function clearClientSecretKey(): void {
+-  sessionStorage.removeItem(CLIENT_SECRET_KEY);
++  localStorage.removeItem(CLIENT_SECRET_KEY);
+ }
+ 
+ // Store bunker pointer for reconnection
+@@ -224,14 +224,14 @@ export async function waitForNip46Connection(
+ }
+ 
+ // Reconnect to existing NIP-46 session
+-export async function reconnectNip46(): Promise<string | null> {
++export async function reconnectNip46(timeoutMs: number = 10000): Promise<string | null> {
+   const pointer = loadBunkerPointer();
+   if (!pointer || !pointer.pubkey) return null;
+ 
+-  try {
+-    const clientSk = getClientSecretKey();
+-    const pool = new SimplePool();
++  const clientSk = getClientSecretKey();
++  const pool = new SimplePool();
+ 
++  try {
+     // Create bunker pointer with proper format
+     const bunkerPointer: BunkerPointer = {
+       pubkey: pointer.pubkey,
+@@ -240,7 +240,14 @@ export async function reconnectNip46(): Promise<string | null> {
+     };
+ 
+     const bunkerSigner = BunkerSigner.fromBunker(clientSk, bunkerPointer, { pool });
+-    await bunkerSigner.connect();
++
++    // Add timeout to connection attempt
++    await Promise.race([
++      bunkerSigner.connect(),
++      new Promise((_, reject) =>
++        setTimeout(() => reject(new Error('Connection timeout')), timeoutMs)
++      )
++    ]);
+ 
+     const pubkey = await bunkerSigner.getPublicKey();
+ 
+@@ -250,6 +257,11 @@ export async function reconnectNip46(): Promise<string | null> {
+     return pubkey;
+   } catch (e) {
+     console.error('Failed to reconnect NIP-46:', e);
++    pool.close(NIP46_RELAYS);
++    // Don't clear credentials on timeout - user can try again manually
++    if (e instanceof Error && e.message === 'Connection timeout') {
++      return null;
++    }
+     clearBunkerPointer();
+     clearClientSecretKey();
+     return null;
+-- 
+2.50.1 (Apple Git-155)
+
