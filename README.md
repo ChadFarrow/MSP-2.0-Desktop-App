@@ -1,6 +1,10 @@
-# MSP 2.0 - Music Side Project Studio
+# MSP 2.0 Desktop App - Music Side Project Studio
 
-A web-based RSS feed editor for creating Podcasting 2.0 compatible music album feeds and publisher catalogs with Value 4 Value support.
+A cross-platform desktop application for creating Podcasting 2.0 compatible music album feeds and publisher catalogs with Value 4 Value support.
+
+Built with [Tauri](https://tauri.app/) for Windows, macOS, and Linux.
+
+> **Note:** This is the desktop version of MSP 2.0. The web version is available at [msp.podtards.com](https://msp.podtards.com) ([source](https://github.com/ChadFarrow/MSP-2.0)).
 
 ## Features
 
@@ -30,9 +34,10 @@ A web-based RSS feed editor for creating Podcasting 2.0 compatible music album f
 
 ## Tech Stack
 
-- React 18 + TypeScript
-- Vite
-- Nostr (NIP-07 browser extension support)
+- **Desktop Framework:** Tauri 2.x (Rust backend)
+- **Frontend:** React 19 + TypeScript
+- **Build Tool:** Vite
+- **Nostr:** NIP-07 browser extension support
 
 ## Project Structure
 
@@ -79,13 +84,34 @@ api/
 ├── pisubmit.ts                     # Podcast Index feed submission
 ├── proxy-feed.ts                   # Feed proxy for CORS
 └── hosted/                         # MSP feed hosting endpoints
+
+src-tauri/
+├── src/
+│   └── lib.rs                      # Tauri Rust backend
+├── Cargo.toml                      # Rust dependencies
+└── tauri.conf.json                 # Tauri configuration
 ```
 
 ## Development
 
+### Prerequisites
+
+- Node.js v22+
+- npm
+- Rust (for desktop builds) - [Install Rust](https://rustup.rs/)
+
+### Web Development
+
 ```bash
 npm install
 npm run dev
+```
+
+### Desktop Development
+
+```bash
+npm run tauri:dev    # Start desktop app in dev mode
+npm run tauri:build  # Build for distribution
 ```
 
 ## Publisher Mode

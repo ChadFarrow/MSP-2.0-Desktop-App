@@ -4,13 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MSP 2.0 (Music Side Project Studio) is a React web application for creating Podcasting 2.0 compatible RSS feeds for music albums, videos, and publisher catalogs. It supports Value 4 Value (Lightning Network payments), Nostr integration for cloud sync, and Podcast Index integration.
+MSP 2.0 Desktop App (Music Side Project Studio) is a cross-platform desktop application built with Tauri and React for creating Podcasting 2.0 compatible RSS feeds for music albums, videos, and publisher catalogs. It supports Value 4 Value (Lightning Network payments), Nostr integration for cloud sync, and Podcast Index integration.
+
+This is the desktop version of MSP 2.0. The web version is at [github.com/ChadFarrow/MSP-2.0](https://github.com/ChadFarrow/MSP-2.0).
 
 ## Development
 
 ### Prerequisites
 - Node.js v22+
 - npm
+- Rust (for Tauri desktop builds)
 
 ### Environment Setup
 A `.env` file is required with the following variables:
@@ -25,15 +28,22 @@ No `.env.example` exists - request credentials from the team.
 ### Getting Started
 ```bash
 npm install
-npm run dev
+npm run dev          # Web dev server
+npm run tauri:dev    # Desktop app dev mode
 ```
 
 ## Deployment
 
+### Web Version
 - Hosted on Vercel at msp.podtards.com
 - API functions in `/api/` directory are Vercel serverless functions
 - Dev server proxies `/api/*` to production
 - Build: `npm run build` (tsc + vite)
+
+### Desktop App
+- Built with Tauri 2.x
+- Supports Windows, macOS, and Linux
+- Build: `npm run tauri:build`
 
 ## Software Versions
 
@@ -43,6 +53,7 @@ npm run dev
 - Vite 7.2
 
 ### Key Libraries
+- Tauri 2.9
 - fast-xml-parser 5.3
 - nostr-tools 2.19
 - @vercel/blob 2.0
@@ -68,6 +79,11 @@ src/
 └── utils/          # Utilities (XML, Nostr, audio, storage)
 
 api/                # Vercel serverless endpoints
+
+src-tauri/          # Tauri desktop app
+├── src/            # Rust backend
+├── Cargo.toml      # Rust dependencies
+└── tauri.conf.json # Tauri configuration
 ```
 
 ## Boundaries
@@ -94,6 +110,8 @@ npm run lint         # ESLint
 npm run test         # Run tests with Vitest
 npm run test:watch   # Watch mode testing
 npm run preview      # Preview production build
+npm run tauri:dev    # Start Tauri desktop app in dev mode
+npm run tauri:build  # Build desktop app for distribution
 ```
 
 ## Architecture
