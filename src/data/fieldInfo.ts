@@ -39,7 +39,7 @@ export const FIELD_INFO = {
 
   // Publisher Reference
   publisherGuid: "The GUID of your publisher feed. This links your album to a parent publisher feed that aggregates multiple releases.",
-  publisherUrl: "Optional URL to your publisher feed. Helps apps locate the publisher feed if the GUID lookup fails.",
+  publisherUrl: "URL to your publisher feed. Links this release to the publisher's catalog.",
 
   // Publisher Feed
   catalogTitle: "The name of this catalog feed. A publisher can have multiple catalogs (e.g., 'Jazz Collection', 'New Releases 2024').",

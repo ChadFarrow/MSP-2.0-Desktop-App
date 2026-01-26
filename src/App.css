@@ -631,6 +631,20 @@ body {
   font-weight: 600;
   font-size: 0.875rem;
   flex-shrink: 0;
+  border: none;
+  color: inherit;
+  -moz-appearance: textfield;
+}
+
+.track-number::-webkit-outer-spin-button,
+.track-number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.track-number:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .track-info {

@@ -28,8 +28,22 @@ function getPodcastIndexHeaders(): Record<string, string> {
 
 /**
  * Submit feed to Podcast Index and return PI ID if available
+ * Uses pubnotify to trigger re-crawl, then add/byfeedurl for new feeds
  */
 export async function notifyPodcastIndex(feedUrl: string): Promise<number | null> {
+  // First, send pubnotify to trigger re-crawl (works for updates, no auth required)
+  try {
+    await fetch(
+      `https://api.podcastindex.org/api/1.0/hub/pubnotify?url=${encodeURIComponent(feedUrl)}`,
+      {
+        headers: { 'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)' }
+      }
+    );
+  } catch (err) {
+    console.warn('Failed to send pubnotify:', err instanceof Error ? err.message : err);
+  }
+
+  // Then try to get PI ID via add/byfeedurl (for new feeds) or lookup
   if (!PI_API_KEY || !PI_API_SECRET) return null;
 
   try {
@@ -51,7 +65,7 @@ export async function notifyPodcastIndex(feedUrl: string): Promise<number | null
       }
     }
   } catch (err) {
-    console.warn('Failed to notify Podcast Index:', err instanceof Error ? err.message : err);
+    console.warn('Failed to add feed to Podcast Index:', err instanceof Error ? err.message : err);
   }
   return null;
 }

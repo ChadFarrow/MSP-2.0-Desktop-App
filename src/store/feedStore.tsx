@@ -3,7 +3,7 @@ import { createContext, useContext, useReducer, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { Album, Track, Person, PersonRole, ValueRecipient, Funding, PublisherFeed, RemoteItem } from '../types/feed';
 import { createEmptyAlbum, createEmptyTrack, createEmptyPerson, createEmptyPersonRole, createEmptyRecipient, createEmptyFunding, createEmptyPublisherFeed, createEmptyRemoteItem, createEmptyVideoAlbum } from '../types/feed';
-import { albumStorage, videoStorage, publisherStorage } from '../utils/storage';
+import { albumStorage, videoStorage, publisherStorage, feedTypeStorage } from '../utils/storage';
 
 // Feed type enum
 export type FeedType = 'album' | 'video' | 'publisher';
@@ -64,7 +64,7 @@ interface FeedState {
 
 // Initial state - try to load from localStorage first
 const initialState: FeedState = {
-  feedType: 'album',
+  feedType: feedTypeStorage.load(),
   album: albumStorage.load() || createEmptyAlbum(),
   videoFeed: videoStorage.load() || null,
   publisherFeed: publisherStorage.load() || null,
@@ -94,6 +94,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
   switch (action.type) {
     case 'SET_ALBUM':
+      feedTypeStorage.save('album');
       return { ...state, album: action.payload, feedType: 'album', isDirty: false };
 
     case 'UPDATE_ALBUM':
@@ -236,7 +237,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
       tracks.splice(action.payload.toIndex, 0, removed);
       return updateActiveFeed(state, {
         ...activeAlbum,
-        tracks: tracks.map((t, i) => ({ ...t, trackNumber: i + 1 }))
+        tracks: tracks.map((t, i) => ({ ...t, trackNumber: i + 1, episode: i + 1 }))
       });
     }
 
@@ -331,9 +332,11 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
     // Publisher feed actions
     case 'SET_FEED_TYPE':
+      feedTypeStorage.save(action.payload);
       return { ...state, feedType: action.payload };
 
     case 'SET_PUBLISHER_FEED':
+      feedTypeStorage.save('publisher');
       return { ...state, publisherFeed: action.payload, feedType: 'publisher', isDirty: false };
 
     case 'UPDATE_PUBLISHER_FEED':
@@ -396,6 +399,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
     }
 
     case 'CREATE_NEW_PUBLISHER_FEED':
+      feedTypeStorage.save('publisher');
       return {
         ...state,
         publisherFeed: createEmptyPublisherFeed(),
@@ -449,6 +453,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
     // Video feed actions
     case 'SET_VIDEO_FEED':
+      feedTypeStorage.save('video');
       return { ...state, videoFeed: action.payload, feedType: 'video', isDirty: false };
 
     case 'UPDATE_VIDEO_FEED':
@@ -460,6 +465,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
       };
 
     case 'CREATE_NEW_VIDEO_FEED':
+      feedTypeStorage.save('video');
       return {
         ...state,
         videoFeed: createEmptyVideoAlbum(),
