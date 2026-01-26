@@ -237,7 +237,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
       tracks.splice(action.payload.toIndex, 0, removed);
       return updateActiveFeed(state, {
         ...activeAlbum,
-        tracks: tracks.map((t, i) => ({ ...t, trackNumber: i + 1 }))
+        tracks: tracks.map((t, i) => ({ ...t, trackNumber: i + 1, episode: i + 1 }))
       });
     }
 
