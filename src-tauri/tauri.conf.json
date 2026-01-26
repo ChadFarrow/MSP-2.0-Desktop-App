@@ -53,11 +53,6 @@
     "shell": {
       "open": true
     },
-    "fs": {
-      "scope": {
-        "allow": ["$HOME/**", "$DOWNLOAD/**", "$DOCUMENT/**"],
-        "deny": []
-      }
-    }
+    "fs": {}
   }
 }

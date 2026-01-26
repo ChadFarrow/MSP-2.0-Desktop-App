@@ -192,12 +192,6 @@ struct BlossomUploadResult {
     size: usize,
 }
 
-#[derive(Serialize, Deserialize)]
-struct BlossomServerInfo {
-    name: Option<String>,
-    pubkey: Option<String>,
-}
-
 /// Create a Blossom auth event (kind 24242)
 fn create_blossom_auth(
     keys: &Keys,
@@ -212,9 +206,9 @@ fn create_blossom_auth(
         + expiration_secs;
 
     let event = EventBuilder::new(Kind::from(24242), "")
-        .tag(Tag::parse(&["t", action]).map_err(|e| e.to_string())?)
-        .tag(Tag::parse(&["x", sha256]).map_err(|e| e.to_string())?)
-        .tag(Tag::parse(&["expiration", &expiration.to_string()]).map_err(|e| e.to_string())?)
+        .tag(Tag::parse(["t", action]).map_err(|e| e.to_string())?)
+        .tag(Tag::parse(["x", sha256]).map_err(|e| e.to_string())?)
+        .tag(Tag::parse(["expiration", &expiration.to_string()]).map_err(|e| e.to_string())?)
         .sign_with_keys(keys)
         .map_err(|e| e.to_string())?;
 
@@ -546,8 +540,9 @@ async fn nostr_login_hex(
 /// Logout - clear keys and disconnect
 #[tauri::command]
 async fn nostr_logout(state: State<'_, NostrState>) -> Result<(), String> {
-    if let Some(client) = state.client.lock().unwrap().take() {
-        client.disconnect().await;
+    let client = state.client.lock().unwrap().take();
+    if let Some(c) = client {
+        let _ = c.disconnect().await;
     }
     *state.keys.lock().unwrap() = None;
     Ok(())
