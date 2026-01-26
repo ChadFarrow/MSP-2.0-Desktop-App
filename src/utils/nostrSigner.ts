@@ -74,18 +74,18 @@ class Nip46SignerWrapper implements NostrSigner {
 
 // Get or generate client secret key for NIP-46
 function getClientSecretKey(): Uint8Array {
-  const stored = sessionStorage.getItem(CLIENT_SECRET_KEY);
+  const stored = localStorage.getItem(CLIENT_SECRET_KEY);
   if (stored) {
     return hexToBytes(stored);
   }
   const sk = generateSecretKey();
-  sessionStorage.setItem(CLIENT_SECRET_KEY, bytesToHex(sk));
+  localStorage.setItem(CLIENT_SECRET_KEY, bytesToHex(sk));
   return sk;
 }
 
 // Clear client secret key
 function clearClientSecretKey(): void {
-  sessionStorage.removeItem(CLIENT_SECRET_KEY);
+  localStorage.removeItem(CLIENT_SECRET_KEY);
 }
 
 // Store bunker pointer for reconnection
@@ -224,14 +224,14 @@ export async function waitForNip46Connection(
 }
 
 // Reconnect to existing NIP-46 session
-export async function reconnectNip46(): Promise<string | null> {
+export async function reconnectNip46(timeoutMs: number = 10000): Promise<string | null> {
   const pointer = loadBunkerPointer();
   if (!pointer || !pointer.pubkey) return null;
 
-  try {
-    const clientSk = getClientSecretKey();
-    const pool = new SimplePool();
+  const clientSk = getClientSecretKey();
+  const pool = new SimplePool();
 
+  try {
     // Create bunker pointer with proper format
     const bunkerPointer: BunkerPointer = {
       pubkey: pointer.pubkey,
@@ -240,7 +240,14 @@ export async function reconnectNip46(): Promise<string | null> {
     };
 
     const bunkerSigner = BunkerSigner.fromBunker(clientSk, bunkerPointer, { pool });
-    await bunkerSigner.connect();
+
+    // Add timeout to connection attempt
+    await Promise.race([
+      bunkerSigner.connect(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Connection timeout')), timeoutMs)
+      )
+    ]);
 
     const pubkey = await bunkerSigner.getPublicKey();
 
@@ -250,6 +257,11 @@ export async function reconnectNip46(): Promise<string | null> {
     return pubkey;
   } catch (e) {
     console.error('Failed to reconnect NIP-46:', e);
+    pool.close(NIP46_RELAYS);
+    // Don't clear credentials on timeout - user can try again manually
+    if (e instanceof Error && e.message === 'Connection timeout') {
+      return null;
+    }
     clearBunkerPointer();
     clearClientSecretKey();
     return null;

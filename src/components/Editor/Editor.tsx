@@ -577,6 +577,7 @@ export function Editor() {
                         onPaste={async e => {
                           const url = e.clipboardData.getData('text').trim();
                           if (url && url.startsWith('http')) {
+                            e.preventDefault();
                             const isNewUrl = url !== track.enclosureUrl;
                             // Update the URL field immediately
                             dispatch({
