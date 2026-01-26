@@ -1,0 +1,83 @@
+name: 'Build & Release'
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install dependencies (Ubuntu)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'MSP Studio ${{ github.ref_name }}'
+          releaseBody: |
+            ## MSP Studio Desktop Release
+
+            Download the appropriate version for your system:
+            - **Windows**: `.msi` (recommended) or `.exe`
+            - **macOS (Apple Silicon M1/M2/M3)**: `_aarch64.dmg`
+            - **macOS (Intel)**: `_x64.dmg`
+            - **Linux**: `.deb` (Debian/Ubuntu) or `.AppImage` (universal)
+
+            ### ⚠️ macOS Users
+            This app is not signed with an Apple Developer certificate. To open it:
+            1. **Right-click** (or Control-click) the app
+            2. Select **Open** from the menu
+            3. Click **Open** in the dialog that appears
+
+            Or run this in Terminal after mounting the DMG:
+            ```bash
+            xattr -cr /Applications/MSP\ Studio.app
+            ```
+
+            ### Linux Users
+            You may need to install webkit2gtk:
+            ```bash
+            sudo apt install libwebkit2gtk-4.1-0
+            ```
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

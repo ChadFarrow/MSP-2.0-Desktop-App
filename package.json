@@ -9,10 +9,18 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@noble/secp256k1": "^3.0.0",
+    "@tauri-apps/api": "^2.9.1",
+    "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
+    "@tauri-apps/plugin-fs": "^2.4.5",
+    "@tauri-apps/plugin-shell": "^2.3.4",
     "@vercel/blob": "^2.0.0",
     "fast-xml-parser": "^5.3.3",
     "nanoid": "^5.1.6",
@@ -26,6 +34,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@tauri-apps/cli": "^2.9.6",
     "@types/node": "^24.10.1",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.5",
