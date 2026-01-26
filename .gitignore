@@ -28,3 +28,7 @@ dist-ssr
 # Tauri
 src-tauri/target/
 src-tauri/gen/
+
+# Test artifacts
+playwright-report/
+test-results/
