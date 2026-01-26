@@ -38,6 +38,17 @@ function isGuid(input: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.trim());
 }
 
+// Check if input looks like a feed URL
+function isFeedUrl(input: string): boolean {
+  try {
+    const url = new URL(input.trim());
+    return (url.protocol === 'http:' || url.protocol === 'https:') &&
+           (input.includes('.xml') || input.includes('/feed') || input.includes('rss'));
+  } catch {
+    return false;
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -55,15 +66,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Check if input is a feed ID (number or podcastindex URL) or GUID
+    // Check if input is a feed ID, GUID, or feed URL
     const feedId = extractFeedId(q);
     const guid = isGuid(q) ? q.trim() : null;
+    const feedUrl = isFeedUrl(q) ? q.trim() : null;
 
     let searchUrl: string;
     if (feedId) {
       searchUrl = `https://api.podcastindex.org/api/1.0/podcasts/byfeedid?id=${feedId}`;
     } else if (guid) {
       searchUrl = `https://api.podcastindex.org/api/1.0/podcasts/byguid?guid=${guid}`;
+    } else if (feedUrl) {
+      searchUrl = `https://api.podcastindex.org/api/1.0/podcasts/byfeedurl?url=${encodeURIComponent(feedUrl)}`;
     } else {
       searchUrl = `https://api.podcastindex.org/api/1.0/search/byterm?q=${encodeURIComponent(q)}`;
     }
@@ -78,8 +92,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Handle byfeedid/byguid (single feed) and byterm (array of feeds) responses
-    const rawFeeds = (feedId || guid) && data.feed ? [data.feed] : (data.feeds || []);
+    // Handle byfeedid/byguid/byfeedurl (single feed) and byterm (array of feeds) responses
+    const rawFeeds = (feedId || guid || feedUrl) && data.feed ? [data.feed] : (data.feeds || []);
 
     const feeds = rawFeeds.map((feed: {
       id: number;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useFeed } from '../../store/feedStore';
 import { LANGUAGES, PERSON_GROUPS, PERSON_ROLES, createEmptyPersonRole, createEmptyTrack, isVideoMedium } from '../../types/feed';
 import type { PersonGroup } from '../../types/feed';
@@ -81,6 +81,65 @@ export function Editor() {
   // Editor remounts on album change (via key prop), so this always starts fresh
   const [collapsedTracks, setCollapsedTracks] = useState<Record<string, boolean>>({});
   const [showRolesModal, setShowRolesModal] = useState(false);
+  const [publisherLookup, setPublisherLookup] = useState<{
+    loading: boolean;
+    error: string | null;
+    feedTitle: string | null;
+    feedImage: string | null;
+  }>({ loading: false, error: null, feedTitle: null, feedImage: null });
+
+  // Auto-lookup publisher feed in Podcast Index when URL changes
+  const lookupPublisherFeed = useCallback(async (feedUrl: string) => {
+    if (!feedUrl) {
+      setPublisherLookup({ loading: false, error: null, feedTitle: null, feedImage: null });
+      return;
+    }
+
+    setPublisherLookup({ loading: true, error: null, feedTitle: null, feedImage: null });
+
+    try {
+      const response = await fetch(`/api/pisearch?q=${encodeURIComponent(feedUrl)}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        setPublisherLookup({ loading: false, error: data.error || 'Feed not found', feedTitle: null, feedImage: null });
+        return;
+      }
+
+      const feed = data.feeds?.[0];
+      if (feed?.podcastGuid) {
+        dispatch({
+          type: 'UPDATE_ALBUM',
+          payload: {
+            publisher: {
+              feedGuid: feed.podcastGuid,
+              feedUrl: feedUrl
+            }
+          }
+        });
+        setPublisherLookup({ loading: false, error: null, feedTitle: feed.title || null, feedImage: feed.image || null });
+      } else {
+        setPublisherLookup({ loading: false, error: 'Feed not found in Podcast Index', feedTitle: null, feedImage: null });
+      }
+    } catch {
+      setPublisherLookup({ loading: false, error: 'Failed to lookup feed', feedTitle: null, feedImage: null });
+    }
+  }, [dispatch]);
+
+  // Debounce publisher URL lookup
+  useEffect(() => {
+    const url = album.publisher?.feedUrl;
+    if (!url) {
+      setPublisherLookup({ loading: false, error: null, feedTitle: null, feedImage: null });
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      lookupPublisherFeed(url);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [album.publisher?.feedUrl, lookupPublisherFeed]);
 
   // Determine if this is a video feed
   const isVideo = isVideoMedium(album.medium);
@@ -450,56 +509,54 @@ export function Editor() {
             />
           </Section>
 
-          {/* Publisher Section - Hidden for now
-          <Section title="Publisher" icon="&#127970;">
+          {/* Publisher Section */}
+          <Section title="Publisher Feed (Advanced)" icon="&#127970;">
             <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '14px' }}>
-              Link this album to a publisher feed. This allows apps to discover your other releases.
+              Add this release to a publisher catalog by entering the publisher's feed URL (must be in Podcast Index).
             </p>
-            <div className="form-grid">
-              <div className="form-group">
-                <label className="form-label">Publisher Feed GUID<InfoIcon text={FIELD_INFO.publisherGuid} /></label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g., a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-                  value={album.publisher?.feedGuid || ''}
-                  onChange={e => dispatch({
-                    type: 'UPDATE_ALBUM',
-                    payload: {
-                      publisher: {
-                        feedGuid: e.target.value,
-                        feedUrl: album.publisher?.feedUrl || ''
-                      }
+            <div className="form-group">
+              <label className="form-label">Publisher Feed URL<InfoIcon text={FIELD_INFO.publisherUrl} /></label>
+              <input
+                type="url"
+                className="form-input"
+                placeholder="https://example.com/publisher-feed.xml"
+                value={album.publisher?.feedUrl || ''}
+                onChange={e => dispatch({
+                  type: 'UPDATE_ALBUM',
+                  payload: {
+                    publisher: {
+                      feedGuid: '',
+                      feedUrl: e.target.value
                     }
-                  })}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Publisher Feed URL<InfoIcon text={FIELD_INFO.publisherUrl} /></label>
-                <input
-                  type="url"
-                  className="form-input"
-                  placeholder="https://example.com/publisher-feed.xml"
-                  value={album.publisher?.feedUrl || ''}
-                  onChange={e => dispatch({
-                    type: 'UPDATE_ALBUM',
-                    payload: {
-                      publisher: {
-                        feedGuid: album.publisher?.feedGuid || '',
-                        feedUrl: e.target.value
-                      }
-                    }
-                  })}
-                />
-              </div>
+                  }
+                })}
+              />
+              {publisherLookup.loading && (
+                <p style={{ color: 'var(--text-tertiary)', marginTop: '8px', fontSize: '12px' }}>
+                  Looking up feed in Podcast Index...
+                </p>
+              )}
+              {publisherLookup.error && (
+                <p style={{ color: 'var(--error)', marginTop: '8px', fontSize: '12px' }}>
+                  {publisherLookup.error}
+                </p>
+              )}
+              {album.publisher?.feedGuid && !publisherLookup.loading && !publisherLookup.error && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+                  {publisherLookup.feedImage && (
+                    <img
+                      src={publisherLookup.feedImage}
+                      alt=""
+                      style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover' }}
+                    />
+                  )}
+                  <p style={{ color: 'var(--success)', fontSize: '12px', margin: 0 }}>
+                    ✓ Found: {publisherLookup.feedTitle || 'Publisher Feed'}
+                  </p>
+                </div>
+              )}
             </div>
-            {album.publisher?.feedGuid && (
-              <p style={{ color: 'var(--text-tertiary)', marginTop: '8px', fontSize: '12px' }}>
-                This will add a &lt;podcast:publisher&gt; tag to your feed XML.
-              </p>
-            )}
           </Section>
-          */}
 
           {/* Tracks/Videos Section */}
           <Section title={isVideo ? "Videos" : "Tracks"} icon={isVideo ? "🎬" : "🎵"}>
