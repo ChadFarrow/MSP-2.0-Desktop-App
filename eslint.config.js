@@ -19,6 +19,10 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Disable - triggers on intentional patterns like syncing derived state
+      'react-hooks/set-state-in-effect': 'off',
+    },
   },
   // Disable react-refresh for test files
   {

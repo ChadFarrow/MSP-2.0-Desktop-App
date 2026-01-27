@@ -52,7 +52,6 @@ export function PublishSection({ publisherFeed }: PublishSectionProps) {
 
   // Refresh status when podcastGuid changes
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus(getPublishStatus(publisherFeed.podcastGuid));
   }, [publisherFeed.podcastGuid]);
 
@@ -68,7 +67,6 @@ export function PublishSection({ publisherFeed }: PublishSectionProps) {
   useEffect(() => {
     if (!progress) return;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStepStates(prev => {
       const newState = { ...prev };
 
