@@ -127,6 +127,7 @@ export function Editor() {
   }, [dispatch]);
 
   // Debounce publisher URL lookup
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const url = album.publisher?.feedUrl;
     if (!url) {
@@ -140,6 +141,7 @@ export function Editor() {
 
     return () => clearTimeout(timer);
   }, [album.publisher?.feedUrl, lookupPublisherFeed]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Determine if this is a video feed
   const isVideo = isVideoMedium(album.medium);
