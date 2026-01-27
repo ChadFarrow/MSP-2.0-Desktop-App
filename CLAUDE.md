@@ -45,6 +45,33 @@ npm run tauri:dev    # Desktop app dev mode
 - Supports Windows, macOS, and Linux
 - Build: `npm run tauri:build`
 
+### Auto-Update System
+The desktop app uses Tauri's updater plugin with signed releases hosted on GitHub.
+
+**Key files:**
+- `src/utils/updater.ts` - Update check and install logic
+- `src/components/modals/UpdateModal.tsx` - Update prompt UI
+- `src-tauri/tauri.conf.json` - Updater config with public key and endpoint
+
+**GitHub Secrets required:**
+- `TAURI_SIGNING_PRIVATE_KEY` - Base64-encoded signing key (single line, no whitespace)
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` - Key password
+
+**Release process:**
+1. Bump version in `src-tauri/tauri.conf.json`
+2. Create and push a version tag: `git tag v0.x.x && git push origin v0.x.x`
+3. GitHub Actions builds, signs, and uploads artifacts
+4. Publish the draft release when ready
+
+**Known issues and solutions:**
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| "Invalid symbol 32" signing error | Multi-line key format or whitespace in secret | Use single-line base64 key; workflow uses `tr -d '[:space:]'` to strip whitespace |
+| "Resource not accessible by integration" | Parallel jobs race to create release | Manually create draft release first, then re-run failed jobs |
+| Secrets not found | Secrets in Environments instead of Repository | Add to Settings > Secrets > Actions > Repository secrets |
+| No update prompt in old versions | App was built before update code was added | Users must manually update once to a version with update support |
+
 ## Software Versions
 
 ### Core
