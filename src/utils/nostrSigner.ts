@@ -217,7 +217,7 @@ export async function waitForNip46Connection(
     storeConnectionMethod('nip46');
 
     return userPubkey;
-  } catch (e) {
+  } catch {
     pool.close(NIP46_RELAYS);
     throw new Error('Connection timeout - no response from signer');
   }

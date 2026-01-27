@@ -531,7 +531,7 @@ export async function publishPublisherFeed(
               };
               saveHostedFeedInfo(podcastGuid, hostedInfo);
               feedUrl = buildHostedUrl(podcastGuid);
-            } catch (nostrErr) {
+            } catch {
               // Nostr update also failed - feed exists but user doesn't have access
               throw new Error(
                 'This feed already exists on MSP. If you are the owner, use the Restore option in the Save dialog to recover your credentials, or log in with the Nostr identity linked to this feed.'

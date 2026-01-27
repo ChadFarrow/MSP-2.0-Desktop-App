@@ -302,7 +302,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
           }
           showSuccessAndClose('Saved to browser storage');
           break;
-        case 'download':
+        case 'download': {
           const xml = generateCurrentFeedXml();
           const feedTitle = isPublisherMode && publisherFeed ? publisherFeed.title : album.title;
           const publisherName = isPublisherMode && publisherFeed?.author ? `${publisherFeed.author}_` : '';
@@ -310,12 +310,14 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
           downloadXml(xml, filename);
           showSuccessAndClose('Download started');
           break;
-        case 'clipboard':
+        }
+        case 'clipboard': {
           const xmlContent = generateCurrentFeedXml();
           await copyToClipboard(xmlContent);
           showSuccessAndClose('Copied to clipboard');
           break;
-        case 'nostr':
+        }
+        case 'nostr': {
           const nostrResult = isPublisherMode && publisherFeed
             ? await saveFeedToNostr(publisherFeed, 'publisher', isDirty)
             : await saveFeedToNostr(album, 'album', isDirty);
@@ -325,7 +327,8 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
             setMessage({ type: 'error', text: nostrResult.message });
           }
           break;
-        case 'nostrMusic':
+        }
+        case 'nostrMusic': {
           const musicResult = await publishNostrMusicTracks(album, undefined, setProgress);
           setProgress(null);
           // Show error/warning if not all tracks published or playlist failed
@@ -338,7 +341,8 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
             setMessage({ type: 'error', text: musicResult.message });
           }
           break;
-        case 'blossom':
+        }
+        case 'blossom': {
           const blossomResult = isPublisherMode && publisherFeed
             ? await uploadFeedToBlossom(publisherFeed, 'publisher', blossomServer)
             : await uploadFeedToBlossom(album, 'album', blossomServer);
@@ -355,7 +359,8 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
             text: blossomResult.message
           });
           break;
-        case 'hosted':
+        }
+        case 'hosted': {
           const hostedXml = generateCurrentFeedXml();
 
           // If there's a legacy feed with mismatched feedId, update it first
@@ -436,6 +441,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
             setMessage({ type: 'success', text: successMsg });
           }
           break;
+        }
       }
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Save failed' });

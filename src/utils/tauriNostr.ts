@@ -139,16 +139,16 @@ export function getNostrInterface() {
   if (hasNip07()) {
     // Return the browser extension with our extensions stubbed
     return {
-      ...(window as any).nostr,
+      ...window.nostr,
       loginWithNsec: () => Promise.reject(new Error('Use browser extension to login')),
       loginWithHex: () => Promise.reject(new Error('Use browser extension to login')),
       logout: () => Promise.resolve(),
       getPubkey: async () => {
-        const pubkey = await (window as any).nostr.getPublicKey();
+        const pubkey = await window.nostr!.getPublicKey();
         return { pubkey, npub: '' };
       },
       publishEvent: async (event: UnsignedEvent) => {
-        const signed = await (window as any).nostr.signEvent(event);
+        const signed = await window.nostr!.signEvent(event as Parameters<typeof window.nostr.signEvent>[0]);
         // In web mode, you'd need to publish via your existing relay logic
         return signed.id;
       },

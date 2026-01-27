@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Mock fetch globally before importing the handler
 const mockFetch = vi.fn();
@@ -20,12 +21,12 @@ function createMockReqRes(query: Record<string, string | undefined>) {
   const req = {
     method: 'GET',
     query
-  } as any;
+  } as VercelRequest;
 
   const res = {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis()
-  } as any;
+  } as unknown as VercelResponse;
 
   return { req, res };
 }

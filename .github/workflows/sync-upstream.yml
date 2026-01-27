@@ -37,11 +37,12 @@ jobs:
 
           # Delete existing branch if it exists (from failed previous runs)
           git push origin --delete $BRANCH 2>/dev/null || true
+          git branch -D $BRANCH 2>/dev/null || true
 
           git checkout -b $BRANCH
 
           if git merge upstream/master --no-edit; then
-            git push origin $BRANCH
+            git push origin $BRANCH --force
             gh pr create \
               --title "Sync updates from web repo" \
               --body "Automated sync from [MSP-2.0 web repo](https://github.com/ChadFarrow/MSP-2.0).

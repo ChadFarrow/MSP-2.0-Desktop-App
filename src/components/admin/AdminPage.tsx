@@ -10,6 +10,8 @@ export function AdminPage() {
   const [authState, setAuthState] = useState<AuthState>('checking');
   const [error, setError] = useState<string | null>(null);
 
+  // Derive auth state from nostr state - this pattern is intentional to sync external state
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!nostrState.hasExtension) {
       setAuthState('no-extension');
@@ -19,6 +21,7 @@ export function AdminPage() {
       setAuthState('ready');
     }
   }, [nostrState.hasExtension, nostrState.isLoggedIn]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleLogin = async () => {
     await login();

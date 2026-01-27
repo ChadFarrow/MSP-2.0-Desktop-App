@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // MSP 2.0 - Feed State Management (React Context)
 import { createContext, useContext, useReducer, useEffect } from 'react';
 import type { ReactNode } from 'react';
