@@ -59,6 +59,9 @@ jobs:
           - \`CLAUDE.md\`" \
               --head $BRANCH \
               --base master
+
+            # Auto-merge after CI passes
+            gh pr merge $BRANCH --auto --squash
           else
             echo "Merge conflicts detected - manual intervention needed"
             git merge --abort
