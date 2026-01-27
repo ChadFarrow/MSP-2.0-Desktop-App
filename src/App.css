@@ -1844,3 +1844,148 @@ body {
     width: 100%;
   }
 }
+
+/* Update Modal */
+.update-modal {
+  max-width: 500px;
+}
+
+.update-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.update-version-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.update-version-current {
+  color: var(--text-muted);
+}
+
+.update-version-arrow {
+  color: var(--text-muted);
+}
+
+.update-version-new {
+  color: var(--success);
+}
+
+.update-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.update-progress-bar {
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.update-progress-fill {
+  height: 100%;
+  background: var(--accent-gradient);
+  border-radius: 4px;
+  transition: width 0.2s ease;
+}
+
+.update-progress-text {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.update-release-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.update-release-notes h4 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.update-release-notes-content {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.update-release-notes-content h1,
+.update-release-notes-content h2,
+.update-release-notes-content h3 {
+  font-size: 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.update-release-notes-content p {
+  margin: 0.5rem 0;
+}
+
+.update-release-notes-content ul,
+.update-release-notes-content ol {
+  margin: 0.5rem 0;
+  padding-left: 20px;
+}
+
+.update-modal-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.update-modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.update-error {
+  padding: 10px 14px;
+  background: var(--error-bg);
+  border: 1px solid var(--error);
+  border-radius: var(--radius-md);
+  color: var(--error);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 480px) {
+  .update-modal {
+    max-width: 100%;
+  }
+
+  .update-version-info {
+    font-size: 1rem;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .update-modal-buttons {
+    flex-direction: column-reverse;
+  }
+
+  .update-modal-buttons .btn {
+    width: 100%;
+  }
+}

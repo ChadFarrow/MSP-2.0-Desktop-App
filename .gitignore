@@ -24,6 +24,7 @@ dist-ssr
 *.sw?
 .vercel
 .env
+Keys/
 
 # Tauri
 src-tauri/target/

@@ -30,6 +30,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -53,6 +54,12 @@
     "shell": {
       "open": true
     },
-    "fs": {}
+    "fs": {},
+    "updater": {
+      "pubkey": "REPLACE_WITH_YOUR_PUBLIC_KEY",
+      "endpoints": [
+        "https://github.com/ChadFarrow/MSP-2.0-Desktop-App/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

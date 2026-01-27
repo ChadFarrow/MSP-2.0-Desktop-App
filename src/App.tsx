@@ -13,7 +13,10 @@ import { SaveModal } from './components/modals/SaveModal';
 import { InfoModal } from './components/modals/InfoModal';
 import { NostrConnectModal } from './components/modals/NostrConnectModal';
 import { ConfirmModal } from './components/modals/ConfirmModal';
+import { UpdateModal } from './components/modals/UpdateModal';
 import { Editor } from './components/Editor/Editor';
+import { checkForUpdate, isTauri } from './utils/updater';
+import type { UpdateInfo } from './utils/updater';
 import { PublisherEditor } from './components/Editor/PublisherEditor';
 import { AdminPage } from './components/admin/AdminPage';
 import { openUrl } from './utils/openUrl';
@@ -32,8 +35,27 @@ function AppContent() {
   const [showConfirmNewModal, setShowConfirmNewModal] = useState(false);
   const [pendingNewFeedType, setPendingNewFeedType] = useState<FeedType>('album');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { state: nostrState, logout: nostrLogout } = useNostr();
+
+  // Check for updates on launch (desktop only)
+  useEffect(() => {
+    if (!isTauri()) return;
+
+    const checkUpdate = async () => {
+      const update = await checkForUpdate();
+      if (update) {
+        setUpdateInfo(update);
+        setShowUpdateModal(true);
+      }
+    };
+
+    // Delay check by 2 seconds to let the app fully load
+    const timer = setTimeout(checkUpdate, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -194,6 +216,23 @@ function AppContent() {
                   >
                     {theme === 'dark' ? '☀️' : '🌙'} Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode
                   </button>
+                  {isTauri() && (
+                    <button
+                      className="dropdown-item"
+                      onClick={async () => {
+                        setShowDropdown(false);
+                        const update = await checkForUpdate();
+                        if (update) {
+                          setUpdateInfo(update);
+                          setShowUpdateModal(true);
+                        } else {
+                          alert('You are running the latest version!');
+                        }
+                      }}
+                    >
+                      🔄 Check for Updates
+                    </button>
+                  )}
                   <div className="dropdown-divider" />
                   {nostrState.isLoggedIn ? (
                     <button
@@ -271,6 +310,13 @@ function AppContent() {
         onConfirm={handleConfirmNew}
         onCancel={() => setShowConfirmNewModal(false)}
       />
+
+      {showUpdateModal && updateInfo && (
+        <UpdateModal
+          updateInfo={updateInfo}
+          onClose={() => setShowUpdateModal(false)}
+        />
+      )}
     </>
   );
 }
