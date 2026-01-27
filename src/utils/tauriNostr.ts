@@ -148,7 +148,8 @@ export function getNostrInterface() {
         return { pubkey, npub: '' };
       },
       publishEvent: async (event: UnsignedEvent) => {
-        const signed = await window.nostr!.signEvent(event as Parameters<typeof window.nostr!.signEvent>[0]);
+        const nostr = window.nostr!;
+        const signed = await nostr.signEvent(event as Parameters<typeof nostr.signEvent>[0]);
         // In web mode, you'd need to publish via your existing relay logic
         return signed.id;
       },
