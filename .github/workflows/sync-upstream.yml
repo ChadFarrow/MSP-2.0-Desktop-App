@@ -53,6 +53,7 @@ jobs:
           - \`package.json\`
           - \`src/App.tsx\`
           - \`CLAUDE.md\`" \
+              --head $BRANCH \
               --base master
           else
             echo "Merge conflicts detected - manual intervention needed"
