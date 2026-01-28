@@ -37,7 +37,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          BRANCH="sync-upstream-$(date +%Y%m%d)"
+          BRANCH="sync-upstream-$(date +%Y%m%d-%H%M%S)"
 
           # Delete existing branch if it exists (from failed previous runs)
           git push origin --delete $BRANCH 2>/dev/null || true
