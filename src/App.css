@@ -747,6 +747,37 @@ body {
   max-width: 500px;
 }
 
+.preview-modal {
+  max-width: 98vw;
+  width: 98%;
+  height: 95vh;
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-modal .modal-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: none !important;
+  padding: 12px;
+}
+
+.preview-modal pre {
+  flex: 1;
+  max-height: none !important;
+  min-height: 0;
+  overflow: auto !important;
+}
+
+.preview-modal .modal-footer {
+  flex-shrink: 0;
+  padding: 12px;
+}
+
 .import-help-list {
   margin: 0;
   padding-left: 20px;

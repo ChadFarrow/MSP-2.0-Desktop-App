@@ -129,6 +129,14 @@ src-tauri/          # Tauri desktop app
 - Include Co-Authored-By for Claude-assisted commits
 - No pre-commit hooks configured
 
+## GitHub Issues
+
+Check GitHub issues for feature requests and bug reports:
+```bash
+gh issue list              # List open issues
+gh issue view <number>     # View issue details
+```
+
 ## Commands
 
 ```bash

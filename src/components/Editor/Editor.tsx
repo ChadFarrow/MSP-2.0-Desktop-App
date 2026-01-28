@@ -89,9 +89,19 @@ export function Editor() {
     feedImage: string | null;
   }>({ loading: false, error: null, feedTitle: null, feedImage: null });
 
+// Submit to Podcast Index state
+  const [piSubmitting, setPiSubmitting] = useState(false);
+  const [piSubmitResult, setPiSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
+
   // Auto-lookup publisher feed in Podcast Index when URL changes
   const lookupPublisherFeed = useCallback(async (feedUrl: string) => {
     if (!feedUrl) {
+      setPublisherLookup({ loading: false, error: null, feedTitle: null, feedImage: null });
+      return;
+    }
+
+// Only lookup actual URLs, not search terms
+    if (!feedUrl.startsWith('http://') && !feedUrl.startsWith('https://')) {
       setPublisherLookup({ loading: false, error: null, feedTitle: null, feedImage: null });
       return;
     }
@@ -141,6 +151,44 @@ export function Editor() {
 
     return () => clearTimeout(timer);
   }, [album.publisher?.feedUrl, lookupPublisherFeed]);
+
+  // Submit feed to Podcast Index
+  const handleSubmitToPI = async () => {
+    const feedUrl = album.publisher?.feedUrl;
+    if (!feedUrl?.trim()) return;
+    setPiSubmitting(true);
+    setPiSubmitResult(null);
+    try {
+      // First validate it's an actual RSS feed
+      const proxyRes = await apiFetch(`/api/proxy-feed?url=${encodeURIComponent(feedUrl)}`);
+      if (!proxyRes.ok) {
+        setPiSubmitResult({ success: false, message: 'Could not fetch URL - check the address' });
+        return;
+      }
+      const content = await proxyRes.text();
+      if (!content.includes('<rss') && !content.includes('<feed') && !content.includes('<channel')) {
+        setPiSubmitResult({ success: false, message: 'URL does not appear to be an RSS feed' });
+        return;
+      }
+
+      // Submit to Podcast Index
+      const response = await apiFetch('/api/pisubmit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: feedUrl })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setPiSubmitResult({ success: true, message: 'Submitted! May take a few minutes to index.' });
+      } else {
+        setPiSubmitResult({ success: false, message: data.error || data.details?.description || 'Failed to submit' });
+      }
+    } catch {
+      setPiSubmitResult({ success: false, message: 'Failed to submit' });
+    } finally {
+      setPiSubmitting(false);
+    }
+  };
 
   // Determine if this is a video feed
   const isVideo = isVideoMedium(album.medium);
@@ -538,9 +586,31 @@ export function Editor() {
                 </p>
               )}
               {publisherLookup.error && (
-                <p style={{ color: 'var(--error)', marginTop: '8px', fontSize: '12px' }}>
-                  {publisherLookup.error}
-                </p>
+                <div style={{ marginTop: '8px' }}>
+                  <p style={{ color: 'var(--warning-color, #f59e0b)', fontSize: '12px', marginBottom: '8px' }}>
+                    ⚠ {publisherLookup.error}
+                  </p>
+                  {publisherLookup.error === 'Feed not found in Podcast Index' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        className="btn btn-secondary"
+                        onClick={handleSubmitToPI}
+                        disabled={piSubmitting}
+                        style={{ fontSize: '12px', padding: '6px 12px' }}
+                      >
+                        {piSubmitting ? 'Submitting...' : 'Submit to Podcast Index'}
+                      </button>
+                      {piSubmitResult && (
+                        <span style={{
+                          color: piSubmitResult.success ? 'var(--success-color, #22c55e)' : 'var(--danger-color, #ef4444)',
+                          fontSize: '12px'
+                        }}>
+                          {piSubmitResult.message}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
               {album.publisher?.feedGuid && !publisherLookup.loading && !publisherLookup.error && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>

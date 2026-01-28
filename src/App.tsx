@@ -10,6 +10,7 @@ import { generateTestAlbum } from './utils/testData';
 import { NostrLoginButton } from './components/NostrLoginButton';
 import { ImportModal } from './components/modals/ImportModal';
 import { SaveModal } from './components/modals/SaveModal';
+import { PreviewModal } from './components/modals/PreviewModal';
 import { InfoModal } from './components/modals/InfoModal';
 import { NostrConnectModal } from './components/modals/NostrConnectModal';
 import { ConfirmModal } from './components/modals/ConfirmModal';
@@ -37,6 +38,7 @@ function AppContent() {
   const { theme, toggleTheme } = useTheme();
   const [showImportModal, setShowImportModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showNostrConnectModal, setShowNostrConnectModal] = useState(false);
   const [showConfirmNewModal, setShowConfirmNewModal] = useState(false);
@@ -237,6 +239,12 @@ function AppContent() {
                   </button>
                   <button
                     className="dropdown-item"
+                    onClick={() => { setShowPreviewModal(true); setShowDropdown(false); }}
+                  >
+                    👁️ View Feed
+                  </button>
+                  <button
+                    className="dropdown-item"
                     onClick={() => { setShowInfoModal(true); setShowDropdown(false); }}
                   >
                     ℹ️ Info
@@ -332,6 +340,15 @@ function AppContent() {
           isDirty={state.isDirty}
           isLoggedIn={nostrState.isLoggedIn}
           onImport={handleImport}
+        />
+      )}
+
+      {showPreviewModal && (
+        <PreviewModal
+          onClose={() => setShowPreviewModal(false)}
+          album={state.feedType === 'video' && state.videoFeed ? state.videoFeed : state.album}
+          publisherFeed={state.publisherFeed}
+          feedType={state.feedType}
         />
       )}
 

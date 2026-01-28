@@ -52,6 +52,12 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
   const [myFeedsError, setMyFeedsError] = useState('');
   const [showMyFeeds, setShowMyFeeds] = useState(false);
 
+  // Submit to Podcast Index state
+  const [hasSearched, setHasSearched] = useState(false);
+  const [submitUrl, setSubmitUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
+
   // Refresh feed info from Podcast Index by GUID
   const handleRefreshArtwork = async (index: number) => {
     const item = publisherFeed.remoteItems[index];
@@ -166,6 +172,9 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
     setIsSearching(true);
     setSearchError('');
     setSearchResults([]);
+    setHasSearched(false);
+    setSubmitUrl('');
+    setSubmitResult(null);
 
     try {
       const response = await apiFetch(`/api/pisearch?q=${encodeURIComponent(searchQuery)}`);
@@ -177,6 +186,7 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
       }
 
       setSearchResults(data.feeds || []);
+      setHasSearched(true);
     } catch {
       setSearchError('Failed to search');
     } finally {
@@ -197,6 +207,42 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
       }
     });
     setSearchResults(prev => prev.filter(r => r.id !== result.id));
+  };
+
+  const handleSubmitToPI = async () => {
+    if (!submitUrl.trim()) return;
+    setIsSubmitting(true);
+    setSubmitResult(null);
+    try {
+      // First validate it's an actual RSS feed
+      const proxyRes = await fetch(`/api/proxy-feed?url=${encodeURIComponent(submitUrl)}`);
+      if (!proxyRes.ok) {
+        setSubmitResult({ success: false, message: 'Could not fetch URL - check the address' });
+        return;
+      }
+      const content = await proxyRes.text();
+      if (!content.includes('<rss') && !content.includes('<feed') && !content.includes('<channel')) {
+        setSubmitResult({ success: false, message: 'URL does not appear to be an RSS feed' });
+        return;
+      }
+
+      // Submit to Podcast Index
+      const response = await fetch('/api/pisubmit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: submitUrl })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setSubmitResult({ success: true, message: data.message || 'Feed submitted! It may take a few minutes to be indexed.' });
+      } else {
+        setSubmitResult({ success: false, message: data.error || data.details?.description || 'Failed to submit feed' });
+      }
+    } catch {
+      setSubmitResult({ success: false, message: 'Failed to submit feed' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -294,6 +340,42 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
               </div>
             ))}
             </div>
+          </div>
+        )}
+
+        {hasSearched && searchResults.length === 0 && !searchError && (
+          <div style={{ marginTop: '8px' }}>
+            <p style={{ color: 'var(--warning-color, #f59e0b)', fontSize: '14px', marginBottom: '12px' }}>
+              ⚠ No feeds found in the Podcast Index.
+            </p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>
+              If your feed isn't indexed yet, enter the URL to submit it:
+            </p>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <input
+                type="url"
+                className="form-input"
+                placeholder="https://example.com/feed.xml"
+                value={submitUrl}
+                onChange={e => setSubmitUrl(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button
+                className="btn btn-secondary"
+                onClick={handleSubmitToPI}
+                disabled={isSubmitting || !submitUrl.trim()}
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit to Podcast Index'}
+              </button>
+            </div>
+            {submitResult && (
+              <p style={{
+                color: submitResult.success ? 'var(--success-color, #22c55e)' : 'var(--danger-color, #ef4444)',
+                fontSize: '12px'
+              }}>
+                {submitResult.message}
+              </p>
+            )}
           </div>
         )}
 
