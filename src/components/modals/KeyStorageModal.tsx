@@ -12,7 +12,6 @@ import {
   storeKeyWithoutPassword,
   unlockStoredKey,
   removeStoredKey,
-  changeKeyPassword,
   type StoredKeyInfo,
   type StoredKeyEntry,
   type NostrProfile,
@@ -51,8 +50,6 @@ export function KeyStorageModal({
 }: KeyStorageModalProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [usePassword, setUsePassword] = useState(true);
   const [label, setLabel] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -106,8 +103,6 @@ export function KeyStorageModal({
   const resetState = () => {
     setPassword('');
     setConfirmPassword('');
-    setNewPassword('');
-    setConfirmNewPassword('');
     setLabel('');
     setError(null);
     setLoading(false);
@@ -181,36 +176,6 @@ export function KeyStorageModal({
       handleClose();
     } catch (e) {
       setError(extractErrorMessage(e, 'Failed to unlock key'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleChangePassword = async () => {
-    if (!selectedKey) return;
-
-    if (newPassword && newPassword !== confirmNewPassword) {
-      setError('New passwords do not match');
-      return;
-    }
-    if (newPassword && newPassword.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      await changeKeyPassword(
-        selectedKey.pubkey,
-        selectedKey.mode === 'password' ? password : undefined,
-        newPassword || undefined
-      );
-      onKeySaved?.();
-      handleClose();
-    } catch (e) {
-      setError(extractErrorMessage(e, 'Failed to change password'));
     } finally {
       setLoading(false);
     }
