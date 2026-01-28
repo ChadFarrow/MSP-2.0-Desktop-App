@@ -58,10 +58,14 @@ The desktop app uses Tauri's updater plugin with signed releases hosted on GitHu
 - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` - Key password
 
 **Release process:**
-1. Bump version in `src-tauri/tauri.conf.json`
+Releases are automatic on push to master:
+1. Push changes to master branch
+2. GitHub Actions auto-increments version using run number (e.g., `0.1.14`)
+3. Workflow builds, signs, and publishes release automatically
+
+For manual version control (optional):
+1. Update version in `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml`
 2. Create and push a version tag: `git tag v0.x.x && git push origin v0.x.x`
-3. GitHub Actions builds, signs, and uploads artifacts
-4. Publish the draft release when ready
 
 **Known issues and solutions:**
 
@@ -71,6 +75,9 @@ The desktop app uses Tauri's updater plugin with signed releases hosted on GitHu
 | "Resource not accessible by integration" | Parallel jobs race to create release | Manually create draft release first, then re-run failed jobs |
 | Secrets not found | Secrets in Environments instead of Repository | Add to Settings > Secrets > Actions > Repository secrets |
 | No update prompt in old versions | App was built before update code was added | Users must manually update once to a version with update support |
+| Branch protection blocks workflow commits | Workflow can't push version bumps when status checks required | Use GitHub run number for version instead of committing |
+| Build fails with unused variable error | TypeScript strict mode + ESLint enforce no unused code | Remove unused functions/variables before committing |
+| Component uses outdated API after refactor | Type changed (e.g., `StoredKeyInfo.exists` to `keys[]` array) | Update all components using the old API pattern |
 
 ## Software Versions
 
