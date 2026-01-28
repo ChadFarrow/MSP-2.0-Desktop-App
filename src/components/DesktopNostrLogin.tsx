@@ -117,7 +117,7 @@ export function DesktopNostrLogin({ onLogin, onLogout }: DesktopNostrLoginProps)
       onLogin?.(result);
 
       // Offer to save key if it was an nsec and no key is currently stored
-      if (trimmedKey.startsWith('nsec1') && !storedKeyInfo?.keys && storedKeyInfo.keys.length > 0) {
+      if (trimmedKey.startsWith('nsec1') && !(storedKeyInfo?.keys && storedKeyInfo.keys.length > 0)) {
         setModalMode('save');
       }
     } catch (e) {
