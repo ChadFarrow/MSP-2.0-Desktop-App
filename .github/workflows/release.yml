@@ -125,6 +125,6 @@ jobs:
             ```bash
             sudo apt install libwebkit2gtk-4.1-0
             ```
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
