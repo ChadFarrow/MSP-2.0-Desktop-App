@@ -4,6 +4,7 @@ import { Section } from '../../Section';
 import { fetchFeedFromUrl, parseRssFeed } from '../../../utils/xmlParser';
 import { generateRssFeed, downloadXml } from '../../../utils/xmlGenerator';
 import { getHostedFeedInfo, buildHostedUrl } from '../../../utils/hostedFeed';
+import { apiFetch } from '../../../utils/api';
 
 interface DownloadCatalogSectionProps {
   publisherFeed: PublisherFeed;
@@ -51,7 +52,7 @@ export function DownloadCatalogSection({ publisherFeed }: DownloadCatalogSection
     setIsSubmitting(true);
     setSubmitResult(null);
     try {
-      const response = await fetch('/api/pisubmit', {
+      const response = await apiFetch('/api/pisubmit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: publisherFeedUrl })
@@ -88,7 +89,7 @@ export function DownloadCatalogSection({ publisherFeed }: DownloadCatalogSection
     const timeoutId = setTimeout(async () => {
       setUrlValidation('checking');
       try {
-        const response = await fetch(`/api/pisearch?q=${encodeURIComponent(publisherFeedUrl)}`);
+        const response = await apiFetch(`/api/pisearch?q=${encodeURIComponent(publisherFeedUrl)}`);
         const data = await response.json();
 
         if (response.ok && data.feeds && data.feeds.length > 0) {

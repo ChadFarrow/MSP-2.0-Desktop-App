@@ -10,6 +10,7 @@ import { useNostr } from '../../store/nostrStore';
 import type { SavedAlbumInfo, NostrMusicAlbumGroup } from '../../types/nostr';
 import type { Album } from '../../types/feed';
 import { ModalWrapper } from './ModalWrapper';
+import { apiFetch } from '../../utils/api';
 
 interface HostedFeedListItem {
   feedId: string;
@@ -162,8 +163,8 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
     setError('');
 
     try {
-      // Fetch the feed XML using relative URL (works on localhost and production)
-      const response = await fetch(`/api/hosted/${hostedFeedId.trim()}.xml`);
+      // Fetch the feed XML using apiFetch (works in both web and Tauri)
+      const response = await apiFetch(`/api/hosted/${hostedFeedId.trim()}.xml`);
       if (!response.ok) {
         throw new Error('Feed not found');
       }
@@ -195,8 +196,8 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
     setError('');
 
     try {
-      // Fetch using relative URL (works on localhost and production)
-      const response = await fetch(`/api/hosted/${feed.feedId}.xml`);
+      // Fetch using apiFetch (works in both web and Tauri)
+      const response = await apiFetch(`/api/hosted/${feed.feedId}.xml`);
       if (!response.ok) {
         throw new Error('Feed not found');
       }

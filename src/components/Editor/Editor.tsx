@@ -13,6 +13,7 @@ import { AddRecipientSelect } from '../AddRecipientSelect';
 import { RecipientsList } from '../RecipientsList';
 import { FundingFields } from '../FundingFields';
 import { ArtworkFields } from '../ArtworkFields';
+import { apiFetch } from '../../utils/api';
 
 // Roles Reference Modal
 function RolesModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -98,7 +99,7 @@ export function Editor() {
     setPublisherLookup({ loading: true, error: null, feedTitle: null, feedImage: null });
 
     try {
-      const response = await fetch(`/api/pisearch?q=${encodeURIComponent(feedUrl)}`);
+      const response = await apiFetch(`/api/pisearch?q=${encodeURIComponent(feedUrl)}`);
       const data = await response.json();
 
       if (!response.ok) {

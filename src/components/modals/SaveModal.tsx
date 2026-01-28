@@ -22,6 +22,7 @@ import {
 import { albumStorage, videoStorage, publisherStorage, pendingHostedStorage } from '../../utils/storage';
 import { useNostr } from '../../store/nostrStore';
 import { ModalWrapper } from './ModalWrapper';
+import { apiFetch } from '../../utils/api';
 
 const DEFAULT_BLOSSOM_SERVER = 'https://blossom.primal.net/';
 
@@ -493,7 +494,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
     setMessage(null);
 
     try {
-      const response = await fetch(`/api/pubnotify?url=${encodeURIComponent(podcastIndexUrl.trim())}`);
+      const response = await apiFetch(`/api/pubnotify?url=${encodeURIComponent(podcastIndexUrl.trim())}`);
       const data = await response.json();
 
       if (!response.ok) {

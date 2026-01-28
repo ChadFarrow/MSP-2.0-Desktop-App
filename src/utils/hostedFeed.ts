@@ -2,6 +2,7 @@
 import { hostedFeedStorage, type HostedFeedInfo } from './storage';
 import { createAdminAuthHeader } from './adminAuth';
 import { hasSigner } from './nostrSigner';
+import { apiFetch, resolveApiUrl } from './api';
 
 // Re-export type for backward compatibility
 export type { HostedFeedInfo };
@@ -55,7 +56,7 @@ export async function createHostedFeed(
   podcastGuid: string,
   editToken?: string
 ): Promise<CreateFeedResponse> {
-  const response = await fetch('/api/hosted', {
+  const response = await apiFetch('/api/hosted', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ xml, title, podcastGuid, editToken })
@@ -83,7 +84,7 @@ export async function updateHostedFeed(
   xml: string,
   title: string
 ): Promise<UpdateFeedResponse> {
-  const response = await fetch(`/api/hosted/${feedId}`, {
+  const response = await apiFetch(`/api/hosted/${feedId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -107,7 +108,7 @@ export async function deleteHostedFeed(
   feedId: string,
   editToken: string
 ): Promise<void> {
-  const response = await fetch(`/api/hosted/${feedId}`, {
+  const response = await apiFetch(`/api/hosted/${feedId}`, {
     method: 'DELETE',
     headers: { 'X-Edit-Token': editToken }
   });
@@ -201,11 +202,11 @@ export async function createHostedFeedWithNostr(
 
   // Add Nostr auth if available
   if (hasSigner()) {
-    const url = `${window.location.origin}/api/hosted`;
+    const url = resolveApiUrl('/api/hosted');
     headers['Authorization'] = await createAdminAuthHeader(url, 'POST');
   }
 
-  const response = await fetch('/api/hosted', {
+  const response = await apiFetch('/api/hosted', {
     method: 'POST',
     headers,
     body: JSON.stringify({ xml, title, podcastGuid, editToken })
@@ -231,10 +232,10 @@ export async function updateHostedFeedWithNostr(
     throw new Error('Not logged in with Nostr');
   }
 
-  const url = `${window.location.origin}/api/hosted/${feedId}`;
+  const url = resolveApiUrl(`/api/hosted/${feedId}`);
   const authHeader = await createAdminAuthHeader(url, 'PUT');
 
-  const response = await fetch(`/api/hosted/${feedId}`, {
+  const response = await apiFetch(`/api/hosted/${feedId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -269,10 +270,10 @@ export async function linkNostrToFeed(
     throw new Error('Not logged in with Nostr');
   }
 
-  const url = `${window.location.origin}/api/hosted/${feedId}`;
+  const url = resolveApiUrl(`/api/hosted/${feedId}`);
   const authHeader = await createAdminAuthHeader(url, 'PATCH');
 
-  const response = await fetch(`/api/hosted/${feedId}`, {
+  const response = await apiFetch(`/api/hosted/${feedId}`, {
     method: 'PATCH',
     headers: {
       'X-Edit-Token': editToken,

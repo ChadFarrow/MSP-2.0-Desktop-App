@@ -3,6 +3,7 @@ import { XMLParser } from 'fast-xml-parser';
 import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData } from '../types/feed';
 import { createEmptyTrack } from '../types/feed';
 import { areValueBlocksStrictEqual, arePersonsEqual } from './comparison';
+import { apiFetch } from './api';
 
 // Known channel keys that we explicitly parse (don't capture as unknown)
 const KNOWN_CHANNEL_KEYS = new Set([
@@ -558,8 +559,7 @@ export const fetchFeedFromUrl = async (url: string): Promise<string> => {
   // For MSP feeds, try our own proxy first to avoid CORS issues
   if (isMspUrl(url)) {
     try {
-      const proxyUrl = `/api/proxy-feed?url=${encodeURIComponent(url)}`;
-      const response = await fetch(proxyUrl, {
+      const response = await apiFetch(`/api/proxy-feed?url=${encodeURIComponent(url)}`, {
         headers: {
           'Accept': 'application/rss+xml, application/xml, text/xml, */*'
         }
@@ -577,30 +577,37 @@ export const fetchFeedFromUrl = async (url: string): Promise<string> => {
   }
 
   const corsProxies = [
-    '', // Try direct first
-    '/api/proxy-feed?url=', // Our own proxy
-    'https://api.allorigins.win/get?url=',
-    'https://corsproxy.io/?'
+    { prefix: '', isOurProxy: false }, // Try direct first
+    { prefix: '/api/proxy-feed?url=', isOurProxy: true }, // Our own proxy
+    { prefix: 'https://api.allorigins.win/get?url=', isOurProxy: false },
+    { prefix: 'https://corsproxy.io/?', isOurProxy: false }
   ];
 
   for (const proxy of corsProxies) {
     try {
-      const fetchUrl = proxy
-        ? `${proxy}${encodeURIComponent(url)}`
+      const fetchUrl = proxy.prefix
+        ? `${proxy.prefix}${encodeURIComponent(url)}`
         : url;
 
-      const response = await fetch(fetchUrl, {
-        headers: {
-          'Accept': 'application/rss+xml, application/xml, text/xml, */*'
-        }
-      });
+      // Use apiFetch for our own proxy (handles Tauri), regular fetch for external proxies
+      const response = proxy.isOurProxy
+        ? await apiFetch(`/api/proxy-feed?url=${encodeURIComponent(url)}`, {
+            headers: {
+              'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+            }
+          })
+        : await fetch(fetchUrl, {
+            headers: {
+              'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+            }
+          });
 
       if (!response.ok) continue;
 
       let content = await response.text();
 
       // Handle allorigins wrapper
-      if (proxy.includes('allorigins.win')) {
+      if (proxy.prefix.includes('allorigins.win')) {
         try {
           const data = JSON.parse(content);
           content = data.contents || content;

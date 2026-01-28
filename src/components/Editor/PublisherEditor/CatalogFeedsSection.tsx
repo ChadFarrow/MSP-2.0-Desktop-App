@@ -6,6 +6,7 @@ import { useNostr } from '../../../store/nostrStore';
 import { createAdminAuthHeader } from '../../../utils/adminAuth';
 import { InfoIcon } from '../../InfoIcon';
 import { Section } from '../../Section';
+import { apiFetch, resolveApiUrl } from '../../../utils/api';
 
 interface SearchResult {
   id: number;
@@ -58,7 +59,7 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
 
     setRefreshingIndex(index);
     try {
-      const response = await fetch(`/api/pisearch?q=${encodeURIComponent(item.feedGuid)}`);
+      const response = await apiFetch(`/api/pisearch?q=${encodeURIComponent(item.feedGuid)}`);
       const data = await response.json();
 
       if (response.ok && data.feeds && data.feeds.length > 0) {
@@ -93,10 +94,10 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
     setShowMyFeeds(true);
 
     try {
-      const url = `${window.location.origin}/api/hosted/`;
+      const url = resolveApiUrl('/api/hosted/');
       const authHeader = await createAdminAuthHeader(url, 'GET');
 
-      const response = await fetch('/api/hosted/', {
+      const response = await apiFetch('/api/hosted/', {
         headers: { 'Authorization': authHeader }
       });
 
@@ -116,7 +117,7 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
       const feedsWithMedium = await Promise.all(
         userFeeds.map(async (feed: MspFeed) => {
           try {
-            const feedResponse = await fetch(`/api/hosted/${feed.feedId}.xml`);
+            const feedResponse = await apiFetch(`/api/hosted/${feed.feedId}.xml`);
             if (feedResponse.ok) {
               const xml = await feedResponse.text();
               // Extract medium from XML
@@ -167,7 +168,7 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
     setSearchResults([]);
 
     try {
-      const response = await fetch(`/api/pisearch?q=${encodeURIComponent(searchQuery)}`);
+      const response = await apiFetch(`/api/pisearch?q=${encodeURIComponent(searchQuery)}`);
       const data = await response.json();
 
       if (!response.ok) {
