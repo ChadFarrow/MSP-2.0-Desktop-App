@@ -123,6 +123,7 @@ src-tauri/          # Tauri desktop app
 
 ## Git Workflow
 
+- **Run `git pull` on startup** before beginning any work
 - Main branch: `master`
 - Commit style: imperative tense ("Fix bug", "Add feature")
 - Include Co-Authored-By for Claude-assisted commits
