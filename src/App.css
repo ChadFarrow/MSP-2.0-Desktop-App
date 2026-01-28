@@ -1567,7 +1567,8 @@ body {
 }
 
 .nostr-connect-extension,
-.nostr-connect-remote {
+.nostr-connect-remote,
+.nostr-connect-nsec {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1704,6 +1705,59 @@ body {
   font-size: 1rem;
 }
 
+/* Nsec login styles */
+.nostr-connect-nsec .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nostr-connect-nsec .form-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.nostr-connect-nsec .security-note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+.nostr-connect-nsec .stored-key-notice {
+  padding: 12px 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+.nostr-connect-nsec .stored-key-notice p {
+  margin: 0;
+}
+
+.nostr-connect-nsec .link-btn {
+  background: none;
+  border: none;
+  color: var(--accent-primary);
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  text-decoration: underline;
+}
+
+.nostr-connect-nsec .link-btn:hover {
+  color: var(--accent-hover);
+}
+
+.nostr-connect-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--text-secondary);
+}
+
 /* Nostr Connect Modal - Mobile */
 @media (max-width: 480px) {
   .nostr-connect-modal .modal-content {
@@ -1722,6 +1776,178 @@ body {
     max-width: 200px;
     height: auto;
   }
+}
+
+/* Key Storage Modal */
+.key-storage-modal {
+  max-width: 420px;
+}
+
+.key-storage-modal .modal-description {
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.key-storage-modal .key-storage-option {
+  margin-bottom: 1rem;
+}
+
+.key-storage-modal .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.key-storage-modal .checkbox-label input {
+  width: auto;
+}
+
+.key-storage-modal .form-group {
+  margin-bottom: 1rem;
+}
+
+.key-storage-modal .form-group label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.key-storage-modal .form-group input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.key-storage-modal .form-group input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(155, 89, 182, 0.2);
+}
+
+.key-storage-modal .security-warning {
+  background: var(--error-bg);
+  border: 1px solid var(--error);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: var(--error);
+}
+
+.key-storage-modal .error-message {
+  color: var(--error);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.key-storage-modal .stored-key-info {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.key-storage-modal .stored-key-info .info-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.key-storage-modal .stored-key-info .info-row:last-child {
+  margin-bottom: 0;
+}
+
+.key-storage-modal .stored-key-info .label {
+  font-weight: 500;
+  min-width: 80px;
+  font-size: 0.875rem;
+}
+
+.key-storage-modal .stored-key-info .pubkey {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--accent-primary);
+}
+
+.key-storage-modal h4 {
+  margin: 1rem 0 0.75rem;
+  font-size: 1rem;
+}
+
+.key-storage-modal .modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.key-storage-modal .btn-danger {
+  background: var(--error);
+  color: white;
+}
+
+.key-storage-modal .btn-danger:hover:not(:disabled) {
+  background: #c0392b;
+}
+
+.key-storage-modal .stored-key-profile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.key-storage-modal .profile-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.key-storage-modal .profile-avatar-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.key-storage-modal .profile-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.key-storage-modal .profile-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.key-storage-modal .profile-details .pubkey {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--accent-primary);
 }
 
 /* Person Preview Container - Two-column layout for roles + thumbnail */

@@ -1,8 +1,15 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use argon2::{Argon2, password_hash::SaltString};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
+use chacha20poly1305::{
+    aead::{Aead, KeyInit},
+    XChaCha20Poly1305, XNonce,
+};
 use directories::ProjectDirs;
 use nostr_sdk::prelude::*;
+use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -10,6 +17,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
 use uuid::Uuid;
+use zeroize::Zeroize;
 
 /// Default Nostr relays for publishing and fetching events
 const DEFAULT_RELAYS: &[&str] = &[
@@ -61,6 +69,34 @@ struct FeedSummary {
     created_at: u64,
     updated_at: u64,
 }
+
+// Encrypted key storage types
+#[derive(Serialize, Deserialize, Clone)]
+struct StoredKeyFile {
+    version: u32,
+    mode: String, // "password" or "device"
+    nonce: String,
+    ciphertext: String,
+    argon2_salt: String,
+    pubkey: String,
+    created_at: u64,
+}
+
+#[derive(Serialize, Deserialize)]
+struct StoredKeyInfo {
+    exists: bool,
+    mode: Option<String>,
+    pubkey: Option<String>,
+    created_at: Option<u64>,
+}
+
+// Constants for Argon2
+const ARGON2_MEMORY_KB: u32 = 65536; // 64MB
+const ARGON2_ITERATIONS: u32 = 3;
+const ARGON2_PARALLELISM: u32 = 1;
+
+// App-specific salt for device mode
+const DEVICE_MODE_APP_SALT: &[u8] = b"msp-studio-device-key-v1";
 
 /// Get the current Unix timestamp in seconds
 fn get_current_timestamp() -> Result<u64, String> {
@@ -673,6 +709,312 @@ async fn nostr_fetch_events(
     Ok(events.iter().map(event_to_signed_event).collect())
 }
 
+// ============================================================================
+// Encrypted Key Storage
+// ============================================================================
+
+/// Get the keystore file path
+fn get_keystore_path() -> Result<PathBuf, String> {
+    let proj_dirs = ProjectDirs::from("com", "podtards", "msp-studio")
+        .ok_or("Could not determine app data directory")?;
+
+    let data_dir = proj_dirs.data_dir();
+    fs::create_dir_all(data_dir).map_err(|e| e.to_string())?;
+
+    Ok(data_dir.join("keystore.json"))
+}
+
+/// Derive encryption key from password using Argon2id
+fn derive_key_from_password(password: &str, salt: &[u8]) -> Result<[u8; 32], String> {
+    let argon2 = Argon2::new(
+        argon2::Algorithm::Argon2id,
+        argon2::Version::V0x13,
+        argon2::Params::new(ARGON2_MEMORY_KB, ARGON2_ITERATIONS, ARGON2_PARALLELISM, Some(32))
+            .map_err(|e| e.to_string())?,
+    );
+
+    let mut key = [0u8; 32];
+    argon2
+        .hash_password_into(password.as_bytes(), salt, &mut key)
+        .map_err(|e| format!("Key derivation failed: {}", e))?;
+
+    Ok(key)
+}
+
+/// Derive encryption key from device ID (for passwordless mode)
+fn derive_key_from_device() -> Result<[u8; 32], String> {
+    let machine_id = machine_uid::get().map_err(|e| format!("Failed to get machine ID: {}", e))?;
+
+    // Combine machine ID with app salt
+    let mut combined = Vec::new();
+    combined.extend_from_slice(machine_id.as_bytes());
+    combined.extend_from_slice(DEVICE_MODE_APP_SALT);
+
+    // Use SHA256 as salt for Argon2
+    let mut hasher = Sha256::new();
+    hasher.update(&combined);
+    let salt = hasher.finalize();
+
+    derive_key_from_password(&machine_id, &salt[..16])
+}
+
+/// Encrypt nsec with the given key
+fn encrypt_nsec(nsec: &str, key: &[u8; 32]) -> Result<(String, String), String> {
+    let cipher = XChaCha20Poly1305::new_from_slice(key)
+        .map_err(|e| format!("Failed to create cipher: {}", e))?;
+
+    // Generate random nonce
+    let mut nonce_bytes = [0u8; 24];
+    rand::thread_rng().fill_bytes(&mut nonce_bytes);
+    let nonce = XNonce::from_slice(&nonce_bytes);
+
+    let ciphertext = cipher
+        .encrypt(nonce, nsec.as_bytes())
+        .map_err(|e| format!("Encryption failed: {}", e))?;
+
+    Ok((
+        BASE64.encode(nonce_bytes),
+        BASE64.encode(ciphertext),
+    ))
+}
+
+/// Decrypt nsec with the given key
+fn decrypt_nsec(nonce_b64: &str, ciphertext_b64: &str, key: &[u8; 32]) -> Result<String, String> {
+    let cipher = XChaCha20Poly1305::new_from_slice(key)
+        .map_err(|e| format!("Failed to create cipher: {}", e))?;
+
+    let nonce_bytes = BASE64
+        .decode(nonce_b64)
+        .map_err(|e| format!("Invalid nonce: {}", e))?;
+
+    if nonce_bytes.len() != 24 {
+        return Err("Invalid nonce length".to_string());
+    }
+
+    let nonce = XNonce::from_slice(&nonce_bytes);
+
+    let ciphertext = BASE64
+        .decode(ciphertext_b64)
+        .map_err(|e| format!("Invalid ciphertext: {}", e))?;
+
+    let plaintext = cipher
+        .decrypt(nonce, ciphertext.as_slice())
+        .map_err(|_| "Decryption failed - incorrect password or corrupted data".to_string())?;
+
+    String::from_utf8(plaintext).map_err(|e| format!("Invalid UTF-8: {}", e))
+}
+
+/// Set restrictive file permissions on Unix
+#[cfg(unix)]
+fn set_file_permissions(path: &PathBuf) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+    let permissions = std::fs::Permissions::from_mode(0o600);
+    fs::set_permissions(path, permissions).map_err(|e| e.to_string())
+}
+
+#[cfg(not(unix))]
+fn set_file_permissions(_path: &PathBuf) -> Result<(), String> {
+    // Windows doesn't use Unix-style permissions
+    Ok(())
+}
+
+/// Check if a stored key exists and return its info
+#[tauri::command]
+fn check_stored_key() -> Result<StoredKeyInfo, String> {
+    let keystore_path = get_keystore_path()?;
+
+    if !keystore_path.exists() {
+        return Ok(StoredKeyInfo {
+            exists: false,
+            mode: None,
+            pubkey: None,
+            created_at: None,
+        });
+    }
+
+    let content = fs::read_to_string(&keystore_path).map_err(|e| e.to_string())?;
+    let stored: StoredKeyFile = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+
+    Ok(StoredKeyInfo {
+        exists: true,
+        mode: Some(stored.mode),
+        pubkey: Some(stored.pubkey),
+        created_at: Some(stored.created_at),
+    })
+}
+
+/// Store key with password protection
+#[tauri::command]
+fn store_key_with_password(nsec: String, password: String) -> Result<(), String> {
+    if password.is_empty() {
+        return Err("Password cannot be empty".to_string());
+    }
+
+    // Validate nsec and get pubkey
+    let secret_key = SecretKey::from_bech32(&nsec).map_err(|e| e.to_string())?;
+    let keys = Keys::new(secret_key);
+    let pubkey = keys.public_key().to_hex();
+
+    // Generate salt
+    let salt = SaltString::generate(&mut rand::thread_rng());
+    let salt_str = salt.as_str();
+
+    // Derive key and encrypt
+    let mut encryption_key = derive_key_from_password(&password, salt_str.as_bytes())?;
+    let (nonce, ciphertext) = encrypt_nsec(&nsec, &encryption_key)?;
+
+    // Zeroize sensitive data
+    encryption_key.zeroize();
+
+    let stored = StoredKeyFile {
+        version: 1,
+        mode: "password".to_string(),
+        nonce,
+        ciphertext,
+        argon2_salt: salt.to_string(),
+        pubkey,
+        created_at: get_current_timestamp()?,
+    };
+
+    let keystore_path = get_keystore_path()?;
+    let json = serde_json::to_string_pretty(&stored).map_err(|e| e.to_string())?;
+    fs::write(&keystore_path, json).map_err(|e| e.to_string())?;
+    set_file_permissions(&keystore_path)?;
+
+    Ok(())
+}
+
+/// Store key with device-only protection (passwordless)
+#[tauri::command]
+fn store_key_without_password(nsec: String) -> Result<(), String> {
+    // Validate nsec and get pubkey
+    let secret_key = SecretKey::from_bech32(&nsec).map_err(|e| e.to_string())?;
+    let keys = Keys::new(secret_key);
+    let pubkey = keys.public_key().to_hex();
+
+    // Derive key from device ID
+    let mut encryption_key = derive_key_from_device()?;
+    let (nonce, ciphertext) = encrypt_nsec(&nsec, &encryption_key)?;
+
+    // Zeroize sensitive data
+    encryption_key.zeroize();
+
+    let stored = StoredKeyFile {
+        version: 1,
+        mode: "device".to_string(),
+        nonce,
+        ciphertext,
+        argon2_salt: String::new(), // Not used for device mode
+        pubkey,
+        created_at: get_current_timestamp()?,
+    };
+
+    let keystore_path = get_keystore_path()?;
+    let json = serde_json::to_string_pretty(&stored).map_err(|e| e.to_string())?;
+    fs::write(&keystore_path, json).map_err(|e| e.to_string())?;
+    set_file_permissions(&keystore_path)?;
+
+    Ok(())
+}
+
+/// Unlock stored key and login
+#[tauri::command]
+async fn unlock_stored_key(
+    password: Option<String>,
+    state: State<'_, NostrState>,
+) -> Result<NostrProfile, String> {
+    let keystore_path = get_keystore_path()?;
+
+    if !keystore_path.exists() {
+        return Err("No stored key found".to_string());
+    }
+
+    let content = fs::read_to_string(&keystore_path).map_err(|e| e.to_string())?;
+    let stored: StoredKeyFile = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+
+    // Derive decryption key based on mode
+    let mut decryption_key = match stored.mode.as_str() {
+        "password" => {
+            let password = password.ok_or("Password required for this key")?;
+            derive_key_from_password(&password, stored.argon2_salt.as_bytes())?
+        }
+        "device" => derive_key_from_device()?,
+        _ => return Err(format!("Unknown storage mode: {}", stored.mode)),
+    };
+
+    // Decrypt nsec
+    let mut nsec = decrypt_nsec(&stored.nonce, &stored.ciphertext, &decryption_key)?;
+    decryption_key.zeroize();
+
+    // Parse and login
+    let secret_key = SecretKey::from_bech32(&nsec).map_err(|e| e.to_string())?;
+    nsec.zeroize();
+
+    let keys = Keys::new(secret_key);
+
+    // Verify pubkey matches
+    let pubkey = keys.public_key().to_hex();
+    if pubkey != stored.pubkey {
+        return Err("Key verification failed - pubkey mismatch".to_string());
+    }
+
+    login_with_keys(keys, &state).await
+}
+
+/// Clear stored key
+#[tauri::command]
+fn clear_stored_key() -> Result<(), String> {
+    let keystore_path = get_keystore_path()?;
+
+    if keystore_path.exists() {
+        fs::remove_file(&keystore_path).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+/// Change key password or protection mode
+#[tauri::command]
+fn change_key_password(
+    current_password: Option<String>,
+    new_password: Option<String>,
+) -> Result<(), String> {
+    let keystore_path = get_keystore_path()?;
+
+    if !keystore_path.exists() {
+        return Err("No stored key found".to_string());
+    }
+
+    let content = fs::read_to_string(&keystore_path).map_err(|e| e.to_string())?;
+    let stored: StoredKeyFile = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+
+    // Decrypt with current credentials
+    let mut decryption_key = match stored.mode.as_str() {
+        "password" => {
+            let password = current_password.ok_or("Current password required")?;
+            derive_key_from_password(&password, stored.argon2_salt.as_bytes())?
+        }
+        "device" => derive_key_from_device()?,
+        _ => return Err(format!("Unknown storage mode: {}", stored.mode)),
+    };
+
+    let mut nsec = decrypt_nsec(&stored.nonce, &stored.ciphertext, &decryption_key)?;
+    decryption_key.zeroize();
+
+    // Re-encrypt with new credentials
+    match new_password {
+        Some(password) if !password.is_empty() => {
+            store_key_with_password(nsec.clone(), password)?;
+        }
+        _ => {
+            store_key_without_password(nsec.clone())?;
+        }
+    }
+
+    nsec.zeroize();
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -702,6 +1044,12 @@ fn main() {
             blossom_upload_file,
             blossom_delete,
             blossom_list,
+            check_stored_key,
+            store_key_with_password,
+            store_key_without_password,
+            unlock_stored_key,
+            clear_stored_key,
+            change_key_password,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

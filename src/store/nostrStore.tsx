@@ -26,11 +26,11 @@ type NostrAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_HAS_EXTENSION'; payload: boolean }
-  | { type: 'SET_CONNECTION_METHOD'; payload: 'nip07' | 'nip46' | null }
-  | { type: 'LOGIN_SUCCESS'; payload: { user: NostrUser; method: 'nip07' | 'nip46' } }
+  | { type: 'SET_CONNECTION_METHOD'; payload: 'nip07' | 'nip46' | 'tauri' | null }
+  | { type: 'LOGIN_SUCCESS'; payload: { user: NostrUser; method: 'nip07' | 'nip46' | 'tauri' } }
   | { type: 'UPDATE_PROFILE'; payload: { displayName?: string; picture?: string; nip05?: string } }
   | { type: 'LOGOUT' }
-  | { type: 'RESTORE_SESSION'; payload: { user: NostrUser; method: 'nip07' | 'nip46' } };
+  | { type: 'RESTORE_SESSION'; payload: { user: NostrUser; method: 'nip07' | 'nip46' | 'tauri' } };
 
 // Initial state
 const initialState: NostrAuthState = {
@@ -99,6 +99,7 @@ interface NostrContextType {
   state: NostrAuthState;
   login: () => Promise<void>;
   loginWithNip46: (bunkerUri?: string, onUriGenerated?: (uri: string) => void) => Promise<void>;
+  loginWithProfile: (profile: { pubkey: string; npub: string }) => void;
   logout: () => void;
 }
 
@@ -302,6 +303,36 @@ export function NostrProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Login with profile from Tauri (desktop nsec login)
+  const loginWithProfile = useCallback((profile: { pubkey: string; npub: string }) => {
+    const user: NostrUser = {
+      pubkey: profile.pubkey,
+      npub: profile.npub,
+      displayName: undefined,
+      picture: undefined,
+      nip05: undefined
+    };
+
+    // Save to localStorage
+    saveUser(user);
+
+    dispatch({ type: 'LOGIN_SUCCESS', payload: { user, method: 'tauri' } });
+
+    // Fetch profile in background
+    fetchNostrProfile(profile.pubkey).then((nostrProfile) => {
+      if (nostrProfile) {
+        dispatch({
+          type: 'UPDATE_PROFILE',
+          payload: {
+            displayName: nostrProfile.display_name || nostrProfile.name,
+            picture: nostrProfile.picture,
+            nip05: nostrProfile.nip05
+          }
+        });
+      }
+    });
+  }, []);
+
   // Logout function
   const logout = useCallback(() => {
     clearStoredUser();
@@ -310,7 +341,7 @@ export function NostrProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <NostrContext.Provider value={{ state, login, loginWithNip46, logout }}>
+    <NostrContext.Provider value={{ state, login, loginWithNip46, loginWithProfile, logout }}>
       {children}
     </NostrContext.Provider>
   );

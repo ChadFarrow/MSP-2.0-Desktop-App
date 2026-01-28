@@ -29,6 +29,13 @@ interface UnsignedEvent {
   created_at?: number;
 }
 
+interface StoredKeyInfo {
+  exists: boolean;
+  mode: 'password' | 'device' | null;
+  pubkey: string | null;
+  created_at: number | null;
+}
+
 // Check if running in Tauri
 export const isTauri = (): boolean => {
   return '__TAURI__' in window || '__TAURI_INTERNALS__' in window;
@@ -104,6 +111,61 @@ export async function fetchEvents(
   });
 }
 
+// ============================================================================
+// Encrypted Key Storage
+// ============================================================================
+
+/**
+ * Check if an encrypted key is stored
+ */
+export async function checkStoredKey(): Promise<StoredKeyInfo> {
+  return await invoke<StoredKeyInfo>('check_stored_key');
+}
+
+/**
+ * Store nsec with password protection
+ */
+export async function storeKeyWithPassword(nsec: string, password: string): Promise<void> {
+  return await invoke('store_key_with_password', { nsec, password });
+}
+
+/**
+ * Store nsec with device-only protection (passwordless)
+ */
+export async function storeKeyWithoutPassword(nsec: string): Promise<void> {
+  return await invoke('store_key_without_password', { nsec });
+}
+
+/**
+ * Unlock stored key and login
+ * @param password Required if key was stored with password protection
+ */
+export async function unlockStoredKey(password?: string): Promise<NostrProfile> {
+  return await invoke<NostrProfile>('unlock_stored_key', { password: password || null });
+}
+
+/**
+ * Clear stored key
+ */
+export async function clearStoredKey(): Promise<void> {
+  return await invoke('clear_stored_key');
+}
+
+/**
+ * Change key password or protection mode
+ * @param currentPassword Current password (null for device mode)
+ * @param newPassword New password (null to switch to device mode)
+ */
+export async function changeKeyPassword(
+  currentPassword?: string,
+  newPassword?: string
+): Promise<void> {
+  return await invoke('change_key_password', {
+    currentPassword: currentPassword || null,
+    newPassword: newPassword || null,
+  });
+}
+
 /**
  * NIP-07 compatible interface for easier migration
  * Use this as a drop-in replacement for window.nostr
@@ -126,6 +188,13 @@ export const tauriNostr = {
   getPubkey,
   publishEvent,
   fetchEvents,
+  // Key storage
+  checkStoredKey,
+  storeKeyWithPassword,
+  storeKeyWithoutPassword,
+  unlockStoredKey,
+  clearStoredKey,
+  changeKeyPassword,
 };
 
 /**
@@ -160,4 +229,4 @@ export function getNostrInterface() {
   throw new Error('No Nostr interface available');
 }
 
-export type { NostrProfile, SignedEvent, UnsignedEvent };
+export type { NostrProfile, SignedEvent, UnsignedEvent, StoredKeyInfo };

@@ -14,6 +14,7 @@ import { InfoModal } from './components/modals/InfoModal';
 import { NostrConnectModal } from './components/modals/NostrConnectModal';
 import { ConfirmModal } from './components/modals/ConfirmModal';
 import { UpdateModal } from './components/modals/UpdateModal';
+import { KeyStorageModal } from './components/modals/KeyStorageModal';
 import { Editor } from './components/Editor/Editor';
 import { checkForUpdate, isTauri } from './utils/updater';
 import type { UpdateInfo } from './utils/updater';
@@ -21,6 +22,12 @@ import { PublisherEditor } from './components/Editor/PublisherEditor';
 import { AdminPage } from './components/admin/AdminPage';
 import { openUrl } from './utils/openUrl';
 import type { Album } from './types/feed';
+import {
+  checkStoredKey,
+  unlockStoredKey,
+  type StoredKeyInfo,
+  type NostrProfile,
+} from './utils/tauriNostr';
 import mspLogo from './assets/msp-logo.png';
 import './App.css';
 
@@ -38,7 +45,11 @@ function AppContent() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { state: nostrState, logout: nostrLogout } = useNostr();
+  const { state: nostrState, logout: nostrLogout, loginWithProfile } = useNostr();
+
+  // Auto-unlock state for stored keys (desktop only)
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [storedKeyInfo, setStoredKeyInfo] = useState<StoredKeyInfo | null>(null);
 
   // Check for updates on launch (desktop only)
   useEffect(() => {
@@ -56,6 +67,38 @@ function AppContent() {
     const timer = setTimeout(checkUpdate, 2000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Check for stored key on launch and auto-unlock (desktop only)
+  useEffect(() => {
+    if (!isTauri() || nostrState.isLoggedIn) return;
+
+    const checkKey = async () => {
+      try {
+        const keyInfo = await checkStoredKey();
+        setStoredKeyInfo(keyInfo);
+
+        if (keyInfo.exists) {
+          if (keyInfo.mode === 'device') {
+            // Auto-unlock for device mode
+            try {
+              const profile = await unlockStoredKey();
+              loginWithProfile(profile);
+            } catch (e) {
+              console.error('Auto-unlock failed:', e);
+              // Device key failed, user will need to login manually
+            }
+          } else if (keyInfo.mode === 'password') {
+            // Show unlock modal for password mode
+            setShowUnlockModal(true);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to check stored key:', e);
+      }
+    };
+
+    checkKey();
+  }, [nostrState.isLoggedIn, loginWithProfile]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -317,6 +360,18 @@ function AppContent() {
           onClose={() => setShowUpdateModal(false)}
         />
       )}
+
+      {/* Auto-unlock modal for stored keys (desktop only) */}
+      <KeyStorageModal
+        isOpen={showUnlockModal}
+        onClose={() => setShowUnlockModal(false)}
+        mode="unlock"
+        storedKeyInfo={storedKeyInfo || undefined}
+        onUnlock={(profile: NostrProfile) => {
+          loginWithProfile(profile);
+          setShowUnlockModal(false);
+        }}
+      />
     </>
   );
 }
