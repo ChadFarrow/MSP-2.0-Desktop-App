@@ -13,12 +13,12 @@ import {
   logout,
   getPubkey,
   checkStoredKey,
-  unlockStoredKey,
+  tryAutoUnlockStoredKey,
   type NostrProfile,
   type StoredKeyInfo,
 } from '../utils/tauriNostr';
 import { extractErrorMessage } from '../utils/errorHandling';
-import { KeyStorageModal, keyStorageModalStyles } from './modals/KeyStorageModal';
+import { KeyStorageModal } from './modals/KeyStorageModal';
 
 interface DesktopNostrLoginProps {
   onLogin?: (profile: NostrProfile) => void;
@@ -56,25 +56,15 @@ export function DesktopNostrLogin({ onLogin, onLogout }: DesktopNostrLoginProps)
           return;
         }
 
-        // Check for stored key
-        const keyInfo = await checkStoredKey();
-        setStoredKeyInfo(keyInfo);
+        // Try auto-unlock
+        const result = await tryAutoUnlockStoredKey();
+        setStoredKeyInfo(result.storedKeyInfo);
 
-        if (keyInfo.exists) {
-          if (keyInfo.mode === 'device') {
-            // Auto-unlock for device mode
-            try {
-              const unlockedProfile = await unlockStoredKey();
-              setProfile(unlockedProfile);
-              onLogin?.(unlockedProfile);
-            } catch {
-              // Device key failed (maybe machine changed), show manual login
-              setStoredKeyInfo({ ...keyInfo, exists: false });
-            }
-          } else {
-            // Password mode - show unlock modal
-            setModalMode('unlock');
-          }
+        if (result.success && result.profile) {
+          setProfile(result.profile);
+          onLogin?.(result.profile);
+        } else if (result.showUnlockModal) {
+          setModalMode('unlock');
         }
       } catch (e) {
         console.error('Init error:', e);
@@ -127,7 +117,7 @@ export function DesktopNostrLogin({ onLogin, onLogout }: DesktopNostrLoginProps)
       onLogin?.(result);
 
       // Offer to save key if it was an nsec and no key is currently stored
-      if (trimmedKey.startsWith('nsec1') && !storedKeyInfo?.exists) {
+      if (trimmedKey.startsWith('nsec1') && !storedKeyInfo?.keys && storedKeyInfo.keys.length > 0) {
         setModalMode('save');
       }
     } catch (e) {
@@ -193,7 +183,7 @@ export function DesktopNostrLogin({ onLogin, onLogout }: DesktopNostrLoginProps)
             <span className="npub" title={profile.pubkey}>
               {profile.npub.slice(0, 12)}...{profile.npub.slice(-8)}
             </span>
-            {storedKeyInfo?.exists && (
+            {storedKeyInfo?.keys && storedKeyInfo.keys.length > 0 && (
               <button
                 className="manage-key-btn"
                 onClick={() => setModalMode('manage')}
@@ -284,8 +274,6 @@ export function DesktopNostrLogin({ onLogin, onLogout }: DesktopNostrLoginProps)
 
 // CSS styles (add to your App.css or create nostr-login.css)
 export const nostrLoginStyles = `
-${keyStorageModalStyles}
-
 .nostr-login {
   display: flex;
   align-items: center;
