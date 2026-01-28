@@ -16,10 +16,8 @@ jobs:
       tag_name: ${{ steps.bump_version.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Bump version
+      - name: Generate version
         id: bump_version
         run: |
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
@@ -27,24 +25,10 @@ jobs:
             TAG_NAME="${{ github.ref_name }}"
             VERSION="${TAG_NAME#v}"
           else
-            # Auto-increment patch version
-            CURRENT_VERSION=$(grep '"version"' src-tauri/tauri.conf.json | sed 's/.*"\([0-9.]*\)".*/\1/')
-            MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
-            MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
-            PATCH=$(echo $CURRENT_VERSION | cut -d. -f3)
-            NEW_PATCH=$((PATCH + 1))
-            VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+            # Use base version + run number for auto-incrementing builds
+            BASE_VERSION=$(grep '"version"' src-tauri/tauri.conf.json | sed 's/.*"\([0-9]*\.[0-9]*\)\.[0-9]*".*/\1/')
+            VERSION="${BASE_VERSION}.${{ github.run_number }}"
             TAG_NAME="v${VERSION}"
-
-            # Update tauri.conf.json
-            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
-
-            # Commit and push the version bump
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add src-tauri/tauri.conf.json
-            git commit -m "Bump version to $VERSION [skip ci]"
-            git push
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
