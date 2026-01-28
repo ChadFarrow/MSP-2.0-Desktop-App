@@ -29,11 +29,20 @@ interface UnsignedEvent {
   created_at?: number;
 }
 
+interface StoredKeyEntry {
+  pubkey: string;
+  mode: 'password' | 'device';
+  created_at: number;
+  label: string | null;
+}
+
+interface StoredKeysResponse {
+  keys: StoredKeyEntry[];
+}
+
+// Legacy interface for backwards compatibility
 interface StoredKeyInfo {
-  exists: boolean;
-  mode: 'password' | 'device' | null;
-  pubkey: string | null;
-  created_at: number | null;
+  keys: StoredKeyEntry[];
 }
 
 // Check if running in Tauri
@@ -112,11 +121,18 @@ export async function fetchEvents(
 }
 
 // ============================================================================
-// Encrypted Key Storage
+// Encrypted Key Storage (Multi-key support)
 // ============================================================================
 
 /**
- * Check if an encrypted key is stored
+ * List all stored keys
+ */
+export async function listStoredKeys(): Promise<StoredKeysResponse> {
+  return await invoke<StoredKeysResponse>('list_stored_keys');
+}
+
+/**
+ * Check if any encrypted keys are stored (backwards compatible)
  */
 export async function checkStoredKey(): Promise<StoredKeyInfo> {
   return await invoke<StoredKeyInfo>('check_stored_key');
@@ -124,46 +140,125 @@ export async function checkStoredKey(): Promise<StoredKeyInfo> {
 
 /**
  * Store nsec with password protection
+ * @param label Optional user-defined label for this key
  */
-export async function storeKeyWithPassword(nsec: string, password: string): Promise<void> {
-  return await invoke('store_key_with_password', { nsec, password });
+export async function storeKeyWithPassword(
+  nsec: string,
+  password: string,
+  label?: string
+): Promise<void> {
+  return await invoke('store_key_with_password', {
+    nsec,
+    password,
+    label: label || null,
+  });
 }
 
 /**
  * Store nsec with device-only protection (passwordless)
+ * @param label Optional user-defined label for this key
  */
-export async function storeKeyWithoutPassword(nsec: string): Promise<void> {
-  return await invoke('store_key_without_password', { nsec });
+export async function storeKeyWithoutPassword(nsec: string, label?: string): Promise<void> {
+  return await invoke('store_key_without_password', { nsec, label: label || null });
 }
 
 /**
- * Unlock stored key and login
+ * Unlock a stored key and login
+ * @param pubkey Pubkey of the key to unlock (optional, uses first key if not specified)
  * @param password Required if key was stored with password protection
  */
-export async function unlockStoredKey(password?: string): Promise<NostrProfile> {
-  return await invoke<NostrProfile>('unlock_stored_key', { password: password || null });
+export async function unlockStoredKey(pubkey?: string, password?: string): Promise<NostrProfile> {
+  return await invoke<NostrProfile>('unlock_stored_key', {
+    pubkey: pubkey || null,
+    password: password || null,
+  });
 }
 
 /**
- * Clear stored key
+ * Remove a stored key by pubkey
+ */
+export async function removeStoredKey(pubkey: string): Promise<void> {
+  return await invoke('remove_stored_key', { pubkey });
+}
+
+/**
+ * Clear all stored keys
  */
 export async function clearStoredKey(): Promise<void> {
   return await invoke('clear_stored_key');
 }
 
 /**
+ * Update a key's label
+ */
+export async function updateKeyLabel(pubkey: string, label?: string): Promise<void> {
+  return await invoke('update_key_label', { pubkey, label: label || null });
+}
+
+/**
  * Change key password or protection mode
+ * @param pubkey Pubkey of the key to change
  * @param currentPassword Current password (null for device mode)
  * @param newPassword New password (null to switch to device mode)
  */
 export async function changeKeyPassword(
+  pubkey: string,
   currentPassword?: string,
   newPassword?: string
 ): Promise<void> {
   return await invoke('change_key_password', {
+    pubkey,
     currentPassword: currentPassword || null,
     newPassword: newPassword || null,
   });
+}
+
+// ============================================================================
+// Auto-unlock utilities
+// ============================================================================
+
+export interface AutoUnlockResult {
+  /** Whether auto-unlock was successful */
+  success: boolean;
+  /** The profile if login succeeded */
+  profile?: NostrProfile;
+  /** Whether to show the unlock modal (multiple keys or password required) */
+  showUnlockModal: boolean;
+  /** The stored key info for the modal */
+  storedKeyInfo: StoredKeyInfo | null;
+}
+
+/**
+ * Attempt to auto-unlock stored keys on app startup.
+ * If a single device-mode key exists, it will be auto-unlocked.
+ * Otherwise, returns info needed to show an unlock modal.
+ */
+export async function tryAutoUnlockStoredKey(): Promise<AutoUnlockResult> {
+  try {
+    const keyInfo = await checkStoredKey();
+
+    if (!keyInfo.keys || keyInfo.keys.length === 0) {
+      return { success: false, showUnlockModal: false, storedKeyInfo: keyInfo };
+    }
+
+    // If there's only one key and it's device mode, auto-unlock
+    if (keyInfo.keys.length === 1 && keyInfo.keys[0].mode === 'device') {
+      try {
+        const profile = await unlockStoredKey(keyInfo.keys[0].pubkey);
+        return { success: true, profile, showUnlockModal: false, storedKeyInfo: keyInfo };
+      } catch (e) {
+        console.error('Auto-unlock failed:', e);
+        // Device key failed, show modal for manual login
+        return { success: false, showUnlockModal: true, storedKeyInfo: keyInfo };
+      }
+    }
+
+    // Multiple keys or password-protected key - show unlock modal
+    return { success: false, showUnlockModal: true, storedKeyInfo: keyInfo };
+  } catch (e) {
+    console.error('Failed to check stored key:', e);
+    return { success: false, showUnlockModal: false, storedKeyInfo: null };
+  }
 }
 
 /**
@@ -188,12 +283,15 @@ export const tauriNostr = {
   getPubkey,
   publishEvent,
   fetchEvents,
-  // Key storage
+  // Key storage (multi-key)
+  listStoredKeys,
   checkStoredKey,
   storeKeyWithPassword,
   storeKeyWithoutPassword,
   unlockStoredKey,
+  removeStoredKey,
   clearStoredKey,
+  updateKeyLabel,
   changeKeyPassword,
 };
 
@@ -229,4 +327,4 @@ export function getNostrInterface() {
   throw new Error('No Nostr interface available');
 }
 
-export type { NostrProfile, SignedEvent, UnsignedEvent, StoredKeyInfo };
+export type { NostrProfile, SignedEvent, UnsignedEvent, StoredKeyInfo, StoredKeyEntry, StoredKeysResponse };

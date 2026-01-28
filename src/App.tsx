@@ -24,8 +24,7 @@ import { AdminPage } from './components/admin/AdminPage';
 import { openUrl } from './utils/openUrl';
 import type { Album } from './types/feed';
 import {
-  checkStoredKey,
-  unlockStoredKey,
+  tryAutoUnlockStoredKey,
   type StoredKeyInfo,
   type NostrProfile,
 } from './utils/tauriNostr';
@@ -75,27 +74,13 @@ function AppContent() {
     if (!isTauri() || nostrState.isLoggedIn) return;
 
     const checkKey = async () => {
-      try {
-        const keyInfo = await checkStoredKey();
-        setStoredKeyInfo(keyInfo);
+      const result = await tryAutoUnlockStoredKey();
+      setStoredKeyInfo(result.storedKeyInfo);
 
-        if (keyInfo.exists) {
-          if (keyInfo.mode === 'device') {
-            // Auto-unlock for device mode
-            try {
-              const profile = await unlockStoredKey();
-              loginWithProfile(profile);
-            } catch (e) {
-              console.error('Auto-unlock failed:', e);
-              // Device key failed, user will need to login manually
-            }
-          } else if (keyInfo.mode === 'password') {
-            // Show unlock modal for password mode
-            setShowUnlockModal(true);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to check stored key:', e);
+      if (result.success && result.profile) {
+        loginWithProfile(result.profile);
+      } else if (result.showUnlockModal) {
+        setShowUnlockModal(true);
       }
     };
 

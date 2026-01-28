@@ -70,11 +70,29 @@ struct FeedSummary {
     updated_at: u64,
 }
 
-// Encrypted key storage types
+// Encrypted key storage types (v2 - multiple keys)
 #[derive(Serialize, Deserialize, Clone)]
-struct StoredKeyFile {
-    version: u32,
+struct StoredKeyEntry {
+    pubkey: String,
     mode: String, // "password" or "device"
+    nonce: String,
+    ciphertext: String,
+    argon2_salt: String,
+    created_at: u64,
+    label: Option<String>, // Optional user-defined label
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+struct KeystoreFile {
+    version: u32,
+    keys: Vec<StoredKeyEntry>,
+}
+
+// Legacy v1 format for migration
+#[derive(Serialize, Deserialize)]
+struct StoredKeyFileV1 {
+    version: u32,
+    mode: String,
     nonce: String,
     ciphertext: String,
     argon2_salt: String,
@@ -82,12 +100,17 @@ struct StoredKeyFile {
     created_at: u64,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 struct StoredKeyInfo {
-    exists: bool,
-    mode: Option<String>,
-    pubkey: Option<String>,
-    created_at: Option<u64>,
+    pubkey: String,
+    mode: String,
+    created_at: u64,
+    label: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct StoredKeysResponse {
+    keys: Vec<StoredKeyInfo>,
 }
 
 // Constants for Argon2
@@ -296,83 +319,13 @@ fn create_blossom_auth(
     Ok(event)
 }
 
-/// Upload content to a Blossom server
-#[tauri::command]
-async fn blossom_upload(
-    server_url: String,
-    content: String,
-    content_type: Option<String>,
-    state: State<'_, NostrState>,
+/// Shared implementation for Blossom uploads
+async fn perform_blossom_upload(
+    content_bytes: Vec<u8>,
+    keys: &Keys,
+    server_url: &str,
+    mime_type: &str,
 ) -> Result<BlossomUploadResult, String> {
-    let keys = state
-        .keys
-        .lock()
-        .unwrap()
-        .clone()
-        .ok_or("Not logged in - Nostr key required for Blossom upload")?;
-
-    let content_bytes = content.as_bytes();
-    let size = content_bytes.len();
-
-    // Calculate SHA256
-    let mut hasher = Sha256::new();
-    hasher.update(content_bytes);
-    let sha256 = hex::encode(hasher.finalize());
-
-    // Create auth event (valid for 5 minutes)
-    let auth_event = create_blossom_auth(&keys, &sha256, "upload", 300)?;
-    let auth_json = serde_json::to_string(&auth_event).map_err(|e| e.to_string())?;
-    let auth_base64 = base64_encode(&auth_json);
-
-    // Determine content type
-    let mime_type = content_type.unwrap_or_else(|| "application/xml".to_string());
-
-    // Upload to Blossom server
-    let client = reqwest::Client::new();
-    let base_url = normalize_server_url(&server_url);
-    let upload_url = format!("{}/upload", base_url);
-
-    let response = client
-        .put(&upload_url)
-        .header("Authorization", format!("Nostr {}", auth_base64))
-        .header("Content-Type", &mime_type)
-        .body(content_bytes.to_vec())
-        .send()
-        .await
-        .map_err(|e| format!("Upload failed: {}", e))?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        return Err(format!("Blossom server error {}: {}", status, error_text));
-    }
-
-    // Parse response to get URL
-    let blob_url = format!("{}/{}", base_url, sha256);
-
-    Ok(BlossomUploadResult {
-        url: blob_url,
-        sha256,
-        size,
-    })
-}
-
-/// Upload a file from disk to Blossom
-#[tauri::command]
-async fn blossom_upload_file(
-    server_url: String,
-    file_path: String,
-    state: State<'_, NostrState>,
-) -> Result<BlossomUploadResult, String> {
-    let keys = state
-        .keys
-        .lock()
-        .unwrap()
-        .clone()
-        .ok_or("Not logged in - Nostr key required for Blossom upload")?;
-
-    // Read file
-    let content_bytes = fs::read(&file_path).map_err(|e| format!("Failed to read file: {}", e))?;
     let size = content_bytes.len();
 
     // Calculate SHA256
@@ -380,28 +333,14 @@ async fn blossom_upload_file(
     hasher.update(&content_bytes);
     let sha256 = hex::encode(hasher.finalize());
 
-    // Create auth event
-    let auth_event = create_blossom_auth(&keys, &sha256, "upload", 300)?;
+    // Create auth event (valid for 5 minutes)
+    let auth_event = create_blossom_auth(keys, &sha256, "upload", 300)?;
     let auth_json = serde_json::to_string(&auth_event).map_err(|e| e.to_string())?;
-    let auth_base64 = base64_encode(&auth_json);
+    let auth_base64 = BASE64.encode(&auth_json);
 
-    // Guess content type from extension
-    let mime_type = match file_path.rsplit('.').next() {
-        Some("xml") => "application/xml",
-        Some("json") => "application/json",
-        Some("mp3") => "audio/mpeg",
-        Some("flac") => "audio/flac",
-        Some("wav") => "audio/wav",
-        Some("ogg") => "audio/ogg",
-        Some("png") => "image/png",
-        Some("jpg") | Some("jpeg") => "image/jpeg",
-        Some("webp") => "image/webp",
-        _ => "application/octet-stream",
-    };
-
-    // Upload
+    // Upload to Blossom server
     let client = reqwest::Client::new();
-    let base_url = normalize_server_url(&server_url);
+    let base_url = normalize_server_url(server_url);
     let upload_url = format!("{}/upload", base_url);
 
     let response = client
@@ -428,6 +367,60 @@ async fn blossom_upload_file(
     })
 }
 
+/// Upload content to a Blossom server
+#[tauri::command]
+async fn blossom_upload(
+    server_url: String,
+    content: String,
+    content_type: Option<String>,
+    state: State<'_, NostrState>,
+) -> Result<BlossomUploadResult, String> {
+    let keys = state
+        .keys
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or("Not logged in - Nostr key required for Blossom upload")?;
+
+    let mime_type = content_type.unwrap_or_else(|| "application/xml".to_string());
+
+    perform_blossom_upload(content.into_bytes(), &keys, &server_url, &mime_type).await
+}
+
+/// Upload a file from disk to Blossom
+#[tauri::command]
+async fn blossom_upload_file(
+    server_url: String,
+    file_path: String,
+    state: State<'_, NostrState>,
+) -> Result<BlossomUploadResult, String> {
+    let keys = state
+        .keys
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or("Not logged in - Nostr key required for Blossom upload")?;
+
+    // Read file
+    let content_bytes = fs::read(&file_path).map_err(|e| format!("Failed to read file: {}", e))?;
+
+    // Guess content type from extension
+    let mime_type = match file_path.rsplit('.').next() {
+        Some("xml") => "application/xml",
+        Some("json") => "application/json",
+        Some("mp3") => "audio/mpeg",
+        Some("flac") => "audio/flac",
+        Some("wav") => "audio/wav",
+        Some("ogg") => "audio/ogg",
+        Some("png") => "image/png",
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("webp") => "image/webp",
+        _ => "application/octet-stream",
+    };
+
+    perform_blossom_upload(content_bytes, &keys, &server_url, mime_type).await
+}
+
 /// Delete a blob from a Blossom server
 #[tauri::command]
 async fn blossom_delete(
@@ -444,7 +437,7 @@ async fn blossom_delete(
 
     let auth_event = create_blossom_auth(&keys, &sha256, "delete", 300)?;
     let auth_json = serde_json::to_string(&auth_event).map_err(|e| e.to_string())?;
-    let auth_base64 = base64_encode(&auth_json);
+    let auth_base64 = BASE64.encode(&auth_json);
 
     let client = reqwest::Client::new();
     let delete_url = format!("{}/{}", normalize_server_url(&server_url), sha256);
@@ -501,54 +494,6 @@ async fn blossom_list(
         .map_err(|e| format!("Failed to parse response: {}", e))?;
 
     Ok(blobs)
-}
-
-fn base64_encode(input: &str) -> String {
-    use std::io::Write;
-    let mut buf = Vec::new();
-    {
-        let mut encoder = base64_encoder(&mut buf);
-        encoder.write_all(input.as_bytes()).unwrap();
-    }
-    String::from_utf8(buf).unwrap()
-}
-
-fn base64_encoder(writer: &mut Vec<u8>) -> impl std::io::Write + '_ {
-    struct Base64Encoder<'a>(&'a mut Vec<u8>);
-    
-    impl<'a> std::io::Write for Base64Encoder<'a> {
-        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-            const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-            
-            for chunk in buf.chunks(3) {
-                let b0 = chunk[0] as usize;
-                let b1 = chunk.get(1).copied().unwrap_or(0) as usize;
-                let b2 = chunk.get(2).copied().unwrap_or(0) as usize;
-                
-                self.0.push(ALPHABET[b0 >> 2]);
-                self.0.push(ALPHABET[((b0 & 0x03) << 4) | (b1 >> 4)]);
-                
-                if chunk.len() > 1 {
-                    self.0.push(ALPHABET[((b1 & 0x0f) << 2) | (b2 >> 6)]);
-                } else {
-                    self.0.push(b'=');
-                }
-                
-                if chunk.len() > 2 {
-                    self.0.push(ALPHABET[b2 & 0x3f]);
-                } else {
-                    self.0.push(b'=');
-                }
-            }
-            Ok(buf.len())
-        }
-        
-        fn flush(&mut self) -> std::io::Result<()> {
-            Ok(())
-        }
-    }
-    
-    Base64Encoder(writer)
 }
 
 /// Login with nsec (private key)
@@ -818,34 +763,89 @@ fn set_file_permissions(_path: &PathBuf) -> Result<(), String> {
     Ok(())
 }
 
-/// Check if a stored key exists and return its info
-#[tauri::command]
-fn check_stored_key() -> Result<StoredKeyInfo, String> {
+/// Load keystore, migrating from v1 if necessary
+fn load_keystore() -> Result<KeystoreFile, String> {
     let keystore_path = get_keystore_path()?;
 
     if !keystore_path.exists() {
-        return Ok(StoredKeyInfo {
-            exists: false,
-            mode: None,
-            pubkey: None,
-            created_at: None,
+        return Ok(KeystoreFile {
+            version: 2,
+            keys: Vec::new(),
         });
     }
 
     let content = fs::read_to_string(&keystore_path).map_err(|e| e.to_string())?;
-    let stored: StoredKeyFile = serde_json::from_str(&content).map_err(|e| e.to_string())?;
 
-    Ok(StoredKeyInfo {
-        exists: true,
-        mode: Some(stored.mode),
-        pubkey: Some(stored.pubkey),
-        created_at: Some(stored.created_at),
-    })
+    // Try to parse as v2 first
+    if let Ok(keystore) = serde_json::from_str::<KeystoreFile>(&content) {
+        if keystore.version == 2 {
+            return Ok(keystore);
+        }
+    }
+
+    // Try to parse as v1 and migrate
+    if let Ok(v1) = serde_json::from_str::<StoredKeyFileV1>(&content) {
+        let entry = StoredKeyEntry {
+            pubkey: v1.pubkey,
+            mode: v1.mode,
+            nonce: v1.nonce,
+            ciphertext: v1.ciphertext,
+            argon2_salt: v1.argon2_salt,
+            created_at: v1.created_at,
+            label: None,
+        };
+
+        let keystore = KeystoreFile {
+            version: 2,
+            keys: vec![entry],
+        };
+
+        // Save migrated keystore
+        save_keystore(&keystore)?;
+
+        return Ok(keystore);
+    }
+
+    Err("Failed to parse keystore file".to_string())
+}
+
+/// Save keystore to disk
+fn save_keystore(keystore: &KeystoreFile) -> Result<(), String> {
+    let keystore_path = get_keystore_path()?;
+    let json = serde_json::to_string_pretty(keystore).map_err(|e| e.to_string())?;
+    fs::write(&keystore_path, json).map_err(|e| e.to_string())?;
+    set_file_permissions(&keystore_path)?;
+    Ok(())
+}
+
+/// List all stored keys
+#[tauri::command]
+fn list_stored_keys() -> Result<StoredKeysResponse, String> {
+    let keystore = load_keystore()?;
+
+    let keys: Vec<StoredKeyInfo> = keystore
+        .keys
+        .iter()
+        .map(|k| StoredKeyInfo {
+            pubkey: k.pubkey.clone(),
+            mode: k.mode.clone(),
+            created_at: k.created_at,
+            label: k.label.clone(),
+        })
+        .collect();
+
+    Ok(StoredKeysResponse { keys })
+}
+
+/// Check if a stored key exists (for backwards compatibility)
+#[tauri::command]
+fn check_stored_key() -> Result<StoredKeysResponse, String> {
+    list_stored_keys()
 }
 
 /// Store key with password protection
 #[tauri::command]
-fn store_key_with_password(nsec: String, password: String) -> Result<(), String> {
+fn store_key_with_password(nsec: String, password: String, label: Option<String>) -> Result<(), String> {
     if password.is_empty() {
         return Err("Password cannot be empty".to_string());
     }
@@ -854,6 +854,12 @@ fn store_key_with_password(nsec: String, password: String) -> Result<(), String>
     let secret_key = SecretKey::from_bech32(&nsec).map_err(|e| e.to_string())?;
     let keys = Keys::new(secret_key);
     let pubkey = keys.public_key().to_hex();
+
+    // Load existing keystore
+    let mut keystore = load_keystore()?;
+
+    // Remove existing entry for this pubkey if present
+    keystore.keys.retain(|k| k.pubkey != pubkey);
 
     // Generate salt
     let salt = SaltString::generate(&mut rand::thread_rng());
@@ -866,31 +872,35 @@ fn store_key_with_password(nsec: String, password: String) -> Result<(), String>
     // Zeroize sensitive data
     encryption_key.zeroize();
 
-    let stored = StoredKeyFile {
-        version: 1,
+    let entry = StoredKeyEntry {
+        pubkey,
         mode: "password".to_string(),
         nonce,
         ciphertext,
         argon2_salt: salt.to_string(),
-        pubkey,
         created_at: get_current_timestamp()?,
+        label,
     };
 
-    let keystore_path = get_keystore_path()?;
-    let json = serde_json::to_string_pretty(&stored).map_err(|e| e.to_string())?;
-    fs::write(&keystore_path, json).map_err(|e| e.to_string())?;
-    set_file_permissions(&keystore_path)?;
+    keystore.keys.push(entry);
+    save_keystore(&keystore)?;
 
     Ok(())
 }
 
 /// Store key with device-only protection (passwordless)
 #[tauri::command]
-fn store_key_without_password(nsec: String) -> Result<(), String> {
+fn store_key_without_password(nsec: String, label: Option<String>) -> Result<(), String> {
     // Validate nsec and get pubkey
     let secret_key = SecretKey::from_bech32(&nsec).map_err(|e| e.to_string())?;
     let keys = Keys::new(secret_key);
     let pubkey = keys.public_key().to_hex();
+
+    // Load existing keystore
+    let mut keystore = load_keystore()?;
+
+    // Remove existing entry for this pubkey if present
+    keystore.keys.retain(|k| k.pubkey != pubkey);
 
     // Derive key from device ID
     let mut encryption_key = derive_key_from_device()?;
@@ -899,51 +909,57 @@ fn store_key_without_password(nsec: String) -> Result<(), String> {
     // Zeroize sensitive data
     encryption_key.zeroize();
 
-    let stored = StoredKeyFile {
-        version: 1,
+    let entry = StoredKeyEntry {
+        pubkey,
         mode: "device".to_string(),
         nonce,
         ciphertext,
-        argon2_salt: String::new(), // Not used for device mode
-        pubkey,
+        argon2_salt: String::new(),
         created_at: get_current_timestamp()?,
+        label,
     };
 
-    let keystore_path = get_keystore_path()?;
-    let json = serde_json::to_string_pretty(&stored).map_err(|e| e.to_string())?;
-    fs::write(&keystore_path, json).map_err(|e| e.to_string())?;
-    set_file_permissions(&keystore_path)?;
+    keystore.keys.push(entry);
+    save_keystore(&keystore)?;
 
     Ok(())
 }
 
-/// Unlock stored key and login
+/// Unlock a stored key by pubkey and login
 #[tauri::command]
 async fn unlock_stored_key(
+    pubkey: Option<String>,
     password: Option<String>,
     state: State<'_, NostrState>,
 ) -> Result<NostrProfile, String> {
-    let keystore_path = get_keystore_path()?;
+    let keystore = load_keystore()?;
 
-    if !keystore_path.exists() {
-        return Err("No stored key found".to_string());
+    if keystore.keys.is_empty() {
+        return Err("No stored keys found".to_string());
     }
 
-    let content = fs::read_to_string(&keystore_path).map_err(|e| e.to_string())?;
-    let stored: StoredKeyFile = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+    // Find the key to unlock
+    let entry = match pubkey {
+        Some(ref pk) => keystore
+            .keys
+            .iter()
+            .find(|k| k.pubkey == *pk)
+            .ok_or_else(|| format!("Key not found: {}", pk))?,
+        None => keystore.keys.first().unwrap(), // Use first key if none specified
+    };
 
     // Derive decryption key based on mode
-    let mut decryption_key = match stored.mode.as_str() {
+    let mut decryption_key = match entry.mode.as_str() {
         "password" => {
             let password = password.ok_or("Password required for this key")?;
-            derive_key_from_password(&password, stored.argon2_salt.as_bytes())?
+            derive_key_from_password(&password, entry.argon2_salt.as_bytes())?
         }
         "device" => derive_key_from_device()?,
-        _ => return Err(format!("Unknown storage mode: {}", stored.mode)),
+        _ => return Err(format!("Unknown storage mode: {}", entry.mode)),
     };
 
     // Decrypt nsec
-    let mut nsec = decrypt_nsec(&stored.nonce, &stored.ciphertext, &decryption_key)?;
+    let mut nsec = decrypt_nsec(&entry.nonce, &entry.ciphertext, &decryption_key)?;
     decryption_key.zeroize();
 
     // Parse and login
@@ -953,15 +969,31 @@ async fn unlock_stored_key(
     let keys = Keys::new(secret_key);
 
     // Verify pubkey matches
-    let pubkey = keys.public_key().to_hex();
-    if pubkey != stored.pubkey {
+    let actual_pubkey = keys.public_key().to_hex();
+    if actual_pubkey != entry.pubkey {
         return Err("Key verification failed - pubkey mismatch".to_string());
     }
 
     login_with_keys(keys, &state).await
 }
 
-/// Clear stored key
+/// Remove a stored key by pubkey
+#[tauri::command]
+fn remove_stored_key(pubkey: String) -> Result<(), String> {
+    let mut keystore = load_keystore()?;
+
+    let original_len = keystore.keys.len();
+    keystore.keys.retain(|k| k.pubkey != pubkey);
+
+    if keystore.keys.len() == original_len {
+        return Err(format!("Key not found: {}", pubkey));
+    }
+
+    save_keystore(&keystore)?;
+    Ok(())
+}
+
+/// Clear all stored keys
 #[tauri::command]
 fn clear_stored_key() -> Result<(), String> {
     let keystore_path = get_keystore_path()?;
@@ -973,41 +1005,60 @@ fn clear_stored_key() -> Result<(), String> {
     Ok(())
 }
 
+/// Update a key's label
+#[tauri::command]
+fn update_key_label(pubkey: String, label: Option<String>) -> Result<(), String> {
+    let mut keystore = load_keystore()?;
+
+    let entry = keystore
+        .keys
+        .iter_mut()
+        .find(|k| k.pubkey == pubkey)
+        .ok_or_else(|| format!("Key not found: {}", pubkey))?;
+
+    entry.label = label;
+    save_keystore(&keystore)?;
+
+    Ok(())
+}
+
 /// Change key password or protection mode
 #[tauri::command]
 fn change_key_password(
+    pubkey: String,
     current_password: Option<String>,
     new_password: Option<String>,
 ) -> Result<(), String> {
-    let keystore_path = get_keystore_path()?;
+    let keystore = load_keystore()?;
 
-    if !keystore_path.exists() {
-        return Err("No stored key found".to_string());
-    }
-
-    let content = fs::read_to_string(&keystore_path).map_err(|e| e.to_string())?;
-    let stored: StoredKeyFile = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+    let entry = keystore
+        .keys
+        .iter()
+        .find(|k| k.pubkey == pubkey)
+        .ok_or_else(|| format!("Key not found: {}", pubkey))?;
 
     // Decrypt with current credentials
-    let mut decryption_key = match stored.mode.as_str() {
+    let mut decryption_key = match entry.mode.as_str() {
         "password" => {
             let password = current_password.ok_or("Current password required")?;
-            derive_key_from_password(&password, stored.argon2_salt.as_bytes())?
+            derive_key_from_password(&password, entry.argon2_salt.as_bytes())?
         }
         "device" => derive_key_from_device()?,
-        _ => return Err(format!("Unknown storage mode: {}", stored.mode)),
+        _ => return Err(format!("Unknown storage mode: {}", entry.mode)),
     };
 
-    let mut nsec = decrypt_nsec(&stored.nonce, &stored.ciphertext, &decryption_key)?;
+    let mut nsec = decrypt_nsec(&entry.nonce, &entry.ciphertext, &decryption_key)?;
     decryption_key.zeroize();
+
+    let label = entry.label.clone();
 
     // Re-encrypt with new credentials
     match new_password {
         Some(password) if !password.is_empty() => {
-            store_key_with_password(nsec.clone(), password)?;
+            store_key_with_password(nsec.clone(), password, label)?;
         }
         _ => {
-            store_key_without_password(nsec.clone())?;
+            store_key_without_password(nsec.clone(), label)?;
         }
     }
 
@@ -1044,11 +1095,14 @@ fn main() {
             blossom_upload_file,
             blossom_delete,
             blossom_list,
+            list_stored_keys,
             check_stored_key,
             store_key_with_password,
             store_key_without_password,
             unlock_stored_key,
+            remove_stored_key,
             clear_stored_key,
+            update_key_label,
             change_key_password,
         ])
         .run(tauri::generate_context!())

@@ -2,7 +2,7 @@
  * Key Storage Modal
  *
  * Handles encrypted nsec storage for the desktop app.
- * Supports password-protected and device-only (passwordless) modes.
+ * Supports multiple keys with password-protected and device-only modes.
  */
 
 import { useState, useEffect } from 'react';
@@ -11,9 +11,10 @@ import {
   storeKeyWithPassword,
   storeKeyWithoutPassword,
   unlockStoredKey,
-  clearStoredKey,
+  removeStoredKey,
   changeKeyPassword,
   type StoredKeyInfo,
+  type StoredKeyEntry,
   type NostrProfile,
 } from '../../utils/tauriNostr';
 import { extractErrorMessage } from '../../utils/errorHandling';
@@ -53,47 +54,64 @@ export function KeyStorageModal({
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [usePassword, setUsePassword] = useState(true);
+  const [label, setLabel] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [selectedPubkey, setSelectedPubkey] = useState<string | null>(null);
+  const [keyToRemove, setKeyToRemove] = useState<string | null>(null);
+  const [profileCache, setProfileCache] = useState<Record<string, ProfileInfo>>({});
+  const [loadingProfiles, setLoadingProfiles] = useState<Set<string>>(new Set());
 
-  // Fetch profile info when modal opens with a stored key
+  const keys = storedKeyInfo?.keys || [];
+  const selectedKey = keys.find(k => k.pubkey === selectedPubkey) || keys[0];
+
+  // Select first key by default
   useEffect(() => {
-    if (!isOpen || !storedKeyInfo?.pubkey) {
-      setProfileInfo(null);
-      return;
+    if (isOpen && keys.length > 0 && !selectedPubkey) {
+      setSelectedPubkey(keys[0].pubkey);
     }
+  }, [isOpen, keys, selectedPubkey]);
 
-    const fetchProfile = async () => {
-      setLoadingProfile(true);
+  // Fetch profiles for all keys
+  useEffect(() => {
+    if (!isOpen) return;
+
+    keys.forEach(async (key) => {
+      if (profileCache[key.pubkey] || loadingProfiles.has(key.pubkey)) return;
+
+      setLoadingProfiles(prev => new Set(prev).add(key.pubkey));
       try {
-        const profile = await fetchNostrProfile(storedKeyInfo.pubkey);
+        const profile = await fetchNostrProfile(key.pubkey);
         if (profile) {
-          setProfileInfo({
-            displayName: profile.display_name || profile.name,
-            picture: profile.picture,
-          });
+          setProfileCache(prev => ({
+            ...prev,
+            [key.pubkey]: {
+              displayName: profile.display_name || profile.name,
+              picture: profile.picture,
+            },
+          }));
         }
       } catch (e) {
         console.error('Failed to fetch profile:', e);
       } finally {
-        setLoadingProfile(false);
+        setLoadingProfiles(prev => {
+          const next = new Set(prev);
+          next.delete(key.pubkey);
+          return next;
+        });
       }
-    };
-
-    fetchProfile();
-  }, [isOpen, storedKeyInfo?.pubkey]);
+    });
+  }, [isOpen, keys, profileCache, loadingProfiles]);
 
   const resetState = () => {
     setPassword('');
     setConfirmPassword('');
     setNewPassword('');
     setConfirmNewPassword('');
+    setLabel('');
     setError(null);
     setLoading(false);
-    setShowClearConfirm(false);
+    setKeyToRemove(null);
   };
 
   const handleClose = () => {
@@ -127,9 +145,9 @@ export function KeyStorageModal({
 
     try {
       if (usePassword) {
-        await storeKeyWithPassword(nsecToStore, password);
+        await storeKeyWithPassword(nsecToStore, password, label || undefined);
       } else {
-        await storeKeyWithoutPassword(nsecToStore);
+        await storeKeyWithoutPassword(nsecToStore, label || undefined);
       }
       onKeySaved?.();
       handleClose();
@@ -141,7 +159,12 @@ export function KeyStorageModal({
   };
 
   const handleUnlock = async () => {
-    if (storedKeyInfo?.mode === 'password' && !password) {
+    if (!selectedKey) {
+      setError('No key selected');
+      return;
+    }
+
+    if (selectedKey.mode === 'password' && !password) {
       setError('Please enter your password');
       return;
     }
@@ -151,7 +174,8 @@ export function KeyStorageModal({
 
     try {
       const profile = await unlockStoredKey(
-        storedKeyInfo?.mode === 'password' ? password : undefined
+        selectedKey.pubkey,
+        selectedKey.mode === 'password' ? password : undefined
       );
       onUnlock?.(profile);
       handleClose();
@@ -163,6 +187,8 @@ export function KeyStorageModal({
   };
 
   const handleChangePassword = async () => {
+    if (!selectedKey) return;
+
     if (newPassword && newPassword !== confirmNewPassword) {
       setError('New passwords do not match');
       return;
@@ -177,7 +203,8 @@ export function KeyStorageModal({
 
     try {
       await changeKeyPassword(
-        storedKeyInfo?.mode === 'password' ? password : undefined,
+        selectedKey.pubkey,
+        selectedKey.mode === 'password' ? password : undefined,
         newPassword || undefined
       );
       onKeySaved?.();
@@ -189,26 +216,81 @@ export function KeyStorageModal({
     }
   };
 
-  const handleClearKey = async () => {
+  const handleRemoveKey = async () => {
+    if (!keyToRemove) return;
+
     setLoading(true);
     setError(null);
 
     try {
-      await clearStoredKey();
+      await removeStoredKey(keyToRemove);
+      setKeyToRemove(null);
+      // Select another key if available
+      const remaining = keys.filter(k => k.pubkey !== keyToRemove);
+      if (remaining.length > 0) {
+        setSelectedPubkey(remaining[0].pubkey);
+      } else {
+        setSelectedPubkey(null);
+      }
       onKeyCleared?.();
-      handleClose();
     } catch (e) {
-      setError(extractErrorMessage(e, 'Failed to clear key'));
+      setError(extractErrorMessage(e, 'Failed to remove key'));
     } finally {
       setLoading(false);
     }
+  };
+
+  const renderKeyItem = (key: StoredKeyEntry, selectable: boolean = false) => {
+    const profile = profileCache[key.pubkey];
+    const npub = hexToNpub(key.pubkey);
+    const isSelected = key.pubkey === selectedPubkey;
+
+    return (
+      <div
+        key={key.pubkey}
+        className={`key-item ${selectable ? 'selectable' : ''} ${isSelected && selectable ? 'selected' : ''}`}
+        onClick={selectable ? () => setSelectedPubkey(key.pubkey) : undefined}
+      >
+        {profile?.picture ? (
+          <img src={profile.picture} alt="" className="key-avatar" />
+        ) : (
+          <div className="key-avatar-placeholder">
+            {loadingProfiles.has(key.pubkey) ? '...' : '?'}
+          </div>
+        )}
+        <div className="key-details">
+          <span className="key-name">
+            {key.label || profile?.displayName || 'Unnamed Key'}
+          </span>
+          <code className="key-npub">
+            {npub.slice(0, 12)}...{npub.slice(-8)}
+          </code>
+          <span className="key-mode">
+            {key.mode === 'password' ? '🔒 Password' : '💻 Device'}
+          </span>
+        </div>
+      </div>
+    );
   };
 
   const renderSaveMode = () => (
     <>
       <p className="modal-description">
         Save your private key for automatic login next time.
+        {keys.length > 0 && ' This will be added to your existing saved keys.'}
       </p>
+
+      <div className="form-group">
+        <label htmlFor="key-label">Label (optional)</label>
+        <input
+          id="key-label"
+          type="text"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="e.g., Main Account, Work, etc."
+          disabled={loading}
+        />
+      </div>
 
       <div className="key-storage-option">
         <label className="checkbox-label">
@@ -275,40 +357,20 @@ export function KeyStorageModal({
   const renderUnlockMode = () => (
     <>
       <p className="modal-description">
-        {storedKeyInfo?.mode === 'device'
-          ? 'Unlocking your saved key...'
-          : 'Enter your password to unlock your saved key.'
-        }
+        {keys.length > 1
+          ? 'Select an account to sign in with.'
+          : 'Enter your password to unlock your saved key.'}
       </p>
 
-      {storedKeyInfo?.pubkey && (
-        <div className="stored-key-profile">
-          {profileInfo?.picture ? (
-            <img
-              src={profileInfo.picture}
-              alt=""
-              className="profile-avatar"
-            />
-          ) : (
-            <div className="profile-avatar-placeholder">
-              {loadingProfile ? '...' : '?'}
-            </div>
-          )}
-          <div className="profile-details">
-            {profileInfo?.displayName && (
-              <span className="profile-name">{profileInfo.displayName}</span>
-            )}
-            <code className="pubkey">
-              {(() => {
-                const npub = hexToNpub(storedKeyInfo.pubkey);
-                return `${npub.slice(0, 12)}...${npub.slice(-8)}`;
-              })()}
-            </code>
-          </div>
+      {keys.length > 1 && (
+        <div className="key-list">
+          {keys.map(key => renderKeyItem(key, true))}
         </div>
       )}
 
-      {storedKeyInfo?.mode === 'password' && (
+      {keys.length === 1 && selectedKey && renderKeyItem(selectedKey)}
+
+      {selectedKey?.mode === 'password' && (
         <div className="form-group">
           <label htmlFor="unlock-password">Password</label>
           <input
@@ -330,12 +392,12 @@ export function KeyStorageModal({
         <button
           className="btn btn-primary"
           onClick={handleUnlock}
-          disabled={loading}
+          disabled={loading || !selectedKey}
         >
           {loading ? 'Unlocking...' : 'Unlock'}
         </button>
         <button className="btn btn-secondary" onClick={handleClose} disabled={loading}>
-          Login Differently
+          Cancel
         </button>
       </div>
     </>
@@ -343,116 +405,62 @@ export function KeyStorageModal({
 
   const renderManageMode = () => (
     <>
-      {!showClearConfirm ? (
+      {!keyToRemove ? (
         <>
-          <div className="stored-key-info">
-            <div className="info-row">
-              <span className="label">Key:</span>
-              <code className="pubkey">
-                {storedKeyInfo?.pubkey && (() => {
-                  const npub = hexToNpub(storedKeyInfo.pubkey);
-                  return `${npub.slice(0, 12)}...${npub.slice(-8)}`;
-                })()}
-              </code>
-            </div>
-            <div className="info-row">
-              <span className="label">Protection:</span>
-              <span className="value">
-                {storedKeyInfo?.mode === 'password' ? 'Password protected' : 'Device-only'}
-              </span>
-            </div>
+          <p className="modal-description">
+            Manage your saved keys ({keys.length} key{keys.length !== 1 ? 's' : ''}).
+          </p>
+
+          <div className="key-list">
+            {keys.map(key => (
+              <div key={key.pubkey} className="key-item-manage">
+                {renderKeyItem(key)}
+                <button
+                  className="btn btn-small btn-danger"
+                  onClick={() => setKeyToRemove(key.pubkey)}
+                  title="Remove key"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
           </div>
 
-          <h4>Change Protection</h4>
-
-          {storedKeyInfo?.mode === 'password' && (
-            <div className="form-group">
-              <label htmlFor="current-password">Current Password</label>
-              <input
-                id="current-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter current password"
-                disabled={loading}
-              />
-            </div>
-          )}
-
-          <div className="form-group">
-            <label htmlFor="new-password">New Password (leave empty for device-only)</label>
-            <input
-              id="new-password"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Enter new password"
-              disabled={loading}
-            />
-          </div>
-
-          {newPassword && (
-            <div className="form-group">
-              <label htmlFor="confirm-new-password">Confirm New Password</label>
-              <input
-                id="confirm-new-password"
-                type="password"
-                value={confirmNewPassword}
-                onChange={(e) => setConfirmNewPassword(e.target.value)}
-                placeholder="Confirm new password"
-                disabled={loading}
-              />
-            </div>
-          )}
-
-          {!newPassword && storedKeyInfo?.mode === 'password' && (
-            <div className="security-warning">
-              Leaving password empty will switch to device-only protection.
-            </div>
+          {keys.length === 0 && (
+            <p className="no-keys">No saved keys.</p>
           )}
 
           {error && <div className="error-message">{error}</div>}
 
           <div className="modal-actions">
-            <button
-              className="btn btn-primary"
-              onClick={handleChangePassword}
-              disabled={loading}
-            >
-              {loading ? 'Saving...' : 'Update Protection'}
-            </button>
-            <button
-              className="btn btn-danger"
-              onClick={() => setShowClearConfirm(true)}
-              disabled={loading}
-            >
-              Clear Saved Key
-            </button>
-            <button className="btn btn-secondary" onClick={handleClose} disabled={loading}>
-              Cancel
+            <button className="btn btn-secondary" onClick={handleClose}>
+              Close
             </button>
           </div>
         </>
       ) : (
         <>
           <div className="security-warning">
-            Are you sure you want to remove your saved key?
-            You will need to enter your nsec again to login.
+            Are you sure you want to remove this key?
+            You will need to enter the nsec again to use this account.
           </div>
+
+          {keys.find(k => k.pubkey === keyToRemove) &&
+            renderKeyItem(keys.find(k => k.pubkey === keyToRemove)!)}
 
           {error && <div className="error-message">{error}</div>}
 
           <div className="modal-actions">
             <button
               className="btn btn-danger"
-              onClick={handleClearKey}
+              onClick={handleRemoveKey}
               disabled={loading}
             >
-              {loading ? 'Clearing...' : 'Yes, Clear Key'}
+              {loading ? 'Removing...' : 'Yes, Remove Key'}
             </button>
             <button
               className="btn btn-secondary"
-              onClick={() => setShowClearConfirm(false)}
+              onClick={() => setKeyToRemove(null)}
               disabled={loading}
             >
               Cancel
@@ -468,9 +476,9 @@ export function KeyStorageModal({
       case 'save':
         return 'Save Key for Next Time?';
       case 'unlock':
-        return 'Unlock Saved Key';
+        return keys.length > 1 ? 'Select Account' : 'Unlock Saved Key';
       case 'manage':
-        return 'Manage Saved Key';
+        return 'Manage Saved Keys';
     }
   };
 
@@ -487,146 +495,3 @@ export function KeyStorageModal({
     </ModalWrapper>
   );
 }
-
-export const keyStorageModalStyles = `
-.key-storage-modal .modal-description {
-  margin-bottom: 1rem;
-  color: var(--text-secondary, #666);
-}
-
-.key-storage-modal .key-storage-option {
-  margin-bottom: 1rem;
-}
-
-.key-storage-modal .checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-}
-
-.key-storage-modal .checkbox-label input {
-  width: auto;
-}
-
-.key-storage-modal .form-group {
-  margin-bottom: 1rem;
-}
-
-.key-storage-modal .form-group label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-weight: 500;
-}
-
-.key-storage-modal .form-group input {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid var(--border-color, #ccc);
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
-.key-storage-modal .form-group input:focus {
-  outline: none;
-  border-color: #9b59b6;
-  box-shadow: 0 0 0 2px rgba(155, 89, 182, 0.2);
-}
-
-.key-storage-modal .security-warning {
-  background: rgba(231, 76, 60, 0.1);
-  border: 1px solid rgba(231, 76, 60, 0.3);
-  border-radius: 4px;
-  padding: 0.75rem;
-  margin-bottom: 1rem;
-  font-size: 0.85rem;
-  color: #c0392b;
-}
-
-.key-storage-modal .error-message {
-  color: #e74c3c;
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
-}
-
-.key-storage-modal .stored-key-info {
-  background: var(--bg-secondary, #f5f5f5);
-  border-radius: 4px;
-  padding: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.key-storage-modal .stored-key-info .info-row {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.25rem;
-}
-
-.key-storage-modal .stored-key-info .info-row:last-child {
-  margin-bottom: 0;
-}
-
-.key-storage-modal .stored-key-info .label {
-  font-weight: 500;
-  min-width: 80px;
-}
-
-.key-storage-modal .stored-key-info .pubkey {
-  font-family: monospace;
-  font-size: 0.85rem;
-  color: #9b59b6;
-}
-
-.key-storage-modal h4 {
-  margin: 1rem 0 0.75rem;
-  font-size: 1rem;
-}
-
-.key-storage-modal .modal-actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.key-storage-modal .btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
-}
-
-.key-storage-modal .btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.key-storage-modal .btn-primary {
-  background: #9b59b6;
-  color: white;
-}
-
-.key-storage-modal .btn-primary:hover:not(:disabled) {
-  background: #8e44ad;
-}
-
-.key-storage-modal .btn-secondary {
-  background: var(--bg-secondary, #e0e0e0);
-  color: var(--text-primary, #333);
-}
-
-.key-storage-modal .btn-secondary:hover:not(:disabled) {
-  background: var(--bg-tertiary, #d0d0d0);
-}
-
-.key-storage-modal .btn-danger {
-  background: #e74c3c;
-  color: white;
-}
-
-.key-storage-modal .btn-danger:hover:not(:disabled) {
-  background: #c0392b;
-}
-`;

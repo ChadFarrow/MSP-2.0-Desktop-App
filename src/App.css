@@ -1981,6 +1981,112 @@ body {
   color: var(--accent-primary);
 }
 
+/* Multi-key list */
+.key-storage-modal .key-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.key-storage-modal .key-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  border: 2px solid transparent;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.key-storage-modal .key-item.selectable {
+  cursor: pointer;
+}
+
+.key-storage-modal .key-item.selectable:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+.key-storage-modal .key-item.selectable.selected {
+  border-color: var(--accent-primary);
+  background: var(--accent-bg-subtle);
+}
+
+.key-storage-modal .key-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.key-storage-modal .key-avatar-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.key-storage-modal .key-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.key-storage-modal .key-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.key-storage-modal .key-npub {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--accent-primary);
+}
+
+.key-storage-modal .key-mode {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.key-storage-modal .key-item-manage {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.key-storage-modal .key-item-manage .key-item {
+  flex: 1;
+}
+
+.key-storage-modal .btn-small {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.key-storage-modal .no-keys {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2rem 0;
+}
+
 /* Person Preview Container - Two-column layout for roles + thumbnail */
 .person-preview-container {
   margin-top: 16px;

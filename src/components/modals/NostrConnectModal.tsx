@@ -8,7 +8,7 @@ import {
   loginWithNsec,
   loginWithHex,
   checkStoredKey,
-  unlockStoredKey,
+  tryAutoUnlockStoredKey,
   type NostrProfile,
   type StoredKeyInfo,
 } from '../../utils/tauriNostr';
@@ -50,33 +50,20 @@ export function NostrConnectModal({ onClose }: NostrConnectModalProps) {
     if (!isDesktop) return;
 
     const checkKey = async () => {
+      setConnecting(true);
       try {
-        const keyInfo = await checkStoredKey();
-        setStoredKeyInfo(keyInfo);
+        const result = await tryAutoUnlockStoredKey();
+        setStoredKeyInfo(result.storedKeyInfo);
 
-        if (keyInfo.exists) {
-          if (keyInfo.mode === 'device') {
-            // Try auto-unlock for device mode
-            try {
-              setConnecting(true);
-              const profile = await unlockStoredKey();
-              loginWithProfile(profile);
-              onClose();
-              return;
-            } catch {
-              // Device key failed, show manual login
-              setStoredKeyInfo({ ...keyInfo, exists: false });
-            } finally {
-              setConnecting(false);
-            }
-          } else {
-            // Password mode - show unlock modal
-            setShowUnlockModal(true);
-          }
+        if (result.success && result.profile) {
+          loginWithProfile(result.profile);
+          onClose();
+          return;
+        } else if (result.showUnlockModal) {
+          setShowUnlockModal(true);
         }
-      } catch (e) {
-        console.error('Failed to check stored key:', e);
       } finally {
+        setConnecting(false);
         setCheckingStoredKey(false);
       }
     };
@@ -192,7 +179,7 @@ export function NostrConnectModal({ onClose }: NostrConnectModalProps) {
       let profile: NostrProfile;
       const trimmedKey = nsecInput.trim();
       const isNsec = trimmedKey.startsWith('nsec1');
-      const shouldOfferSave = isNsec && !storedKeyInfo?.exists;
+      const shouldOfferSave = isNsec;
 
       // Set pendingNsec BEFORE login so the useEffect doesn't auto-close
       if (shouldOfferSave) {
@@ -309,9 +296,9 @@ export function NostrConnectModal({ onClose }: NostrConnectModalProps) {
               Enter your Nostr private key (nsec) to sign in. Your key will be encrypted and stored securely on this device.
             </p>
 
-            {storedKeyInfo?.exists && (
+            {storedKeyInfo?.keys && storedKeyInfo.keys.length > 0 && (
               <div className="stored-key-notice">
-                <p>You have a saved key. <button className="link-btn" onClick={() => setShowUnlockModal(true)}>Unlock it</button></p>
+                <p>You have {storedKeyInfo.keys.length} saved key{storedKeyInfo.keys.length > 1 ? 's' : ''}. <button className="link-btn" onClick={() => setShowUnlockModal(true)}>Unlock</button></p>
               </div>
             )}
 
