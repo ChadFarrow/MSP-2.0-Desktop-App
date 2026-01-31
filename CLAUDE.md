@@ -79,6 +79,7 @@ For manual version control (optional):
 | Build fails with unused variable error | TypeScript strict mode + ESLint enforce no unused code | Remove unused functions/variables before committing |
 | Component uses outdated API after refactor | Type changed (e.g., `StoredKeyInfo.exists` to `keys[]` array) | Update all components using the old API pattern |
 | "Resource not accessible by integration" on PR creation | Repository settings don't allow Actions to create PRs | Settings > Actions > Enable "Allow GitHub Actions to create and approve pull requests" |
+| "Command plugin:updater\|check not allowed by ACL" | Updater plugin permissions missing from capabilities | Add `updater:default` and `process:allow-restart` to `src-tauri/capabilities/default.json` |
 
 ## Software Versions
 
