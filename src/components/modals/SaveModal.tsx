@@ -23,6 +23,11 @@ import { albumStorage, videoStorage, publisherStorage, pendingHostedStorage } fr
 import { useNostr } from '../../store/nostrStore';
 import { ModalWrapper } from './ModalWrapper';
 import { apiFetch } from '../../utils/api';
+import {
+  createCompleteBackup,
+  saveBackupToFile,
+  getBackupPreview
+} from '../../utils/backup';
 
 const DEFAULT_BLOSSOM_SERVER = 'https://blossom.primal.net/';
 
@@ -38,7 +43,9 @@ interface SaveModalProps {
 
 export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', isDirty, isLoggedIn, onImport }: SaveModalProps) {
   const { state: nostrState } = useNostr();
-  const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'hosted' | 'podcastIndex'>('local');
+  const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'hosted' | 'podcastIndex' | 'backup'>('local');
+  const [backupPreview, setBackupPreview] = useState<ReturnType<typeof getBackupPreview> | null>(null);
+  const [backupLoading, setBackupLoading] = useState(false);
   const isPublisherMode = feedType === 'publisher';
   const isVideoMode = feedType === 'video';
 
@@ -79,8 +86,20 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   // Check if feed is linked to current user's Nostr identity
   const isNostrLinked = hostedInfo?.ownerPubkey && nostrState.user?.pubkey === hostedInfo.ownerPubkey;
 
+  // Load backup preview when backup mode is selected
+  useEffect(() => {
+    if (mode === 'backup' && !backupPreview && !backupLoading) {
+      setBackupLoading(true);
+      createCompleteBackup().then((backup) => {
+        setBackupPreview(getBackupPreview(backup));
+        setBackupLoading(false);
+      });
+    }
+  }, [mode, backupPreview, backupLoading]);
+
   // Helper to get button text based on mode and loading state
   const getButtonText = () => {
+    if (mode === 'backup') return loading ? 'Creating Backup...' : 'Create Backup';
     if (mode === 'podcastIndex') return submittingToIndex ? 'Submitting...' : 'Submit';
     if (loading) {
       if (mode === 'nostrMusic' || mode === 'blossom' || mode === 'hosted') return 'Uploading...';
@@ -248,8 +267,8 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
     setMessage(null);
     setProgress(null);
 
-    // Validate required fields only for publishing modes (not local/download/clipboard)
-    const requiresValidation = !['local', 'download', 'clipboard'].includes(mode);
+    // Validate required fields only for publishing modes (not local/download/clipboard/backup)
+    const requiresValidation = !['local', 'download', 'clipboard', 'backup'].includes(mode);
     if (requiresValidation) {
       const errors: string[] = [];
 
@@ -316,6 +335,16 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
           const xmlContent = generateCurrentFeedXml();
           await copyToClipboard(xmlContent);
           showSuccessAndClose('Copied to clipboard');
+          break;
+        }
+        case 'backup': {
+          const backup = await createCompleteBackup();
+          const result = await saveBackupToFile(backup);
+          if (result.success) {
+            showSuccessAndClose(result.message);
+          } else {
+            setMessage({ type: 'error', text: result.message });
+          }
           break;
         }
         case 'nostr': {
@@ -552,6 +581,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               <option value="local">Local Storage</option>
               <option value="download">Download XML</option>
               <option value="clipboard">Copy to Clipboard</option>
+              <option value="backup">Full Backup (All Feeds)</option>
               <option value="hosted">Host on MSP</option>
               <option value="podcastIndex">Submit to Podcast Index</option>
               {isLoggedIn && <option value="nostr">Save to Nostr</option>}
@@ -592,6 +622,62 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '16px' }}>
               Copy the RSS XML to your clipboard for pasting elsewhere.
             </p>
+          )}
+          {mode === 'backup' && (
+            <div style={{ marginTop: '16px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '12px' }}>
+                Create a complete backup of all your feeds (album, video, publisher) and hosted credentials in a single JSON file.
+              </p>
+              {backupLoading ? (
+                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
+                  Loading backup preview...
+                </div>
+              ) : backupPreview && (
+                <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 600 }}>
+                    Backup Contents
+                  </label>
+                  {backupPreview.album && (
+                    <div style={{ padding: '8px', marginBottom: '6px', backgroundColor: 'var(--bg-secondary)', borderRadius: '4px', fontSize: '0.8rem' }}>
+                      <strong>Album:</strong> {backupPreview.album.title} by {backupPreview.album.author}
+                      <span style={{ color: 'var(--text-secondary)' }}> ({backupPreview.album.trackCount} tracks)</span>
+                      {backupPreview.album.hasCredentials && (
+                        <span style={{ marginLeft: '8px', padding: '2px 6px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: 'var(--success)', borderRadius: '4px', fontSize: '0.7rem' }}>
+                          + credentials
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {backupPreview.video && (
+                    <div style={{ padding: '8px', marginBottom: '6px', backgroundColor: 'var(--bg-secondary)', borderRadius: '4px', fontSize: '0.8rem' }}>
+                      <strong>Video:</strong> {backupPreview.video.title} by {backupPreview.video.author}
+                      <span style={{ color: 'var(--text-secondary)' }}> ({backupPreview.video.trackCount} videos)</span>
+                      {backupPreview.video.hasCredentials && (
+                        <span style={{ marginLeft: '8px', padding: '2px 6px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: 'var(--success)', borderRadius: '4px', fontSize: '0.7rem' }}>
+                          + credentials
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {backupPreview.publisher && (
+                    <div style={{ padding: '8px', marginBottom: '6px', backgroundColor: 'var(--bg-secondary)', borderRadius: '4px', fontSize: '0.8rem' }}>
+                      <strong>Publisher:</strong> {backupPreview.publisher.title} by {backupPreview.publisher.author}
+                      <span style={{ color: 'var(--text-secondary)' }}> ({backupPreview.publisher.feedCount} feeds)</span>
+                      {backupPreview.publisher.hasCredentials && (
+                        <span style={{ marginLeft: '8px', padding: '2px 6px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: 'var(--success)', borderRadius: '4px', fontSize: '0.7rem' }}>
+                          + credentials
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {!backupPreview.album && !backupPreview.video && !backupPreview.publisher && (
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: 0, padding: '8px' }}>
+                      No feeds to backup. Create some content first!
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           )}
           {mode === 'nostr' && (
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '16px' }}>
@@ -1142,6 +1228,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                 <li><strong>Local Storage</strong> - Save to your browser's local storage. Data persists until you clear browser data.</li>
                 <li><strong>Download XML</strong> - Download the RSS feed as an XML file to your computer.</li>
                 <li><strong>Copy to Clipboard</strong> - Copy the RSS XML to your clipboard for pasting elsewhere.</li>
+                <li><strong>Full Backup</strong> - Export all feeds (album, video, publisher) and hosted credentials to a single JSON file for backup and transfer.</li>
                 <li><strong>Host on MSP</strong> - Host your feed on MSP servers. Get a permanent URL for your RSS feed to use in any app.{isLoggedIn && ' You can link your Nostr identity to edit from any device without needing the token.'}</li>
                 <li><strong>Submit to Podcast Index</strong> - Notify Podcast Index about your feed URL so podcast apps can discover it. Use this for new feeds or to notify them of updates.</li>
                 <li><strong>Save to Nostr</strong> - Publish to Nostr relays. Load it later on any device with your Nostr key (requires login).</li>
