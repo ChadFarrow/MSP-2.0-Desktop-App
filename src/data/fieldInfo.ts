@@ -30,8 +30,8 @@ export const FIELD_INFO = {
   recipientName: "Name of the payment recipient.",
   recipientAddress: "Lightning node pubkey (66 hex chars) or Lightning address (user@wallet.com). Type is auto-detected.",
   recipientSplit: "Percentage of payment this recipient receives. Splits are totaled and divided proportionally (must be whole numbers).",
-  recipientCustomKey: "TLV record key for routing to subwallets (e.g., 696969).",
-  recipientCustomValue: "Subwallet identifier or user ID for the payment destination.",
+  recipientCustomKey: "The name of a custom record key to send along with the payment.",
+  recipientCustomValue: "A custom value to pass along with the payment.",
 
   // Funding
   fundingUrl: "URL where listeners can support your podcast (e.g., Patreon, Ko-fi, your website).",

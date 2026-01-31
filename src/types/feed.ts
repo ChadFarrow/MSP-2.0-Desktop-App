@@ -267,6 +267,14 @@ export const createEmptyTrack = (trackNumber: number, enclosureType: string = 'a
 // Helper to check if medium is video
 export const isVideoMedium = (medium: string): boolean => medium === 'video';
 
+// Default empty value recipient
+export const createEmptyRecipient = (): ValueRecipient => ({
+  name: '',
+  address: '',
+  split: 0,
+  type: 'lnaddress'
+});
+
 // Default empty album
 export const createEmptyAlbum = (): Album => ({
   title: '',
@@ -299,7 +307,7 @@ export const createEmptyAlbum = (): Album => ({
     type: 'lightning',
     method: 'keysend',
     suggested: '0.000033333',
-    recipients: []
+    recipients: [createEmptyRecipient()]
   },
   funding: [],
   tracks: [createEmptyTrack(1)]
@@ -337,7 +345,7 @@ export const createEmptyVideoAlbum = (): Album => ({
     type: 'lightning',
     method: 'keysend',
     suggested: '0.000033333',
-    recipients: []
+    recipients: [createEmptyRecipient()]
   },
   funding: [],
   tracks: [createEmptyTrack(1, 'video/mp4')]
@@ -355,14 +363,6 @@ export const createEmptyPerson = (): Person => ({
   href: '',
   img: '',
   roles: [createEmptyPersonRole()]
-});
-
-// Default empty value recipient
-export const createEmptyRecipient = (): ValueRecipient => ({
-  name: '',
-  address: '',
-  split: 0,
-  type: 'node'
 });
 
 // Default empty funding
@@ -416,7 +416,7 @@ export const createEmptyPublisherFeed = (): PublisherFeed => ({
     type: 'lightning',
     method: 'keysend',
     suggested: '0.000033333',
-    recipients: []
+    recipients: [createEmptyRecipient()]
   },
   funding: [],
   remoteItems: []
