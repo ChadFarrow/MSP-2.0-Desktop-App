@@ -34,7 +34,6 @@ export interface ValueRecipient {
   address: string;
   split: number;
   type: 'node' | 'lnaddress';
-  fee?: boolean;
   customKey?: string;
   customValue?: string;
 }
@@ -74,7 +73,6 @@ export interface BaseChannelData {
   podcastGuid: string;
   locked: boolean;
   lockedOwner: string;
-  location: string;
   categories: string[];
   keywords: string;
   explicit: boolean;
@@ -141,7 +139,6 @@ export interface Album {
   medium: 'music' | 'video';
   locked: boolean;
   lockedOwner: string;
-  location: string;
 
   // iTunes
   categories: string[];
@@ -197,7 +194,6 @@ export interface PublisherFeed {
   medium: PublisherMedium;
   locked: boolean;
   lockedOwner: string;
-  location: string;
 
   // iTunes
   categories: string[];
@@ -267,6 +263,14 @@ export const createEmptyTrack = (trackNumber: number, enclosureType: string = 'a
 // Helper to check if medium is video
 export const isVideoMedium = (medium: string): boolean => medium === 'video';
 
+// Default empty value recipient
+export const createEmptyRecipient = (): ValueRecipient => ({
+  name: '',
+  address: '',
+  split: 0,
+  type: 'lnaddress'
+});
+
 // Default empty album
 export const createEmptyAlbum = (): Album => ({
   title: '',
@@ -281,7 +285,6 @@ export const createEmptyAlbum = (): Album => ({
   medium: 'music',
   locked: false,
   lockedOwner: '',
-  location: '',
   categories: [],
   keywords: '',
   explicit: false,
@@ -299,7 +302,7 @@ export const createEmptyAlbum = (): Album => ({
     type: 'lightning',
     method: 'keysend',
     suggested: '0.000033333',
-    recipients: []
+    recipients: [createEmptyRecipient()]
   },
   funding: [],
   tracks: [createEmptyTrack(1)]
@@ -319,7 +322,6 @@ export const createEmptyVideoAlbum = (): Album => ({
   medium: 'video',
   locked: false,
   lockedOwner: '',
-  location: '',
   categories: [],
   keywords: '',
   explicit: false,
@@ -337,7 +339,7 @@ export const createEmptyVideoAlbum = (): Album => ({
     type: 'lightning',
     method: 'keysend',
     suggested: '0.000033333',
-    recipients: []
+    recipients: [createEmptyRecipient()]
   },
   funding: [],
   tracks: [createEmptyTrack(1, 'video/mp4')]
@@ -355,14 +357,6 @@ export const createEmptyPerson = (): Person => ({
   href: '',
   img: '',
   roles: [createEmptyPersonRole()]
-});
-
-// Default empty value recipient
-export const createEmptyRecipient = (): ValueRecipient => ({
-  name: '',
-  address: '',
-  split: 0,
-  type: 'node'
 });
 
 // Default empty funding
@@ -399,7 +393,6 @@ export const createEmptyPublisherFeed = (): PublisherFeed => ({
   medium: 'publisher',
   locked: false,
   lockedOwner: '',
-  location: '',
   categories: [],
   keywords: '',
   explicit: false,
@@ -416,7 +409,7 @@ export const createEmptyPublisherFeed = (): PublisherFeed => ({
     type: 'lightning',
     method: 'keysend',
     suggested: '0.000033333',
-    recipients: []
+    recipients: [createEmptyRecipient()]
   },
   funding: [],
   remoteItems: []

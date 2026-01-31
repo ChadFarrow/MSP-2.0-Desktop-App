@@ -25,8 +25,7 @@ export function generateTestAlbum(): Album {
       name: 'Podcast Index',
       address: '03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a',
       split: 1,
-      type: 'node',
-      fee: true
+      type: 'node'
     },
     {
       name: 'MSP',
@@ -115,7 +114,6 @@ export function generateTestAlbum(): Album {
     medium: 'music',
     locked: false,
     lockedOwner: 'test@example.com',
-    location: 'Test City, Test Country',
     categories: ['Music'],
     keywords: 'test, sample, demo, music',
     explicit: false,
