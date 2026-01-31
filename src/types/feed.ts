@@ -34,7 +34,6 @@ export interface ValueRecipient {
   address: string;
   split: number;
   type: 'node' | 'lnaddress';
-  fee?: boolean;
   customKey?: string;
   customValue?: string;
 }
@@ -74,7 +73,6 @@ export interface BaseChannelData {
   podcastGuid: string;
   locked: boolean;
   lockedOwner: string;
-  location: string;
   categories: string[];
   keywords: string;
   explicit: boolean;
@@ -141,7 +139,6 @@ export interface Album {
   medium: 'music' | 'video';
   locked: boolean;
   lockedOwner: string;
-  location: string;
 
   // iTunes
   categories: string[];
@@ -197,7 +194,6 @@ export interface PublisherFeed {
   medium: PublisherMedium;
   locked: boolean;
   lockedOwner: string;
-  location: string;
 
   // iTunes
   categories: string[];
@@ -289,7 +285,6 @@ export const createEmptyAlbum = (): Album => ({
   medium: 'music',
   locked: false,
   lockedOwner: '',
-  location: '',
   categories: [],
   keywords: '',
   explicit: false,
@@ -327,7 +322,6 @@ export const createEmptyVideoAlbum = (): Album => ({
   medium: 'video',
   locked: false,
   lockedOwner: '',
-  location: '',
   categories: [],
   keywords: '',
   explicit: false,
@@ -399,7 +393,6 @@ export const createEmptyPublisherFeed = (): PublisherFeed => ({
   medium: 'publisher',
   locked: false,
   lockedOwner: '',
-  location: '',
   categories: [],
   keywords: '',
   explicit: false,

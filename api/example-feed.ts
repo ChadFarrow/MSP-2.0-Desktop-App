@@ -26,7 +26,6 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
         <podcast:guid>550e8400-e29b-41d4-a716-446655440000</podcast:guid>
         <itunes:category text="Music" />
         <itunes:keywords>example, demo, msp, podcasting2.0, value4value</itunes:keywords>
-        <podcast:location>The Interwebs</podcast:location>
         <image>
             <url>https://msp.podtards.com/msp-logo.png</url>
             <title>MSP Example Album</title>
@@ -46,7 +45,7 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
         <podcast:person group="audio-post-production" role="composer">Demo Producer</podcast:person>
         <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
             <podcast:valueRecipient name="MSP Demo Band" address="msp@getalby.com" split="95" type="lnaddress" />
-            <podcast:valueRecipient name="Podcast Index" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="1" type="node" fee="true" />
+            <podcast:valueRecipient name="Podcast Index" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="1" type="node" />
             <podcast:valueRecipient name="MSP" address="podtards@strike.me" split="4" type="lnaddress" />
         </podcast:value>
         <podcast:funding url="https://msp.podtards.com">Support MSP Development</podcast:funding>
@@ -54,7 +53,7 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
             <title>First Track</title>
             <description>The opening track of the album. Uses the album-level value block and person credits.</description>
             <pubDate>Sat, 01 Feb 2025 00:00:00 GMT</pubDate>
-            <guid isPermaLink="false">msp-example-track-001</guid>
+            <guid isPermaLink="false">a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d</guid>
             <itunes:image href="https://msp.podtards.com/msp-logo.png" />
             <podcast:images srcset="https://msp.podtards.com/msp-logo.png" />
             <enclosure url="https://example.com/audio/track01.mp3" length="5242880" type="audio/mpeg"/>
@@ -68,7 +67,7 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
             <podcast:person group="audio-post-production" role="composer">Demo Producer</podcast:person>
             <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
                 <podcast:valueRecipient name="MSP Demo Band" address="msp@getalby.com" split="95" type="lnaddress" />
-                <podcast:valueRecipient name="Podcast Index" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="1" type="node" fee="true" />
+                <podcast:valueRecipient name="Podcast Index" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="1" type="node" />
                 <podcast:valueRecipient name="MSP" address="podtards@strike.me" split="4" type="lnaddress" />
             </podcast:value>
         </item>
@@ -76,7 +75,7 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
             <title>Track with Lyrics</title>
             <description>This track includes a transcript for synchronized lyrics display in podcast apps that support it.</description>
             <pubDate>Sat, 01 Feb 2025 00:01:00 GMT</pubDate>
-            <guid isPermaLink="false">msp-example-track-002</guid>
+            <guid isPermaLink="false">b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e</guid>
             <podcast:transcript url="https://example.com/lyrics/track02.srt" type="application/srt" />
             <itunes:image href="https://msp.podtards.com/msp-logo.png" />
             <podcast:images srcset="https://msp.podtards.com/msp-logo.png" />
@@ -91,7 +90,7 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
             <podcast:person group="audio-post-production" role="composer">Demo Producer</podcast:person>
             <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
                 <podcast:valueRecipient name="MSP Demo Band" address="msp@getalby.com" split="95" type="lnaddress" />
-                <podcast:valueRecipient name="Podcast Index" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="1" type="node" fee="true" />
+                <podcast:valueRecipient name="Podcast Index" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="1" type="node" />
                 <podcast:valueRecipient name="MSP" address="podtards@strike.me" split="4" type="lnaddress" />
             </podcast:value>
         </item>
@@ -99,7 +98,7 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
             <title>Featured Collaboration</title>
             <description>This track features a guest artist with their own value split. The track-level value block overrides the album default.</description>
             <pubDate>Sat, 01 Feb 2025 00:02:00 GMT</pubDate>
-            <guid isPermaLink="false">msp-example-track-003</guid>
+            <guid isPermaLink="false">c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f</guid>
             <itunes:image href="https://msp.podtards.com/msp-logo.png" />
             <podcast:images srcset="https://msp.podtards.com/msp-logo.png" />
             <enclosure url="https://example.com/audio/track03.mp3" length="7340032" type="audio/mpeg"/>
@@ -112,7 +111,7 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
             <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
                 <podcast:valueRecipient name="MSP Demo Band" address="msp@getalby.com" split="47" type="lnaddress" />
                 <podcast:valueRecipient name="Featured Guest Artist" address="guest@getalby.com" split="48" type="lnaddress" />
-                <podcast:valueRecipient name="Podcast Index" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="1" type="node" fee="true" />
+                <podcast:valueRecipient name="Podcast Index" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="1" type="node" />
                 <podcast:valueRecipient name="MSP" address="podtards@strike.me" split="4" type="lnaddress" />
             </podcast:value>
         </item>

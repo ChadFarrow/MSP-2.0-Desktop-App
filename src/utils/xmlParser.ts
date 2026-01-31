@@ -25,7 +25,6 @@ const KNOWN_CHANNEL_KEYS = new Set([
   'itunes:image',
   'podcast:guid',
   'podcast:medium',
-  'podcast:location',
   'podcast:locked',
   'podcast:person',
   'podcast:value',
@@ -84,7 +83,6 @@ export const parseRssFeed = (xmlString: string): Album => {
   // Podcast Index tags
   album.podcastGuid = getText(channel['podcast:guid']) || '';
   album.medium = (getText(channel['podcast:medium']) as 'music' | 'video') || 'music';
-  album.location = getText(channel['podcast:location']) || '';
 
   // Locked
   const locked = channel['podcast:locked'];
@@ -287,7 +285,6 @@ function parseRecipient(node: unknown): ValueRecipient | null {
     address: getAttr(node, 'address') || '',
     split: parseInt(getAttr(node, 'split')) || 0,
     type: (getAttr(node, 'type') || 'node') as 'node' | 'lnaddress',
-    fee: getAttr(node, 'fee') === 'true',
     customKey: getAttr(node, 'customKey') || undefined,
     customValue: getAttr(node, 'customValue') || undefined
   };
@@ -320,7 +317,6 @@ function parseCommonChannelElements(channel: Record<string, unknown>): Omit<Base
 
   // Podcast Index tags
   const podcastGuid = getText(channel['podcast:guid']) || '';
-  const location = getText(channel['podcast:location']) || '';
 
   // Locked
   const lockedNode = channel['podcast:locked'];
@@ -393,7 +389,6 @@ function parseCommonChannelElements(channel: Record<string, unknown>): Omit<Base
     podcastGuid,
     locked,
     lockedOwner,
-    location,
     categories,
     keywords,
     explicit,

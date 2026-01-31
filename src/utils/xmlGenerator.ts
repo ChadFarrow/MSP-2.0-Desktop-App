@@ -192,7 +192,6 @@ const generateRecipientXml = (recipient: ValueRecipient, level: number): string 
     `split="${recipient.split}"`,
     `type="${recipient.type}"`
   ];
-  if (recipient.fee) attrs.push('fee="true"');
   if (recipient.customKey) attrs.push(`customKey="${escapeXml(recipient.customKey)}"`);
   if (recipient.customValue) attrs.push(`customValue="${escapeXml(recipient.customValue)}"`);
 
@@ -309,11 +308,6 @@ const generateCommonChannelElements = (data: BaseChannelData, medium: string, le
   // Keywords
   if (data.keywords) {
     lines.push(`${indent(level)}<itunes:keywords>${escapeXml(data.keywords)}</itunes:keywords>`);
-  }
-
-  // Location
-  if (data.location) {
-    lines.push(`${indent(level)}<podcast:location>${escapeXml(data.location)}</podcast:location>`);
   }
 
   // Contact
