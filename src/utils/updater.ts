@@ -21,8 +21,9 @@ export interface UpdateProgress {
 /**
  * Check if an update is available
  * Returns update info if available, null otherwise
+ * If throwOnError is true, throws instead of returning null on error
  */
-export async function checkForUpdate(): Promise<UpdateInfo | null> {
+export async function checkForUpdate(throwOnError = false): Promise<UpdateInfo | null> {
   try {
     const update = await check();
 
@@ -38,6 +39,9 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
     };
   } catch (error) {
     console.error('Failed to check for updates:', error);
+    if (throwOnError) {
+      throw error;
+    }
     return null;
   }
 }

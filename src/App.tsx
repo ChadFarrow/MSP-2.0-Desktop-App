@@ -263,12 +263,16 @@ function AppContent() {
                       className="dropdown-item"
                       onClick={async () => {
                         setShowDropdown(false);
-                        const update = await checkForUpdate();
-                        if (update) {
-                          setUpdateInfo(update);
-                          setShowUpdateModal(true);
-                        } else {
-                          alert('You are running the latest version!');
+                        try {
+                          const update = await checkForUpdate(true);
+                          if (update) {
+                            setUpdateInfo(update);
+                            setShowUpdateModal(true);
+                          } else {
+                            alert('You are running the latest version!');
+                          }
+                        } catch (err) {
+                          alert('Update check failed: ' + (err instanceof Error ? err.message : String(err)));
                         }
                       }}
                     >
