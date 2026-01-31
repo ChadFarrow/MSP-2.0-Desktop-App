@@ -256,6 +256,13 @@ body {
   cursor: not-allowed;
 }
 
+.dropdown-version {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
 /* Main Content */
 .main-content {
   display: flex;

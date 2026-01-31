@@ -17,7 +17,7 @@ import { ConfirmModal } from './components/modals/ConfirmModal';
 import { UpdateModal } from './components/modals/UpdateModal';
 import { KeyStorageModal } from './components/modals/KeyStorageModal';
 import { Editor } from './components/Editor/Editor';
-import { checkForUpdate, isTauri } from './utils/updater';
+import { checkForUpdate, isTauri, getAppVersion } from './utils/updater';
 import type { UpdateInfo } from './utils/updater';
 import { PublisherEditor } from './components/Editor/PublisherEditor';
 import { AdminPage } from './components/admin/AdminPage';
@@ -51,6 +51,7 @@ function AppContent() {
   // Auto-unlock state for stored keys (desktop only)
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [storedKeyInfo, setStoredKeyInfo] = useState<StoredKeyInfo | null>(null);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
 
   // Check for updates on launch (desktop only)
   useEffect(() => {
@@ -67,6 +68,11 @@ function AppContent() {
     // Delay check by 2 seconds to let the app fully load
     const timer = setTimeout(checkUpdate, 2000);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Get app version on launch (desktop only)
+  useEffect(() => {
+    getAppVersion().then(setAppVersion);
   }, []);
 
   // Check for stored key on launch and auto-unlock (desktop only)
@@ -297,6 +303,12 @@ function AppContent() {
                       >
                         🧪 Load Test Data
                       </button>
+                    </>
+                  )}
+                  {appVersion && (
+                    <>
+                      <div className="dropdown-divider" />
+                      <div className="dropdown-version">v{appVersion}</div>
                     </>
                   )}
                 </div>
