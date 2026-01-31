@@ -78,6 +78,7 @@ For manual version control (optional):
 | Branch protection blocks workflow commits | Workflow can't push version bumps when status checks required | Use GitHub run number for version instead of committing |
 | Build fails with unused variable error | TypeScript strict mode + ESLint enforce no unused code | Remove unused functions/variables before committing |
 | Component uses outdated API after refactor | Type changed (e.g., `StoredKeyInfo.exists` to `keys[]` array) | Update all components using the old API pattern |
+| "Resource not accessible by integration" on PR creation | Repository settings don't allow Actions to create PRs | Settings > Actions > Enable "Allow GitHub Actions to create and approve pull requests" |
 
 ## Software Versions
 
