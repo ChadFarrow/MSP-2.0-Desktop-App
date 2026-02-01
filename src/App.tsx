@@ -52,6 +52,7 @@ function AppContent() {
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [storedKeyInfo, setStoredKeyInfo] = useState<StoredKeyInfo | null>(null);
   const [appVersion, setAppVersion] = useState<string | null>(null);
+  const hasCheckedStoredKey = useRef(false);
 
   // Check for updates on launch (desktop only)
   useEffect(() => {
@@ -76,8 +77,11 @@ function AppContent() {
   }, []);
 
   // Check for stored key on launch and auto-unlock (desktop only)
+  // Only runs once on mount - not when user signs out
   useEffect(() => {
-    if (!isTauri() || nostrState.isLoggedIn) return;
+    if (!isTauri() || nostrState.isLoggedIn || hasCheckedStoredKey.current) return;
+
+    hasCheckedStoredKey.current = true;
 
     const checkKey = async () => {
       const result = await tryAutoUnlockStoredKey();
