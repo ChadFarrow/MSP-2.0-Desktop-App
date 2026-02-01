@@ -14,7 +14,7 @@ export function AddRecipientSelect({ onAdd }: AddRecipientSelectProps) {
       onChange={e => {
         const value = e.target.value;
         if (value === 'blank') {
-          onAdd({ name: '', address: '', split: 0, type: 'node' });
+          onAdd({ name: '', address: '', split: 0, type: 'lnaddress' });
         } else {
           const preset = PRESET_RECIPIENTS.find(p => p.label === value);
           if (preset) onAdd(preset.recipient);

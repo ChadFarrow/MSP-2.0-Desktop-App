@@ -56,7 +56,7 @@ export function RecipientsList({ recipients, onUpdate, onRemove, onAdd }: Recipi
                     onChange={e => onUpdate(index, { ...recipient, split: parseInt(e.target.value) || 0 })}
                   />
                 </div>
-                {recipient.type === 'node' && recipient.address && (
+                {recipient.type === 'node' && /^[0-9a-fA-F]{66}$/.test(recipient.address) && (
                   <>
                     <div className="form-group">
                       <label className="form-label">Custom Key<InfoIcon text={FIELD_INFO.recipientCustomKey} /></label>
