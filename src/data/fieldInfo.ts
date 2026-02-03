@@ -43,7 +43,7 @@ export const FIELD_INFO = {
 
   // Publisher Feed
   catalogTitle: "The name of this catalog feed. A publisher can have multiple catalogs (e.g., 'Jazz Collection', 'New Releases 2024').",
-  publisherName: "The publisher, label, or entity name. This appears in the <itunes:author> tag.",
+  publisherName: "The artist, publisher, label, or entity name. This appears in the <itunes:author> tag.",
 
   // Tracks
   trackTitle: "The song title.",
