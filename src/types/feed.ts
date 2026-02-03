@@ -127,6 +127,7 @@ export interface Album {
   // Basic Info
   title: string;
   author: string;
+  artistNpub?: string;
   description: string;
   link: string;
   language: string;
@@ -275,6 +276,7 @@ export const createEmptyRecipient = (): ValueRecipient => ({
 export const createEmptyAlbum = (): Album => ({
   title: '',
   author: '',
+  artistNpub: '',
   description: '',
   link: '',
   language: 'en',
@@ -312,6 +314,7 @@ export const createEmptyAlbum = (): Album => ({
 export const createEmptyVideoAlbum = (): Album => ({
   title: '',
   author: '',
+  artistNpub: '',
   description: '',
   link: '',
   language: 'en',

@@ -299,6 +299,11 @@ const generateCommonChannelElements = (data: BaseChannelData, medium: string, le
     lines.push(`${indent(level)}<podcast:guid>${escapeXml(data.podcastGuid)}</podcast:guid>`);
   }
 
+  // Artist Npub (only for Album feeds)
+  if ((data as Album).artistNpub) {
+    lines.push(`${indent(level)}<podcast:txt purpose="npub">${escapeXml((data as Album).artistNpub!)}</podcast:txt>`);
+  }
+
   // Categories (default to Music for music feeds)
   const categories = data.categories.length > 0 ? data.categories : ['Music'];
   categories.forEach(cat => {

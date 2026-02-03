@@ -317,6 +317,16 @@ export function Editor() {
                   onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { ownerEmail: e.target.value } })}
                 />
               </div>
+              <div className="form-group">
+                <label className="form-label">Artist Npub<InfoIcon text={FIELD_INFO.artistNpub} /></label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="npub1..."
+                  value={album.artistNpub || ''}
+                  onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { artistNpub: e.target.value } })}
+                />
+              </div>
             </div>
           </Section>
 

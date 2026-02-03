@@ -5,6 +5,7 @@ export const FIELD_INFO = {
   // Album Section
   title: "The name of your album.",
   author: "The artist or band name. This appears in the <itunes:author> tag.",
+  artistNpub: "Nostr public key (npub1...) for the primary artist. Enables Nostr-based identity and discovery.",
   description: "A brief description of the album, band members, recording info, etc.",
   link: "The main website you want listeners to visit (usually a band website).",
   language: "The language the feed is written in. See rssboard.org/rss-language-codes for codes.",

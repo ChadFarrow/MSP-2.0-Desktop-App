@@ -30,7 +30,8 @@ const KNOWN_CHANNEL_KEYS = new Set([
   'podcast:value',
   'podcast:funding',
   'podcast:publisher',
-  'podcast:remoteItem'  // For publisher feeds
+  'podcast:remoteItem',  // For publisher feeds
+  'podcast:txt'  // For npub and other txt tags
 ]);
 
 // Known item keys that we explicitly parse (don't capture as unknown)
@@ -151,6 +152,18 @@ export const parseRssFeed = (xmlString: string): Album => {
   const publisher = channel['podcast:publisher'];
   if (publisher) {
     album.publisher = parsePublisherReference(publisher);
+  }
+
+  // Artist Npub (from podcast:txt with purpose="npub")
+  const txtTags = channel['podcast:txt'];
+  if (txtTags) {
+    const txtArray = Array.isArray(txtTags) ? txtTags : [txtTags];
+    for (const txt of txtArray) {
+      if (getAttr(txt, 'purpose') === 'npub') {
+        album.artistNpub = getText(txt) || '';
+        break;
+      }
+    }
   }
 
   // Capture unknown channel elements
