@@ -272,6 +272,12 @@ export const createEmptyRecipient = (): ValueRecipient => ({
   type: 'lnaddress'
 });
 
+// Support recipients (MSP 2.0 and Podcast Index)
+export const createSupportRecipients = (): ValueRecipient[] => [
+  { name: 'MSP 2.0', address: 'chadf@getalby.com', split: 1, type: 'lnaddress' },
+  { name: 'Podcastindex.org', address: 'podcastindex@getalby.com', split: 1, type: 'lnaddress' },
+];
+
 // Default empty album
 export const createEmptyAlbum = (): Album => ({
   title: '',
