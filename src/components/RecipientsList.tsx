@@ -54,7 +54,7 @@ export function RecipientsList({ recipients, onUpdate, onRemove, onAdd }: Recipi
             <input
               type="text"
               className="form-input"
-              placeholder="Node pubkey or LN address"
+              placeholder="LN address or node pubkey"
               value={recipient.address || ''}
               onChange={e => {
                 const address = e.target.value;
