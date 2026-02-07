@@ -25,27 +25,43 @@ A `.env` file is required with the following variables:
 
 No `.env.example` exists - request credentials from the team.
 
-### Getting Started
+### Commands
 ```bash
-npm install
-npm run dev          # Web dev server
-npm run tauri:dev    # Desktop app dev mode
+npm run dev          # Start Vite dev server (proxies /api to msp.podtards.com)
+npm run build        # TypeScript compile + Vite build
+npm run lint         # ESLint
+npm run preview      # Preview production build
+npm run tauri:dev    # Start Tauri desktop app in dev mode
+npm run tauri:build  # Build desktop app for distribution
 ```
+
+### Testing
+```bash
+npm test             # Run all unit tests (Vitest)
+npm run test:watch   # Watch mode
+npx vitest src/utils/xmlParser.test.ts   # Run a single test file
+npm run test:e2e     # Run Playwright E2E tests (starts dev server automatically)
+npm run test:e2e:ui  # Playwright interactive UI mode
+```
+
+Unit tests use Vitest with jsdom, configured in `vitest.config.ts`. Test files live alongside source as `*.test.{ts,tsx}`.
+
+E2E tests are in `e2e/` and run Playwright against Chrome at multiple viewports (desktop, tablet 1024px, mobile 768px, mobile 480px). Config in `playwright.config.ts`.
+
+### CI/CD
+Push to `master` or PR triggers three parallel GitHub Actions jobs: unit tests, E2E tests, and lint.
+
+Pushing a version tag (`v*`) triggers cross-platform release builds (macOS arm64/x86_64, Ubuntu, Windows) that sign artifacts and create a draft GitHub release.
 
 ## Deployment
 
 ### Web Version
 - Hosted on Vercel at msp.podtards.com
 - API functions in `/api/` directory are Vercel serverless functions
-- Dev server proxies `/api/*` to production
+- Dev server proxies `/api/*` to production via Vite config
 - Build: `npm run build` (tsc + vite)
 
-### Desktop App
-- Built with Tauri 2.x
-- Supports Windows, macOS, and Linux
-- Build: `npm run tauri:build`
-
-### Auto-Update System
+### Desktop App (Auto-Update System)
 The desktop app uses Tauri's updater plugin with signed releases hosted on GitHub.
 
 **Key files:**
@@ -72,75 +88,6 @@ The desktop app uses Tauri's updater plugin with signed releases hosted on GitHu
 | Secrets not found | Secrets in Environments instead of Repository | Add to Settings > Secrets > Actions > Repository secrets |
 | No update prompt in old versions | App was built before update code was added | Users must manually update once to a version with update support |
 
-## Software Versions
-
-### Core
-- React 19.2
-- TypeScript 5.9
-- Vite 7.2
-
-### Key Libraries
-- Tauri 2.9
-- fast-xml-parser 5.3
-- nostr-tools 2.19
-- @vercel/blob 2.0
-
-### Development
-- Vitest 4.0
-- ESLint 9.39
-
-## Project Structure
-
-```
-src/
-├── components/     # React components
-│   ├── Editor/     # Album/Video editor components
-│   ├── PublisherEditor/  # Publisher feed editor
-│   ├── modals/     # Modal dialogs
-│   └── admin/      # Admin components
-├── store/          # React Context stores
-│   ├── feedStore.tsx     # Main feed state
-│   ├── nostrStore.tsx    # Nostr authentication
-│   └── themeStore.tsx    # Theme state
-├── types/          # TypeScript definitions
-└── utils/          # Utilities (XML, Nostr, audio, storage)
-
-api/                # Vercel serverless endpoints
-
-src-tauri/          # Tauri desktop app
-├── src/            # Rust backend
-├── Cargo.toml      # Rust dependencies
-└── tauri.conf.json # Tauri configuration
-```
-
-## Boundaries
-
-- TypeScript strict mode enabled
-- `noUnusedLocals`, `noUnusedParameters` enforced
-- ES modules only (`"type": "module"`)
-- Target ES2022
-- Never commit secrets (`.env`, API keys, tokens)
-
-## Git Workflow
-
-- Main branch: `master`
-- Commit style: imperative tense ("Fix bug", "Add feature")
-- Include Co-Authored-By for Claude-assisted commits
-- No pre-commit hooks configured
-
-## Commands
-
-```bash
-npm run dev          # Start Vite dev server (proxies /api to msp.podtards.com)
-npm run build        # TypeScript compile + Vite build
-npm run lint         # ESLint
-npm run test         # Run tests with Vitest
-npm run test:watch   # Watch mode testing
-npm run preview      # Preview production build
-npm run tauri:dev    # Start Tauri desktop app in dev mode
-npm run tauri:build  # Build desktop app for distribution
-```
-
 ## Architecture
 
 ### Three Feed Modes
@@ -148,6 +95,19 @@ The app has three modes selected via dropdown in the header:
 - **Album** - Music album RSS feeds with tracks
 - **Video** - Video feed RSS (similar structure to Album)
 - **Publisher** - Label/publisher catalog feeds that aggregate multiple album feeds
+
+### Dual Environment: Web vs Desktop
+The app runs both as a web app (Vercel) and desktop app (Tauri). Code detects the environment via `window.__TAURI__`:
+- **Web:** Uses NIP-07 browser extensions for Nostr signing, browser localStorage for persistence
+- **Desktop:** Uses Rust backend via `invoke()` for Nostr (key management, signing, relay publishing), Blossom uploads, and local file system storage
+
+Tauri-specific wrappers provide the same API surface as web equivalents:
+- `tauriNostr.ts` - Drop-in replacement for NIP-07 browser extension calls
+- `tauriBlossom.ts` - Blossom uploads via Rust backend (SHA256 hashing, auth events)
+- `localFeedStorage.ts` - Feed persistence to app data directory instead of localStorage
+- `DesktopNostrLogin.tsx` - Login via nsec/hex key instead of browser extension
+
+The Rust backend (`src-tauri/src/main.rs`) exposes Tauri commands for Nostr auth, feed storage, and Blossom operations, using `nostr-sdk` and thread-safe `Mutex<Option<T>>` state.
 
 ### State Management
 Uses React Context + useReducer pattern (not Redux). Three separate stores:
@@ -179,11 +139,25 @@ Vercel serverless functions:
 - `xmlGenerator.ts` - Generates Podcasting 2.0 compliant RSS XML
 
 ### Nostr Integration
-- NIP-07 browser extension support for signing
+- NIP-07 browser extension support for signing (web)
 - NIP-46 remote signer support
 - Kind 30054 events for feed storage on relays
 - Kind 36787 for Nostr Music track publishing
 - Blossom server uploads for file hosting
+
+## Boundaries
+
+- TypeScript strict mode enabled
+- `noUnusedLocals`, `noUnusedParameters` enforced
+- ES modules only (`"type": "module"`)
+- Target ES2022
+
+## Git Workflow
+
+- Main branch: `master`
+- Commit style: imperative tense ("Fix bug", "Add feature")
+- Include Co-Authored-By for Claude-assisted commits
+- No pre-commit hooks configured
 
 ## Key Patterns
 
