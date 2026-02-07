@@ -12,6 +12,7 @@ import {
 } from '../../../utils/hostedFeed';
 import { hasSigner } from '../../../utils/nostrSigner';
 import { useNostr } from '../../../store/nostrStore';
+import { apiFetch } from '../../../utils/api';
 
 interface PublisherFeedReminderSectionProps {
   publisherFeed: PublisherFeed;
@@ -66,7 +67,7 @@ export function PublisherFeedReminderSection({ publisherFeed }: PublisherFeedRem
 
       // Auto-submit to Podcast Index
       try {
-        await fetch('/api/pisubmit', {
+        await apiFetch('/api/pisubmit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: feedUrl })

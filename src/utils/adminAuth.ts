@@ -1,5 +1,6 @@
 // Admin authentication utilities for frontend
 import { getSigner, hasSigner } from './nostrSigner';
+import { apiFetch, resolveApiUrl } from './api';
 
 interface NostrEvent {
   id?: string;
@@ -48,12 +49,12 @@ export async function authenticateAdmin(): Promise<{ success: boolean; pubkey?: 
   try {
     // Sign auth event (timestamp in event prevents replay)
     const signedEvent = await signAuthEvent(
-      `${window.location.origin}/api/admin/verify`,
+      resolveApiUrl('/api/admin/verify'),
       'POST'
     );
 
     // Verify with server
-    const response = await fetch('/api/admin/verify', {
+    const response = await apiFetch('/api/admin/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ signedEvent })
@@ -94,10 +95,10 @@ export async function createAdminAuthHeader(url: string, method: string): Promis
 
 // Fetch list of feeds with admin auth
 export async function fetchAdminFeeds(): Promise<ListFeedsResponse> {
-  const url = `${window.location.origin}/api/hosted/`;
+  const url = resolveApiUrl('/api/hosted/');
   const authHeader = await createAdminAuthHeader(url, 'GET');
 
-  const response = await fetch('/api/hosted/', {
+  const response = await apiFetch('/api/hosted/', {
     headers: { 'Authorization': authHeader }
   });
 
@@ -111,10 +112,10 @@ export async function fetchAdminFeeds(): Promise<ListFeedsResponse> {
 
 // Delete a feed with admin auth
 export async function deleteFeed(feedId: string): Promise<void> {
-  const url = `${window.location.origin}/api/hosted/${feedId}`;
+  const url = resolveApiUrl(`/api/hosted/${feedId}`);
   const authHeader = await createAdminAuthHeader(url, 'DELETE');
 
-  const response = await fetch(`/api/hosted/${feedId}`, {
+  const response = await apiFetch(`/api/hosted/${feedId}`, {
     method: 'DELETE',
     headers: { 'Authorization': authHeader }
   });

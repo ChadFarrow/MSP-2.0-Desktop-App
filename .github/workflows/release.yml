@@ -2,12 +2,40 @@ name: 'Build & Release'
 
 on:
   push:
+    branches:
+      - master
     tags:
       - 'v*'
   workflow_dispatch:
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump_version.outputs.version }}
+      tag_name: ${{ steps.bump_version.outputs.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate version
+        id: bump_version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Use the tag name directly (manual release)
+            TAG_NAME="${{ github.ref_name }}"
+            VERSION="${TAG_NAME#v}"
+          else
+            # Use base version + run number for auto-incrementing builds
+            BASE_VERSION=$(grep '"version"' src-tauri/tauri.conf.json | sed 's/.*"\([0-9]*\.[0-9]*\)\.[0-9]*".*/\1/')
+            VERSION="${BASE_VERSION}.${{ github.run_number }}"
+            TAG_NAME="v${VERSION}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION, Tag: $TAG_NAME"
+
   build-tauri:
+    needs: prepare
     permissions:
       contents: write
     strategy:
@@ -52,6 +80,13 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Update version in tauri.conf.json
+        shell: bash
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+          cat src-tauri/tauri.conf.json | grep version
+
       - name: Set signing key
         shell: bash
         run: |
@@ -63,8 +98,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'MSP Studio ${{ github.ref_name }}'
+          tagName: ${{ needs.prepare.outputs.tag_name }}
+          releaseName: 'MSP Studio ${{ needs.prepare.outputs.tag_name }}'
           releaseBody: |
             ## MSP Studio Desktop Release
 
@@ -90,6 +125,6 @@ jobs:
             ```bash
             sudo apt install libwebkit2gtk-4.1-0
             ```
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

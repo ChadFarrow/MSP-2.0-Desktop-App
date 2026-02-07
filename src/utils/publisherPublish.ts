@@ -17,6 +17,7 @@ import {
 import { hasSigner } from './nostrSigner';
 import { fetchFeedFromUrl, parseRssFeed } from './xmlParser';
 import { generateRssFeed } from './xmlGenerator';
+import { apiFetch } from './api';
 
 // Types for publish flow
 export type PublishStep = 'idle' | 'hosting-catalog' | 'hosting' | 'notifying' | 'updating-catalog' | 'complete' | 'error';
@@ -90,7 +91,7 @@ const isCorsOrNetworkError = (errMsg: string): boolean => {
 // Notify Podcast Index about a feed update
 async function notifyPodcastIndex(feedUrl: string): Promise<{ status: 'indexed' | 'pending' | 'failed'; pageUrl?: string }> {
   try {
-    const res = await fetch(`/api/pubnotify?url=${encodeURIComponent(feedUrl)}`);
+    const res = await apiFetch(`/api/pubnotify?url=${encodeURIComponent(feedUrl)}`);
     const data = await res.json();
     if (data.success) {
       if (data.podcastIndexUrl) {

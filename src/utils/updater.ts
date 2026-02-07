@@ -4,6 +4,7 @@
 
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { getVersion } from '@tauri-apps/api/app';
 
 export interface UpdateInfo {
   version: string;
@@ -20,8 +21,9 @@ export interface UpdateProgress {
 /**
  * Check if an update is available
  * Returns update info if available, null otherwise
+ * If throwOnError is true, throws instead of returning null on error
  */
-export async function checkForUpdate(): Promise<UpdateInfo | null> {
+export async function checkForUpdate(throwOnError = false): Promise<UpdateInfo | null> {
   try {
     const update = await check();
 
@@ -37,6 +39,9 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
     };
   } catch (error) {
     console.error('Failed to check for updates:', error);
+    if (throwOnError) {
+      throw error;
+    }
     return null;
   }
 }
@@ -88,4 +93,16 @@ export async function downloadAndInstallUpdate(
  */
 export function isTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
+
+/**
+ * Get the current app version (desktop only)
+ */
+export async function getAppVersion(): Promise<string | null> {
+  if (!isTauri()) return null;
+  try {
+    return await getVersion();
+  } catch {
+    return null;
+  }
 }

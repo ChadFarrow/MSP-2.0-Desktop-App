@@ -10,6 +10,14 @@ import { useNostr } from '../../store/nostrStore';
 import type { SavedAlbumInfo, NostrMusicAlbumGroup } from '../../types/nostr';
 import type { Album } from '../../types/feed';
 import { ModalWrapper } from './ModalWrapper';
+import { apiFetch, isTauri } from '../../utils/api';
+import {
+  loadBackupFromFile,
+  parseBackupFromContent,
+  getBackupPreview,
+  restoreFromBackup,
+  type BackupFile
+} from '../../utils/backup';
 
 interface HostedFeedListItem {
   feedId: string;
@@ -30,7 +38,10 @@ interface ImportModalProps {
 
 export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: ImportModalProps) {
   const { state: nostrState } = useNostr();
-  const [mode, setMode] = useState<'file' | 'paste' | 'url' | 'nostr' | 'nostrMusic' | 'nostrEvent' | 'hosted'>('file');
+  const [mode, setMode] = useState<'file' | 'paste' | 'url' | 'nostr' | 'nostrMusic' | 'nostrEvent' | 'hosted' | 'backup'>('file');
+  const [backupData, setBackupData] = useState<BackupFile | null>(null);
+  const [backupPreview, setBackupPreview] = useState<ReturnType<typeof getBackupPreview> | null>(null);
+  const [restoreMode, setRestoreMode] = useState<'replace' | 'merge'>('replace');
   const [xmlContent, setXmlContent] = useState('');
   const [jsonContent, setJsonContent] = useState('');
   const [feedUrl, setFeedUrl] = useState('');
@@ -162,8 +173,8 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
     setError('');
 
     try {
-      // Fetch the feed XML using relative URL (works on localhost and production)
-      const response = await fetch(`/api/hosted/${hostedFeedId.trim()}.xml`);
+      // Fetch the feed XML using apiFetch (works in both web and Tauri)
+      const response = await apiFetch(`/api/hosted/${hostedFeedId.trim()}.xml`);
       if (!response.ok) {
         throw new Error('Feed not found');
       }
@@ -195,8 +206,8 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
     setError('');
 
     try {
-      // Fetch using relative URL (works on localhost and production)
-      const response = await fetch(`/api/hosted/${feed.feedId}.xml`);
+      // Fetch using apiFetch (works in both web and Tauri)
+      const response = await apiFetch(`/api/hosted/${feed.feedId}.xml`);
       if (!response.ok) {
         throw new Error('Feed not found');
       }
@@ -238,6 +249,69 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
       setError('Failed to read file');
     };
     reader.readAsText(file);
+  };
+
+  // Handle backup file selection (for web mode file input)
+  const handleBackupFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setError('');
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const result = parseBackupFromContent(content);
+      if (result.error) {
+        setError(result.error);
+        setBackupData(null);
+        setBackupPreview(null);
+      } else if (result.backup) {
+        setBackupData(result.backup);
+        setBackupPreview(getBackupPreview(result.backup));
+      }
+    };
+    reader.onerror = () => {
+      setError('Failed to read backup file');
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  // Handle native file picker for Tauri
+  const handleTauriBackupOpen = async () => {
+    setLoading(true);
+    setError('');
+    const result = await loadBackupFromFile();
+    setLoading(false);
+
+    if (result.error) {
+      setError(result.error);
+    } else if (result.backup) {
+      setBackupData(result.backup);
+      setBackupPreview(getBackupPreview(result.backup));
+    }
+  };
+
+  // Handle restore from backup
+  const handleRestoreBackup = () => {
+    if (!backupData) {
+      setError('No backup loaded');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    const result = restoreFromBackup(backupData, restoreMode);
+
+    if (result.success) {
+      // Force page reload to pick up restored data
+      onClose();
+      window.location.reload();
+    } else {
+      setError(result.message);
+      setLoading(false);
+    }
   };
 
   const handleImport = async () => {
@@ -308,6 +382,10 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
                   {loading ? 'Importing...' : 'Import by ID'}
                 </button>
               </>
+            ) : mode === 'backup' ? (
+              <button className="btn btn-primary" onClick={handleRestoreBackup} disabled={loading || !backupData}>
+                {loading ? 'Restoring...' : 'Restore Backup'}
+              </button>
             ) : (
               <button className="btn btn-primary" onClick={handleImport} disabled={loading}>
                 {loading ? 'Importing...' : 'Import Feed'}
@@ -332,6 +410,7 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
               <option value="file">Upload File</option>
               <option value="paste">Paste XML</option>
               <option value="url">From URL</option>
+              <option value="backup">Restore from Backup</option>
               <option value="nostrEvent">Nostr Event</option>
               <option value="hosted">MSP Hosted</option>
               {isLoggedIn && <option value="nostr">From Nostr</option>}
@@ -483,6 +562,150 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
                 value={jsonContent}
                 onChange={e => setJsonContent(e.target.value)}
               />
+            </div>
+          ) : mode === 'backup' ? (
+            <div className="form-group">
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '12px' }}>
+                Restore all feeds and hosted credentials from a backup file.
+              </p>
+
+              {/* File picker - Tauri native or web fallback */}
+              {isTauri() ? (
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleTauriBackupOpen}
+                  disabled={loading}
+                  style={{ width: '100%', padding: '20px', marginBottom: '16px' }}
+                >
+                  <span style={{ fontSize: '1.5rem', marginRight: '8px' }}>📁</span>
+                  {loading ? 'Loading...' : 'Select Backup File'}
+                </button>
+              ) : (
+                <label
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px',
+                    marginBottom: '16px',
+                    border: '2px dashed var(--border-color)',
+                    borderRadius: '8px',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    cursor: 'pointer',
+                    transition: 'border-color 0.2s'
+                  }}
+                >
+                  <span style={{ fontSize: '1.5rem', marginBottom: '8px' }}>📁</span>
+                  <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Select Backup File
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    Click to select your .json backup file
+                  </span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleBackupFileChange}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              )}
+
+              {/* Backup preview */}
+              {backupPreview && (
+                <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 600 }}>
+                    Backup Contents
+                  </label>
+                  {backupData && (
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                      Created: {new Date(backupData.createdAt).toLocaleString()}
+                      {backupData.appVersion && ` (v${backupData.appVersion})`}
+                    </p>
+                  )}
+                  {backupPreview.album && (
+                    <div style={{ padding: '8px', marginBottom: '6px', backgroundColor: 'var(--bg-secondary)', borderRadius: '4px', fontSize: '0.8rem' }}>
+                      <strong>Album:</strong> {backupPreview.album.title} by {backupPreview.album.author}
+                      <span style={{ color: 'var(--text-secondary)' }}> ({backupPreview.album.trackCount} tracks)</span>
+                      {backupPreview.album.hasCredentials && (
+                        <span style={{ marginLeft: '8px', padding: '2px 6px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: 'var(--success)', borderRadius: '4px', fontSize: '0.7rem' }}>
+                          + credentials
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {backupPreview.video && (
+                    <div style={{ padding: '8px', marginBottom: '6px', backgroundColor: 'var(--bg-secondary)', borderRadius: '4px', fontSize: '0.8rem' }}>
+                      <strong>Video:</strong> {backupPreview.video.title} by {backupPreview.video.author}
+                      <span style={{ color: 'var(--text-secondary)' }}> ({backupPreview.video.trackCount} videos)</span>
+                      {backupPreview.video.hasCredentials && (
+                        <span style={{ marginLeft: '8px', padding: '2px 6px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: 'var(--success)', borderRadius: '4px', fontSize: '0.7rem' }}>
+                          + credentials
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {backupPreview.publisher && (
+                    <div style={{ padding: '8px', marginBottom: '6px', backgroundColor: 'var(--bg-secondary)', borderRadius: '4px', fontSize: '0.8rem' }}>
+                      <strong>Publisher:</strong> {backupPreview.publisher.title} by {backupPreview.publisher.author}
+                      <span style={{ color: 'var(--text-secondary)' }}> ({backupPreview.publisher.feedCount} feeds)</span>
+                      {backupPreview.publisher.hasCredentials && (
+                        <span style={{ marginLeft: '8px', padding: '2px 6px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: 'var(--success)', borderRadius: '4px', fontSize: '0.7rem' }}>
+                          + credentials
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {!backupPreview.album && !backupPreview.video && !backupPreview.publisher && (
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: 0, padding: '8px' }}>
+                      No feeds in this backup.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Restore mode toggle */}
+              {backupData && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label className="form-label">Restore Mode</label>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="restoreMode"
+                        value="replace"
+                        checked={restoreMode === 'replace'}
+                        onChange={() => setRestoreMode('replace')}
+                      />
+                      <span style={{ fontSize: '0.875rem' }}>Replace existing</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="restoreMode"
+                        value="merge"
+                        checked={restoreMode === 'merge'}
+                        onChange={() => setRestoreMode('merge')}
+                      />
+                      <span style={{ fontSize: '0.875rem' }}>Merge (keep existing)</span>
+                    </label>
+                  </div>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '6px' }}>
+                    {restoreMode === 'replace'
+                      ? 'Existing feeds will be overwritten with backup data.'
+                      : 'Only restore feeds that don\'t already exist.'}
+                  </p>
+                </div>
+              )}
+
+              {backupData && (
+                <div style={{ padding: '12px', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: '8px', border: '1px solid var(--warning, #f59e0b)' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--warning, #f59e0b)', margin: 0 }}>
+                    The page will reload after restore to load the new data.
+                  </p>
+                </div>
+              )}
             </div>
           ) : mode === 'hosted' ? (
             <div className="form-group">
@@ -651,6 +874,7 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
                 <li><strong>Upload File</strong> - Upload an RSS/XML feed file from your device</li>
                 <li><strong>Paste XML</strong> - Paste RSS/XML content directly</li>
                 <li><strong>From URL</strong> - Fetch a feed from any URL</li>
+                <li><strong>Restore from Backup</strong> - Restore all feeds and hosted credentials from a full backup file</li>
                 <li><strong>Nostr Event</strong> - Import from a Nostr Event (kind 36787)</li>
                 <li><strong>MSP Hosted</strong> - Load a feed hosted on MSP servers using its Feed ID</li>
                 <li><strong>From Nostr</strong> - Load your previously saved albums from Nostr (requires login)</li>

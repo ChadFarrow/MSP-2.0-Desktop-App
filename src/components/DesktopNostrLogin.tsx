@@ -1,25 +1,31 @@
 /**
  * Desktop Nostr Login Component
- * 
+ *
  * Replaces the NIP-07 browser extension login for Tauri desktop builds.
- * Supports nsec and hex key input.
+ * Supports nsec and hex key input with optional encrypted key storage.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   isTauri,
   loginWithNsec,
   loginWithHex,
   logout,
   getPubkey,
-  type NostrProfile
+  checkStoredKey,
+  tryAutoUnlockStoredKey,
+  type NostrProfile,
+  type StoredKeyInfo,
 } from '../utils/tauriNostr';
 import { extractErrorMessage } from '../utils/errorHandling';
+import { KeyStorageModal } from './modals/KeyStorageModal';
 
 interface DesktopNostrLoginProps {
   onLogin?: (profile: NostrProfile) => void;
   onLogout?: () => void;
 }
+
+type ModalMode = 'save' | 'unlock' | 'manage' | null;
 
 export function DesktopNostrLogin({ onLogin, onLogout }: DesktopNostrLoginProps) {
   const [profile, setProfile] = useState<NostrProfile | null>(null);
@@ -27,18 +33,58 @@ export function DesktopNostrLogin({ onLogin, onLogout }: DesktopNostrLoginProps)
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showInput, setShowInput] = useState(false);
+  const [storedKeyInfo, setStoredKeyInfo] = useState<StoredKeyInfo | null>(null);
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
+  const [pendingNsec, setPendingNsec] = useState<string | null>(null);
+  const [checkingStoredKey, setCheckingStoredKey] = useState(true);
 
-  // Check for existing session on mount
+  // Check for existing session and stored key on mount
   useEffect(() => {
-    if (isTauri()) {
-      getPubkey().then((p: NostrProfile | null) => {
-        if (p) {
-          setProfile(p);
-          onLogin?.(p);
-        }
-      });
+    if (!isTauri()) {
+      setCheckingStoredKey(false);
+      return;
     }
+
+    const init = async () => {
+      try {
+        // First check if already logged in
+        const existingProfile = await getPubkey();
+        if (existingProfile) {
+          setProfile(existingProfile);
+          onLogin?.(existingProfile);
+          setCheckingStoredKey(false);
+          return;
+        }
+
+        // Try auto-unlock
+        const result = await tryAutoUnlockStoredKey();
+        setStoredKeyInfo(result.storedKeyInfo);
+
+        if (result.success && result.profile) {
+          setProfile(result.profile);
+          onLogin?.(result.profile);
+        } else if (result.showUnlockModal) {
+          setModalMode('unlock');
+        }
+      } catch (e) {
+        console.error('Init error:', e);
+      } finally {
+        setCheckingStoredKey(false);
+      }
+    };
+
+    init();
   }, [onLogin]);
+
+  const refreshStoredKeyInfo = useCallback(async () => {
+    if (!isTauri()) return;
+    try {
+      const keyInfo = await checkStoredKey();
+      setStoredKeyInfo(keyInfo);
+    } catch (e) {
+      console.error('Failed to check stored key:', e);
+    }
+  }, []);
 
   const handleLogin = async () => {
     if (!keyInput.trim()) {
@@ -51,11 +97,16 @@ export function DesktopNostrLogin({ onLogin, onLogout }: DesktopNostrLoginProps)
 
     try {
       let result: NostrProfile;
-      
-      if (keyInput.startsWith('nsec1')) {
-        result = await loginWithNsec(keyInput.trim());
-      } else if (/^[0-9a-fA-F]{64}$/.test(keyInput.trim())) {
-        result = await loginWithHex(keyInput.trim());
+      const trimmedKey = keyInput.trim();
+
+      if (trimmedKey.startsWith('nsec1')) {
+        result = await loginWithNsec(trimmedKey);
+        // Store the nsec for potential saving
+        setPendingNsec(trimmedKey);
+      } else if (/^[0-9a-fA-F]{64}$/.test(trimmedKey)) {
+        result = await loginWithHex(trimmedKey);
+        // Can't offer to save hex keys as nsec
+        setPendingNsec(null);
       } else {
         throw new Error('Invalid key format. Use nsec1... or 64-char hex.');
       }
@@ -64,6 +115,11 @@ export function DesktopNostrLogin({ onLogin, onLogout }: DesktopNostrLoginProps)
       setKeyInput('');
       setShowInput(false);
       onLogin?.(result);
+
+      // Offer to save key if it was an nsec and no key is currently stored
+      if (trimmedKey.startsWith('nsec1') && !(storedKeyInfo?.keys && storedKeyInfo.keys.length > 0)) {
+        setModalMode('save');
+      }
     } catch (e) {
       setError(extractErrorMessage(e, 'Login failed'));
     } finally {
@@ -75,9 +131,32 @@ export function DesktopNostrLogin({ onLogin, onLogout }: DesktopNostrLoginProps)
     try {
       await logout();
       setProfile(null);
+      setPendingNsec(null);
       onLogout?.();
     } catch (e) {
       console.error('Logout error:', e);
+    }
+  };
+
+  const handleUnlock = (unlockedProfile: NostrProfile) => {
+    setProfile(unlockedProfile);
+    onLogin?.(unlockedProfile);
+  };
+
+  const handleKeySaved = () => {
+    setPendingNsec(null);
+    refreshStoredKeyInfo();
+  };
+
+  const handleKeyCleared = () => {
+    refreshStoredKeyInfo();
+  };
+
+  const handleModalClose = () => {
+    setModalMode(null);
+    // Clear pending nsec if user skipped saving
+    if (modalMode === 'save') {
+      setPendingNsec(null);
     }
   };
 
@@ -86,55 +165,110 @@ export function DesktopNostrLogin({ onLogin, onLogout }: DesktopNostrLoginProps)
     return null;
   }
 
+  // Still checking for stored key
+  if (checkingStoredKey) {
+    return (
+      <div className="nostr-login">
+        <span className="loading-text">Loading...</span>
+      </div>
+    );
+  }
+
   // Logged in state
   if (profile) {
     return (
-      <div className="nostr-login logged-in">
-        <div className="profile-info">
-          <span className="npub" title={profile.pubkey}>
-            {profile.npub.slice(0, 12)}...{profile.npub.slice(-8)}
-          </span>
+      <>
+        <div className="nostr-login logged-in">
+          <div className="profile-info">
+            <span className="npub" title={profile.pubkey}>
+              {profile.npub.slice(0, 12)}...{profile.npub.slice(-8)}
+            </span>
+            {storedKeyInfo?.keys && storedKeyInfo.keys.length > 0 && (
+              <button
+                className="manage-key-btn"
+                onClick={() => setModalMode('manage')}
+                title="Manage saved key"
+              >
+                &#9881;
+              </button>
+            )}
+          </div>
+          <button onClick={handleLogout} className="logout-btn">
+            Logout
+          </button>
         </div>
-        <button onClick={handleLogout} className="logout-btn">
-          Logout
-        </button>
-      </div>
+
+        <KeyStorageModal
+          isOpen={modalMode === 'manage'}
+          onClose={handleModalClose}
+          mode="manage"
+          storedKeyInfo={storedKeyInfo || undefined}
+          onKeySaved={handleKeySaved}
+          onKeyCleared={handleKeyCleared}
+        />
+      </>
     );
   }
 
   // Login form
   return (
-    <div className="nostr-login">
-      {!showInput ? (
-        <button onClick={() => setShowInput(true)} className="login-btn">
-          Login with Nostr
-        </button>
-      ) : (
-        <div className="login-form">
-          <input
-            type="password"
-            placeholder="nsec1... or hex private key"
-            value={keyInput}
-            onChange={(e) => setKeyInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-            disabled={loading}
-            autoFocus
-          />
-          <div className="login-actions">
-            <button onClick={handleLogin} disabled={loading} className="submit-btn">
-              {loading ? 'Connecting...' : 'Login'}
-            </button>
-            <button onClick={() => { setShowInput(false); setError(null); }} className="cancel-btn">
-              Cancel
-            </button>
+    <>
+      <div className="nostr-login">
+        {!showInput ? (
+          <button onClick={() => setShowInput(true)} className="login-btn">
+            Login with Nostr
+          </button>
+        ) : (
+          <div className="login-form">
+            <input
+              type="password"
+              placeholder="nsec1... or hex private key"
+              value={keyInput}
+              onChange={(e) => setKeyInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+              disabled={loading}
+              autoFocus
+            />
+            <div className="login-actions">
+              <button onClick={handleLogin} disabled={loading} className="submit-btn">
+                {loading ? 'Connecting...' : 'Login'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowInput(false);
+                  setError(null);
+                }}
+                className="cancel-btn"
+              >
+                Cancel
+              </button>
+            </div>
+            {error && <div className="error">{error}</div>}
+            <div className="security-note">
+              Your key is encrypted and stored securely on this device.
+            </div>
           </div>
-          {error && <div className="error">{error}</div>}
-          <div className="security-note">
-            🔒 Your key is stored securely in memory and never leaves this device.
-          </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+
+      {/* Unlock modal for password-protected stored key */}
+      <KeyStorageModal
+        isOpen={modalMode === 'unlock'}
+        onClose={handleModalClose}
+        mode="unlock"
+        storedKeyInfo={storedKeyInfo || undefined}
+        onUnlock={handleUnlock}
+      />
+
+      {/* Save modal after successful login */}
+      <KeyStorageModal
+        isOpen={modalMode === 'save'}
+        onClose={handleModalClose}
+        mode="save"
+        nsecToStore={pendingNsec || undefined}
+        onKeySaved={handleKeySaved}
+      />
+    </>
   );
 }
 
@@ -150,6 +284,11 @@ export const nostrLoginStyles = `
   gap: 1rem;
 }
 
+.nostr-login .loading-text {
+  color: var(--text-secondary, #666);
+  font-size: 0.9rem;
+}
+
 .nostr-login .profile-info {
   display: flex;
   align-items: center;
@@ -163,6 +302,20 @@ export const nostrLoginStyles = `
   background: rgba(155, 89, 182, 0.1);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
+}
+
+.nostr-login .manage-key-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.nostr-login .manage-key-btn:hover {
+  opacity: 1;
 }
 
 .nostr-login .login-form {

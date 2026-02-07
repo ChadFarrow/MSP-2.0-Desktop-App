@@ -10,17 +10,24 @@ import { generateTestAlbum } from './utils/testData';
 import { NostrLoginButton } from './components/NostrLoginButton';
 import { ImportModal } from './components/modals/ImportModal';
 import { SaveModal } from './components/modals/SaveModal';
+import { PreviewModal } from './components/modals/PreviewModal';
 import { InfoModal } from './components/modals/InfoModal';
 import { NostrConnectModal } from './components/modals/NostrConnectModal';
 import { ConfirmModal } from './components/modals/ConfirmModal';
 import { UpdateModal } from './components/modals/UpdateModal';
+import { KeyStorageModal } from './components/modals/KeyStorageModal';
 import { Editor } from './components/Editor/Editor';
-import { checkForUpdate, isTauri } from './utils/updater';
+import { checkForUpdate, isTauri, getAppVersion } from './utils/updater';
 import type { UpdateInfo } from './utils/updater';
 import { PublisherEditor } from './components/Editor/PublisherEditor';
 import { AdminPage } from './components/admin/AdminPage';
 import { openUrl } from './utils/openUrl';
 import type { Album } from './types/feed';
+import {
+  tryAutoUnlockStoredKey,
+  type StoredKeyInfo,
+  type NostrProfile,
+} from './utils/tauriNostr';
 import mspLogo from './assets/msp-logo.png';
 import './App.css';
 
@@ -30,6 +37,7 @@ function AppContent() {
   const { theme, toggleTheme } = useTheme();
   const [showImportModal, setShowImportModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showNostrConnectModal, setShowNostrConnectModal] = useState(false);
   const [showConfirmNewModal, setShowConfirmNewModal] = useState(false);
@@ -38,7 +46,13 @@ function AppContent() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { state: nostrState, logout: nostrLogout } = useNostr();
+  const { state: nostrState, logout: nostrLogout, loginWithProfile } = useNostr();
+
+  // Auto-unlock state for stored keys (desktop only)
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [storedKeyInfo, setStoredKeyInfo] = useState<StoredKeyInfo | null>(null);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+  const hasCheckedStoredKey = useRef(false);
 
   // Check for updates on launch (desktop only)
   useEffect(() => {
@@ -56,6 +70,32 @@ function AppContent() {
     const timer = setTimeout(checkUpdate, 2000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Get app version on launch (desktop only)
+  useEffect(() => {
+    getAppVersion().then(setAppVersion);
+  }, []);
+
+  // Check for stored key on launch and auto-unlock (desktop only)
+  // Only runs once on mount - not when user signs out
+  useEffect(() => {
+    if (!isTauri() || nostrState.isLoggedIn || hasCheckedStoredKey.current) return;
+
+    hasCheckedStoredKey.current = true;
+
+    const checkKey = async () => {
+      const result = await tryAutoUnlockStoredKey();
+      setStoredKeyInfo(result.storedKeyInfo);
+
+      if (result.success && result.profile) {
+        loginWithProfile(result.profile);
+      } else if (result.showUnlockModal) {
+        setShowUnlockModal(true);
+      }
+    };
+
+    checkKey();
+  }, [nostrState.isLoggedIn, loginWithProfile]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -194,6 +234,12 @@ function AppContent() {
                   </button>
                   <button
                     className="dropdown-item"
+                    onClick={() => { setShowPreviewModal(true); setShowDropdown(false); }}
+                  >
+                    👁️ View Feed
+                  </button>
+                  <button
+                    className="dropdown-item"
                     onClick={() => { setShowInfoModal(true); setShowDropdown(false); }}
                   >
                     ℹ️ Info
@@ -221,12 +267,16 @@ function AppContent() {
                       className="dropdown-item"
                       onClick={async () => {
                         setShowDropdown(false);
-                        const update = await checkForUpdate();
-                        if (update) {
-                          setUpdateInfo(update);
-                          setShowUpdateModal(true);
-                        } else {
-                          alert('You are running the latest version!');
+                        try {
+                          const update = await checkForUpdate(true);
+                          if (update) {
+                            setUpdateInfo(update);
+                            setShowUpdateModal(true);
+                          } else {
+                            alert('You are running the latest version!');
+                          }
+                        } catch (err) {
+                          alert('Update check failed: ' + (err instanceof Error ? err.message : String(err)));
                         }
                       }}
                     >
@@ -263,6 +313,12 @@ function AppContent() {
                       </button>
                     </>
                   )}
+                  {appVersion && (
+                    <>
+                      <div className="dropdown-divider" />
+                      <div className="dropdown-version">v{appVersion}</div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -292,6 +348,15 @@ function AppContent() {
         />
       )}
 
+      {showPreviewModal && (
+        <PreviewModal
+          onClose={() => setShowPreviewModal(false)}
+          album={state.feedType === 'video' && state.videoFeed ? state.videoFeed : state.album}
+          publisherFeed={state.publisherFeed}
+          feedType={state.feedType}
+        />
+      )}
+
       {showInfoModal && (
         <InfoModal onClose={() => setShowInfoModal(false)} />
       )}
@@ -317,6 +382,18 @@ function AppContent() {
           onClose={() => setShowUpdateModal(false)}
         />
       )}
+
+      {/* Auto-unlock modal for stored keys (desktop only) */}
+      <KeyStorageModal
+        isOpen={showUnlockModal}
+        onClose={() => setShowUnlockModal(false)}
+        mode="unlock"
+        storedKeyInfo={storedKeyInfo || undefined}
+        onUnlock={(profile: NostrProfile) => {
+          loginWithProfile(profile);
+          setShowUnlockModal(false);
+        }}
+      />
     </>
   );
 }
