@@ -16,9 +16,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Add upstream remote
+      - name: Add upstream remote and fetch
         run: |
           git remote add upstream https://github.com/ChadFarrow/MSP-2.0.git || true
           git fetch upstream
@@ -29,41 +28,27 @@ jobs:
           UPSTREAM_COMMITS=$(git rev-list master..upstream/master --count)
           echo "new_commits=$UPSTREAM_COMMITS" >> $GITHUB_OUTPUT
 
-      - name: Create sync branch and PR
+      - name: Merge upstream changes
         if: steps.check.outputs.new_commits != '0'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git merge upstream/master --no-edit
 
-          BRANCH="sync-upstream-$(date +%Y%m%d-%H%M%S)"
+      - name: Create Pull Request
+        if: steps.check.outputs.new_commits != '0'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          title: "Sync updates from web repo"
+          body: |
+            Automated sync from [MSP-2.0 web repo](https://github.com/ChadFarrow/MSP-2.0).
 
-          # Delete existing branch if it exists (from failed previous runs)
-          git push origin --delete $BRANCH 2>/dev/null || true
-          git branch -D $BRANCH 2>/dev/null || true
+            **New commits:** ${{ steps.check.outputs.new_commits }}
 
-          git checkout -b $BRANCH
-
-          if git merge upstream/master --no-edit; then
-            git push origin $BRANCH --force
-            gh pr create \
-              --title "Sync updates from web repo" \
-              --body "Automated sync from [MSP-2.0 web repo](https://github.com/ChadFarrow/MSP-2.0).
-
-          **New commits:** ${{ steps.check.outputs.new_commits }}
-
-          Review for conflicts in:
-          - \`package.json\`
-          - \`src/App.tsx\`
-          - \`CLAUDE.md\`" \
-              --head $BRANCH \
-              --base master
-
-            # Auto-merge after CI passes
-            gh pr merge $BRANCH --auto --squash
-          else
-            echo "Merge conflicts detected - manual intervention needed"
-            git merge --abort
-            exit 1
-          fi
+            Review for conflicts in:
+            - `package.json`
+            - `src/App.tsx`
+            - `CLAUDE.md`
+          branch: sync-upstream
+          delete-branch: true
+          labels: automated
