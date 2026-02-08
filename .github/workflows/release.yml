@@ -6,6 +6,10 @@ on:
       - master
     tags:
       - 'v*'
+    paths-ignore:
+      - '*.md'
+      - 'example-feed.xml'
+      - '.github/workflows/sync-upstream.yml'
   workflow_dispatch:
 
 jobs:
