@@ -98,6 +98,7 @@ For manual version control (optional):
 | Component uses outdated API after refactor | Type changed (e.g., `StoredKeyInfo.exists` to `keys[]` array) | Update all components using the old API pattern |
 | "Resource not accessible by integration" on PR creation | `GITHUB_TOKEN` can't call GraphQL `createPullRequest` | Use `peter-evans/create-pull-request` action instead of `gh pr create` |
 | "Command plugin:updater\|check not allowed by ACL" | Updater plugin permissions missing from capabilities | Add `updater:default` and `process:allow-restart` to `src-tauri/capabilities/default.json` |
+| "error sending request for url" on Linux update check | System CA certificates not detected by reqwest | Fixed in v0.1.28+ via `native-tls-vendored` feature; older versions must manually download update |
 
 ## Architecture
 
