@@ -26,13 +26,13 @@ const KNOWN_CHANNEL_KEYS = new Set([
   'itunes:image',
   'podcast:guid',
   'podcast:medium',
-  'podcast:location',
   'podcast:locked',
   'podcast:person',
   'podcast:value',
   'podcast:funding',
   'podcast:publisher',
-  'podcast:remoteItem'  // For publisher feeds
+  'podcast:remoteItem',  // For publisher feeds
+  'podcast:txt'  // For npub and other txt tags
 ]);
 
 // Known item keys that we explicitly parse (don't capture as unknown)
@@ -85,7 +85,6 @@ export const parseRssFeed = (xmlString: string): Album => {
   // Podcast Index tags
   album.podcastGuid = getText(channel['podcast:guid']) || '';
   album.medium = (getText(channel['podcast:medium']) as 'music' | 'video') || 'music';
-  album.location = getText(channel['podcast:location']) || '';
 
   // Locked
   const locked = channel['podcast:locked'];
@@ -154,6 +153,18 @@ export const parseRssFeed = (xmlString: string): Album => {
   const publisher = channel['podcast:publisher'];
   if (publisher) {
     album.publisher = parsePublisherReference(publisher);
+  }
+
+  // Artist Npub (from podcast:txt with purpose="npub")
+  const txtTags = channel['podcast:txt'];
+  if (txtTags) {
+    const txtArray = Array.isArray(txtTags) ? txtTags : [txtTags];
+    for (const txt of txtArray) {
+      if (getAttr(txt, 'purpose') === 'npub') {
+        album.artistNpub = getText(txt) || '';
+        break;
+      }
+    }
   }
 
   // Capture unknown channel elements
@@ -288,7 +299,6 @@ function parseRecipient(node: unknown): ValueRecipient | null {
     address: getAttr(node, 'address') || '',
     split: parseInt(getAttr(node, 'split')) || 0,
     type: (getAttr(node, 'type') || 'node') as 'node' | 'lnaddress',
-    fee: getAttr(node, 'fee') === 'true',
     customKey: getAttr(node, 'customKey') || undefined,
     customValue: getAttr(node, 'customValue') || undefined
   };
@@ -321,7 +331,6 @@ function parseCommonChannelElements(channel: Record<string, unknown>): Omit<Base
 
   // Podcast Index tags
   const podcastGuid = getText(channel['podcast:guid']) || '';
-  const location = getText(channel['podcast:location']) || '';
 
   // Locked
   const lockedNode = channel['podcast:locked'];
@@ -394,7 +403,6 @@ function parseCommonChannelElements(channel: Record<string, unknown>): Omit<Base
     podcastGuid,
     locked,
     lockedOwner,
-    location,
     categories,
     keywords,
     explicit,

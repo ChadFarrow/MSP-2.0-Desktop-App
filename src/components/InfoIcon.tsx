@@ -1,6 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 
-export function InfoIcon({ text }: { text: string }) {
+interface InfoIconProps {
+  text: string;
+  position?: 'right' | 'left';
+}
+
+export function InfoIcon({ text, position = 'right' }: InfoIconProps) {
   const [show, setShow] = useState(false);
   const [pinned, setPinned] = useState(false);
   const wrapperRef = useRef<HTMLSpanElement>(null);
@@ -74,7 +79,7 @@ export function InfoIcon({ text }: { text: string }) {
         i
       </span>
       {show && (
-        <div className="info-tooltip" onClick={handleClose} onTouchEnd={handleClose}>
+        <div className={`info-tooltip${position === 'left' ? ' info-tooltip-left' : ''}`} onClick={handleClose} onTouchEnd={handleClose}>
           {text}
           <span className="info-tooltip-close">tap to close</span>
         </div>

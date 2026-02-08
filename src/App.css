@@ -1438,6 +1438,25 @@ body {
   border-right-color: var(--bg-tertiary);
 }
 
+.info-tooltip-left {
+  left: auto;
+  right: 20px;
+}
+
+.info-tooltip-left::before {
+  left: auto;
+  right: -6px;
+  border-right-color: transparent;
+  border-left-color: var(--border-color);
+}
+
+.info-tooltip-left::after {
+  left: auto;
+  right: -5px;
+  border-right-color: transparent;
+  border-left-color: var(--bg-tertiary);
+}
+
 .info-tooltip-close {
   display: none;
 }

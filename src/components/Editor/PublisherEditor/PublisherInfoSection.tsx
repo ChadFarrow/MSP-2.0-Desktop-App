@@ -16,7 +16,7 @@ export function PublisherInfoSection({ publisherFeed, dispatch }: PublisherInfoS
     <Section title="Publisher Info" icon="&#127970;">
       <div className="form-grid">
         <div className="form-group">
-          <label className="form-label">Publisher Name <span className="required">*</span><InfoIcon text={FIELD_INFO.publisherName} /></label>
+          <label className="form-label">Artist Name <span className="required">*</span><InfoIcon text={FIELD_INFO.publisherName} /></label>
           <input
             type="text"
             className="form-input"

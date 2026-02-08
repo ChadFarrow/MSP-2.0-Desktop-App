@@ -184,6 +184,16 @@ gh issue view <number>     # View issue details
 - Modal-based dialogs (`components/modals/`)
 - Collapsible sections using `Section.tsx`
 - Editor components split between Album (`Editor.tsx`) and Publisher (`PublisherEditor/`)
+- `InfoIcon` component accepts `position` prop (`"right"` default, `"left"` for edge fields)
+
+### Accessing Nostr State
+Use the `useNostr` hook to access logged-in user info:
+```tsx
+const { state: nostrState } = useNostr();
+if (nostrState.isLoggedIn && nostrState.user?.npub) {
+  // User is logged in, can access nostrState.user.npub
+}
+```
 
 ### Adding New Fields
 1. Add to type definition in `types/feed.ts`

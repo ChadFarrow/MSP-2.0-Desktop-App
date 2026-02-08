@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useFeed } from '../../store/feedStore';
+import { useNostr } from '../../store/nostrStore';
 import { LANGUAGES, PERSON_GROUPS, PERSON_ROLES, createEmptyPersonRole, createEmptyTrack, isVideoMedium } from '../../types/feed';
 import type { PersonGroup } from '../../types/feed';
 import { FIELD_INFO } from '../../data/fieldInfo';
@@ -75,6 +76,7 @@ function RolesModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
 
 export function Editor() {
   const { state, dispatch } = useFeed();
+  const { state: nostrState } = useNostr();
   // Get the active album based on feedType (album or videoFeed)
   const album = state.feedType === 'video' && state.videoFeed ? state.videoFeed : state.album;
 
@@ -261,6 +263,14 @@ export function Editor() {
                   ))}
                 </select>
               </div>
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', paddingTop: '28px', marginLeft: '-20px' }}>
+                <Toggle
+                  checked={album.explicit}
+                  onChange={val => dispatch({ type: 'UPDATE_ALBUM', payload: { explicit: val } })}
+                  label="Explicit Content"
+                  labelSuffix={<InfoIcon text={FIELD_INFO.explicit} />}
+                />
+              </div>
               <div className="form-group full-width">
                 <label className="form-label">Description <span className="required">*</span><InfoIcon text={FIELD_INFO.description} /></label>
                 <textarea
@@ -278,14 +288,6 @@ export function Editor() {
                   placeholder="Auto-generated UUID"
                   value={album.podcastGuid || ''}
                   onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { podcastGuid: e.target.value } })}
-                />
-              </div>
-              <div className="form-group">
-                <Toggle
-                  checked={album.explicit}
-                  onChange={val => dispatch({ type: 'UPDATE_ALBUM', payload: { explicit: val } })}
-                  label="Explicit Content"
-                  labelSuffix={<InfoIcon text={FIELD_INFO.explicit} />}
                 />
               </div>
               <div className="form-group">
@@ -317,6 +319,30 @@ export function Editor() {
                   value={album.ownerEmail || ''}
                   onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { ownerEmail: e.target.value } })}
                 />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Artist npub<InfoIcon text={FIELD_INFO.artistNpub} position="left" /></label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="npub1..."
+                    value={album.artistNpub || ''}
+                    onChange={e => dispatch({ type: 'UPDATE_ALBUM', payload: { artistNpub: e.target.value } })}
+                    style={{ flex: 1 }}
+                  />
+                  {nostrState.isLoggedIn && nostrState.user?.npub && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => dispatch({ type: 'UPDATE_ALBUM', payload: { artistNpub: nostrState.user!.npub } })}
+                      title="Use your logged-in Nostr npub"
+                      style={{ padding: '0 12px', fontSize: '0.8rem' }}
+                    >
+                      use mine
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </Section>

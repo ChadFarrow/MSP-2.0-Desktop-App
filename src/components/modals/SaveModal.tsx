@@ -274,7 +274,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
 
       if (isPublisherMode && publisherFeed) {
         // Publisher feed validation
-        if (!publisherFeed.author?.trim()) errors.push('Publisher Name');
+        if (!publisherFeed.author?.trim()) errors.push('Artist Name');
         if (!publisherFeed.title?.trim()) errors.push('Catalog Title');
         if (!publisherFeed.description?.trim()) errors.push('Description');
         if (!publisherFeed.podcastGuid?.trim()) errors.push('Publisher GUID');

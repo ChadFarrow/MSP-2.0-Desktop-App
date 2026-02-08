@@ -3,8 +3,21 @@
 import { createContext, useContext, useReducer, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { Album, Track, Person, PersonRole, ValueRecipient, Funding, PublisherFeed, RemoteItem } from '../types/feed';
-import { createEmptyAlbum, createEmptyTrack, createEmptyPerson, createEmptyPersonRole, createEmptyRecipient, createEmptyFunding, createEmptyPublisherFeed, createEmptyRemoteItem, createEmptyVideoAlbum } from '../types/feed';
+import { createEmptyAlbum, createEmptyTrack, createEmptyPerson, createEmptyPersonRole, createEmptyRecipient, createEmptyFunding, createEmptyPublisherFeed, createEmptyRemoteItem, createEmptyVideoAlbum, createSupportRecipients } from '../types/feed';
 import { albumStorage, videoStorage, publisherStorage, feedTypeStorage } from '../utils/storage';
+
+// Community support recipients - identified by both name AND address
+const COMMUNITY_SUPPORT_RECIPIENTS = [
+  { name: 'MSP 2.0', address: 'chadf@getalby.com' },
+  { name: 'Podcastindex.org', address: 'podcastindex@getalby.com' },
+];
+
+const isCommunitySupport = (r: ValueRecipient): boolean =>
+  COMMUNITY_SUPPORT_RECIPIENTS.some(cs => cs.name === r.name && cs.address === r.address);
+
+// Check if recipients have any user-added (non-support, non-empty) recipients
+const hasUserRecipients = (recipients: ValueRecipient[]): boolean =>
+  recipients.some(r => r.address && !isCommunitySupport(r));
 
 // Feed type enum
 export type FeedType = 'album' | 'video' | 'publisher';
@@ -159,25 +172,50 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
       return updateActiveFeed(state, { ...activeAlbum, persons });
     }
 
-    case 'ADD_RECIPIENT':
+    case 'ADD_RECIPIENT': {
+      const newRecipient = action.payload || createEmptyRecipient();
+      const currentRecipients = activeAlbum.value.recipients;
+      // Filter out empty placeholder recipients when adding a real one
+      const filteredRecipients = newRecipient.address
+        ? currentRecipients.filter(r => r.address)
+        : currentRecipients;
+      // Auto-add support recipients if this is the first user recipient
+      const shouldAddSupport = newRecipient.address &&
+        !isCommunitySupport(newRecipient) &&
+        !hasUserRecipients(currentRecipients);
+      const newRecipients = shouldAddSupport
+        ? [...filteredRecipients, newRecipient, ...createSupportRecipients()]
+        : [...filteredRecipients, newRecipient];
       return updateActiveFeed(state, {
         ...activeAlbum,
         value: {
           ...activeAlbum.value,
-          recipients: [...activeAlbum.value.recipients, action.payload || createEmptyRecipient()]
+          recipients: newRecipients
         }
       });
+    }
 
-    case 'UPDATE_RECIPIENT':
+    case 'UPDATE_RECIPIENT': {
+      const updatedRecipient = action.payload.recipient;
+      const currentRecipients = activeAlbum.value.recipients;
+      const updatedRecipients = currentRecipients.map((r, i) =>
+        i === action.payload.index ? updatedRecipient : r
+      );
+      // Auto-add community support recipients when user fills in their first address
+      const hadUserRecipients = hasUserRecipients(currentRecipients);
+      const nowHasUserRecipients = hasUserRecipients(updatedRecipients);
+      const shouldAddSupport = !hadUserRecipients && nowHasUserRecipients;
+      const finalRecipients = shouldAddSupport
+        ? [...updatedRecipients, ...createSupportRecipients()]
+        : updatedRecipients;
       return updateActiveFeed(state, {
         ...activeAlbum,
         value: {
           ...activeAlbum.value,
-          recipients: activeAlbum.value.recipients.map((r, i) =>
-            i === action.payload.index ? action.payload.recipient : r
-          )
+          recipients: finalRecipients
         }
       });
+    }
 
     case 'REMOVE_RECIPIENT':
       return updateActiveFeed(state, {
@@ -285,11 +323,24 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
       const track = tracks[action.payload.trackIndex];
       if (track) {
         const value = track.value || { type: 'lightning' as const, method: 'keysend' as const, recipients: [] };
+        const newRecipient = action.payload.recipient || createEmptyRecipient();
+        const currentRecipients = value.recipients;
+        // Filter out empty placeholder recipients when adding a real one
+        const filteredRecipients = newRecipient.address
+          ? currentRecipients.filter(r => r.address)
+          : currentRecipients;
+        // Auto-add support recipients if this is the first user recipient
+        const shouldAddSupport = newRecipient.address &&
+          !isCommunitySupport(newRecipient) &&
+          !hasUserRecipients(currentRecipients);
+        const newRecipients = shouldAddSupport
+          ? [...filteredRecipients, newRecipient, ...createSupportRecipients()]
+          : [...filteredRecipients, newRecipient];
         tracks[action.payload.trackIndex] = {
           ...track,
           value: {
             ...value,
-            recipients: [...value.recipients, action.payload.recipient || createEmptyRecipient()]
+            recipients: newRecipients
           }
         };
       }
@@ -300,13 +351,23 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
       const tracks = [...activeAlbum.tracks];
       const track = tracks[action.payload.trackIndex];
       if (track && track.value) {
+        const updatedRecipient = action.payload.recipient;
+        const currentRecipients = track.value.recipients;
+        const updatedRecipients = currentRecipients.map((r, i) =>
+          i === action.payload.recipientIndex ? updatedRecipient : r
+        );
+        // Auto-add community support recipients when user fills in their first address
+        const hadUserRecipients = hasUserRecipients(currentRecipients);
+        const nowHasUserRecipients = hasUserRecipients(updatedRecipients);
+        const shouldAddSupport = !hadUserRecipients && nowHasUserRecipients;
+        const finalRecipients = shouldAddSupport
+          ? [...updatedRecipients, ...createSupportRecipients()]
+          : updatedRecipients;
         tracks[action.payload.trackIndex] = {
           ...track,
           value: {
             ...track.value,
-            recipients: track.value.recipients.map((r, i) =>
-              i === action.payload.recipientIndex ? action.payload.recipient : r
-            )
+            recipients: finalRecipients
           }
         };
       }
@@ -408,35 +469,60 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
         isDirty: true
       };
 
-    case 'ADD_PUBLISHER_RECIPIENT':
+    case 'ADD_PUBLISHER_RECIPIENT': {
       if (!state.publisherFeed) return state;
+      const newRecipient = action.payload || createEmptyRecipient();
+      const currentRecipients = state.publisherFeed.value.recipients;
+      // Filter out empty placeholder recipients when adding a real one
+      const filteredRecipients = newRecipient.address
+        ? currentRecipients.filter(r => r.address)
+        : currentRecipients;
+      // Auto-add support recipients if this is the first user recipient
+      const shouldAddSupport = newRecipient.address &&
+        !isCommunitySupport(newRecipient) &&
+        !hasUserRecipients(currentRecipients);
+      const newRecipients = shouldAddSupport
+        ? [...filteredRecipients, newRecipient, ...createSupportRecipients()]
+        : [...filteredRecipients, newRecipient];
       return {
         ...state,
         publisherFeed: {
           ...state.publisherFeed,
           value: {
             ...state.publisherFeed.value,
-            recipients: [...state.publisherFeed.value.recipients, action.payload || createEmptyRecipient()]
+            recipients: newRecipients
           }
         },
         isDirty: true
       };
+    }
 
-    case 'UPDATE_PUBLISHER_RECIPIENT':
+    case 'UPDATE_PUBLISHER_RECIPIENT': {
       if (!state.publisherFeed) return state;
+      const updatedRecipient = action.payload.recipient;
+      const currentRecipients = state.publisherFeed.value.recipients;
+      const updatedRecipients = currentRecipients.map((r, i) =>
+        i === action.payload.index ? updatedRecipient : r
+      );
+      // Auto-add community support recipients when user fills in their first address
+      const hadUserRecipients = hasUserRecipients(currentRecipients);
+      const nowHasUserRecipients = hasUserRecipients(updatedRecipients);
+      const shouldAddSupport = !hadUserRecipients && nowHasUserRecipients;
+      const finalRecipients = shouldAddSupport
+        ? [...updatedRecipients, ...createSupportRecipients()]
+        : updatedRecipients;
       return {
         ...state,
         publisherFeed: {
           ...state.publisherFeed,
           value: {
             ...state.publisherFeed.value,
-            recipients: state.publisherFeed.value.recipients.map((r, i) =>
-              i === action.payload.index ? action.payload.recipient : r
-            )
+            recipients: finalRecipients
           }
         },
         isDirty: true
       };
+    }
 
     case 'REMOVE_PUBLISHER_RECIPIENT':
       if (!state.publisherFeed) return state;
