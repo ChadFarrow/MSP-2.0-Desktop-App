@@ -129,25 +129,35 @@ Uses React Context + useReducer pattern (not Redux). Three separate stores:
 Actions are dispatched via reducer pattern. The `FeedAction` union type in `feedStore.tsx` defines all available actions.
 
 ### Core Data Types (src/types/feed.ts)
-- `Album` - Feed metadata + array of `Track`s
+- `Album` - Feed metadata + array of `Track`s, includes optional `artistNpub`
 - `Track` - Individual items with optional per-track value recipients
 - `Person` - Contributors with roles (uses Podcasting 2.0 taxonomy)
-- `ValueRecipient` - Lightning payment recipient with split percentage
+- `ValueRecipient` - Lightning payment recipient with split percentage (type: `node` or `lnaddress`)
 - `PublisherFeed` - Contains `RemoteItem`s referencing other feeds
 - `RemoteItem` - Reference to another feed by GUID/URL
+
+Factory functions: `createEmptyRecipient()` (defaults to `lnaddress`), `createSupportRecipients()` (MSP 2.0 + Podcast Index community support splits)
+
+### ValueBlock & Community Support
+- Recipients are split into **user recipients** and **community support recipients** (MSP 2.0, Podcast Index)
+- Community support recipients are auto-added when a user fills in their first recipient address
+- `RecipientsList.tsx` renders these in separate sections; community support recipients show as non-removable
+- The `isSupportRecipient()` helper identifies community support entries by name+address match
+- Artist Npub is stored via `podcast:txt purpose="npub"` in XML output
 
 ### API Layer (api/)
 Vercel serverless functions:
 - `pisearch.ts` - Podcast Index search
 - `pisubmit.ts` - Submit feed to Podcast Index
 - `proxy-feed.ts` - CORS proxy for fetching external feeds
+- `example-feed.ts` - Reference example feed endpoint
 - `hosted/` - MSP feed hosting endpoints
 - `feed/[npub]/[guid].ts` - Nostr-stored feed retrieval
 - `admin/` - Admin authentication (challenge/verify)
 
 ### XML Handling
-- `xmlParser.ts` - Uses fast-xml-parser to parse RSS feeds, preserves unknown elements
-- `xmlGenerator.ts` - Generates Podcasting 2.0 compliant RSS XML
+- `xmlParser.ts` - Uses fast-xml-parser to parse RSS feeds, preserves unknown elements, parses `podcast:txt` for artist npub
+- `xmlGenerator.ts` - Generates Podcasting 2.0 compliant RSS XML, emits `podcast:txt purpose="npub"` when artistNpub is set
 
 ### Nostr Integration
 - NIP-07 browser extension support for signing (web)
