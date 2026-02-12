@@ -34,6 +34,10 @@ npm run dev
 - API functions in `/api/` directory are Vercel serverless functions
 - Dev server proxies `/api/*` to production
 - Build: `npm run build` (tsc + vite)
+- `VERCEL_DEEP_CLONE=true` env var ensures full git history for version computation
+
+### Versioning
+Version is auto-computed at build time from git commit count: `0.1.{count - 255}` (zero-padded). Each push to master increments the patch number. Configured in `vite.config.ts` via `getAutoVersion()`, with `package.json` version as fallback when git is unavailable. Displayed in the hamburger menu.
 
 ## Software Versions
 

@@ -253,6 +253,8 @@ function AppContent() {
                   >
                     🧪 Experimental (FAFO)
                   </a>
+                  <div className="dropdown-divider" />
+                  <div className="dropdown-version">v{__APP_VERSION__}</div>
                 </div>
               )}
             </div>
