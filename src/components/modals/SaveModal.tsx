@@ -125,7 +125,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
     // Check for pending credentials from import
     const pending = pendingHostedStorage.load();
     if (pending) {
-      // If pending feedId matches podcastGuid, use it; otherwise it's legacy
+      // Only use pending credentials if they match the current feed's GUID
       if (pending.feedId === currentFeedGuid) {
         saveHostedFeedInfo(currentFeedGuid, pending);
         pendingHostedStorage.clear();
@@ -133,9 +133,9 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
         setHostedUrl(buildHostedUrl(pending.feedId));
         return;
       } else {
-        // Legacy feed with mismatched ID - save as legacy, will update both on save
+        // Pending credentials don't match current feed - discard them
+        // (They're stale from a previous import, not a legacy migration)
         pendingHostedStorage.clear();
-        setLegacyHostedInfo(pending);
       }
     }
 
