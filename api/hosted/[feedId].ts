@@ -34,6 +34,32 @@ async function getMetadata(feedId: string): Promise<FeedMetadata | null> {
   return text ? JSON.parse(text) : null;
 }
 
+// Helper to backup a feed and enforce retention (keep last 10)
+async function backupFeed(feedId: string, blobUrl: string): Promise<void> {
+  const response = await fetch(blobUrl);
+  const xml = await response.text();
+  if (!xml) return;
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  await put(`feeds/${feedId}.backup.${timestamp}.xml`, xml, {
+    access: 'public',
+    contentType: 'application/rss+xml',
+    addRandomSuffix: false
+  });
+
+  // Enforce retention: keep only the 10 most recent backups
+  const backupPrefix = `feeds/${feedId}.backup.`;
+  const { blobs } = await list({ prefix: backupPrefix });
+  const backups = blobs
+    .filter(b => b.pathname.startsWith(backupPrefix) && b.pathname.endsWith('.xml'))
+    .sort((a, b) => b.pathname.localeCompare(a.pathname)); // newest first (ISO timestamps sort lexically)
+
+  if (backups.length > 10) {
+    const toDelete = backups.slice(10);
+    await Promise.all(toDelete.map(b => del(b.url)));
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -150,16 +176,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { blobs: currentBlobs } = await list({ prefix: blobPath });
         const currentBlob = currentBlobs.find(b => b.pathname === blobPath);
         if (currentBlob) {
-          const currentResponse = await fetch(currentBlob.url);
-          const currentXml = await currentResponse.text();
-          if (currentXml) {
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            await put(`feeds/${feedId}.backup.${timestamp}.xml`, currentXml, {
-              access: 'public',
-              contentType: 'application/rss+xml',
-              addRandomSuffix: false
-            });
-          }
+          await backupFeed(feedId as string, currentBlob.url);
           await del(currentBlob.url);
         }
 
@@ -253,16 +270,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Save a backup copy of the current feed before overwriting
-        const currentResponse = await fetch(existingBlob.url);
-        const currentXml = await currentResponse.text();
-        if (currentXml) {
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-          await put(`feeds/${feedId}.backup.${timestamp}.xml`, currentXml, {
-            access: 'public',
-            contentType: 'application/rss+xml',
-            addRandomSuffix: false
-          });
-        }
+        await backupFeed(feedId as string, existingBlob.url);
 
         // Delete old feed blob
         await del(existingBlob.url);
@@ -387,16 +395,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Save a backup copy before deleting
-        const currentResponse = await fetch(existingBlob.url);
-        const currentXml = await currentResponse.text();
-        if (currentXml) {
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-          await put(`feeds/${feedId}.backup.${timestamp}.xml`, currentXml, {
-            access: 'public',
-            contentType: 'application/rss+xml',
-            addRandomSuffix: false
-          });
-        }
+        await backupFeed(feedId as string, existingBlob.url);
 
         // Delete feed blob
         await del(existingBlob.url);
