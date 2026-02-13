@@ -2,13 +2,20 @@ import { useState, useRef, useEffect } from 'react';
 
 interface InfoIconProps {
   text: string;
-  position?: 'right' | 'left';
 }
 
-export function InfoIcon({ text, position = 'right' }: InfoIconProps) {
+export function InfoIcon({ text }: InfoIconProps) {
   const [show, setShow] = useState(false);
   const [pinned, setPinned] = useState(false);
+  const [side, setSide] = useState<'left' | 'right'>('right');
   const wrapperRef = useRef<HTMLSpanElement>(null);
+
+  // Auto-detect tooltip side when shown
+  useEffect(() => {
+    if (!show || !wrapperRef.current) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    setSide(rect.right + 300 > window.innerWidth ? 'left' : 'right');
+  }, [show]);
 
   // Close when clicking outside
   useEffect(() => {
@@ -79,7 +86,7 @@ export function InfoIcon({ text, position = 'right' }: InfoIconProps) {
         i
       </span>
       {show && (
-        <div className={`info-tooltip${position === 'left' ? ' info-tooltip-left' : ''}`} onClick={handleClose} onTouchEnd={handleClose}>
+        <div className={`info-tooltip${side === 'left' ? ' info-tooltip-left' : ''}`} onClick={handleClose} onTouchEnd={handleClose}>
           {text}
           <span className="info-tooltip-close">tap to close</span>
         </div>
