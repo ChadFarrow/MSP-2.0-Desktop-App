@@ -152,9 +152,15 @@ Vercel serverless functions:
 - `pisubmit.ts` - Submit feed to Podcast Index
 - `proxy-feed.ts` - CORS proxy for fetching external feeds
 - `example-feed.ts` - Reference example feed endpoint
-- `hosted/` - MSP feed hosting endpoints
+- `hosted/` - MSP feed hosting endpoints (create, update, delete, backup/restore)
 - `feed/[npub]/[guid].ts` - Nostr-stored feed retrieval
 - `admin/` - Admin authentication (challenge/verify)
+
+### Feed Hosting & Podcast Index
+- Hosted feeds are stored as Vercel Blobs at `feeds/{feedId}.xml` with metadata in `feeds/{feedId}.meta.json`
+- Feeds are **automatically submitted to Podcast Index** on creation (POST) and update (PUT) via `notifyPodcastIndex()` in `api/_utils/feedUtils.ts` — no manual step needed
+- The function sends a pubnotify ping (triggers re-crawl) and calls `add/byfeedurl` (registers new feeds, returns PI ID)
+- **Backup retention**: `backupFeed()` helper in `api/hosted/[feedId].ts` creates timestamped backups before PUT, DELETE, and restore operations; keeps only the 10 most recent backups per feed
 
 ### XML Handling
 - `xmlParser.ts` - Uses fast-xml-parser to parse RSS feeds, preserves unknown elements, parses `podcast:txt` for artist npub

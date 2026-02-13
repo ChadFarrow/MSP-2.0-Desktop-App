@@ -321,7 +321,7 @@ export function Editor() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Artist npub<InfoIcon text={FIELD_INFO.artistNpub} position="left" /></label>
+                <label className="form-label">Artist npub<InfoIcon text={FIELD_INFO.artistNpub} /></label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <input
                     type="text"

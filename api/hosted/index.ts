@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const { blobs } = await list({ prefix: 'feeds/' });
       const metaBlobs = blobs.filter(b => b.pathname.endsWith('.meta.json'));
-      const xmlBlobs = blobs.filter(b => b.pathname.endsWith('.xml'));
+      const xmlBlobs = blobs.filter(b => b.pathname.endsWith('.xml') && !b.pathname.includes('.backup.'));
 
       let feeds = await Promise.all(
         metaBlobs.map(async (blob) => {

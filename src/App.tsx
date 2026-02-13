@@ -6,6 +6,7 @@ import { NostrProvider, useNostr } from './store/nostrStore.tsx';
 import { ThemeProvider, useTheme } from './store/themeStore.tsx';
 import { parseRssFeed, isPublisherFeed, isVideoFeed, parsePublisherRssFeed } from './utils/xmlParser';
 import { createEmptyAlbum, createEmptyPublisherFeed, createEmptyVideoAlbum } from './types/feed';
+import { pendingHostedStorage } from './utils/storage';
 import { generateTestAlbum } from './utils/testData';
 import { NostrLoginButton } from './components/NostrLoginButton';
 import { ImportModal } from './components/modals/ImportModal';
@@ -150,6 +151,8 @@ function AppContent() {
   };
 
   const handleLoadAlbum = (album: Album) => {
+    // Clear stale hosted credentials - Nostr/music imports don't use pending hosted storage
+    pendingHostedStorage.clear();
     dispatch({ type: 'SET_ALBUM', payload: album });
   };
 
@@ -159,6 +162,9 @@ function AppContent() {
   };
 
   const handleConfirmNew = () => {
+    // Clear any stale hosted import credentials so they don't
+    // accidentally overwrite a previously imported feed's content
+    pendingHostedStorage.clear();
     if (pendingNewFeedType === 'publisher') {
       dispatch({ type: 'SET_PUBLISHER_FEED', payload: createEmptyPublisherFeed() });
     } else if (pendingNewFeedType === 'video') {
@@ -313,12 +319,18 @@ function AppContent() {
                       </button>
                     </>
                   )}
-                  {appVersion && (
-                    <>
-                      <div className="dropdown-divider" />
-                      <div className="dropdown-version">v{appVersion}</div>
-                    </>
-                  )}
+                  <div className="dropdown-divider" />
+                  <a
+                    className="dropdown-item"
+                    href="https://msp-2-0-git-fafo-chadfs-projects.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowDropdown(false)}
+                  >
+                    🧪 Experimental (FAFO)
+                  </a>
+                  <div className="dropdown-divider" />
+                  <div className="dropdown-version">v{appVersion ?? __APP_VERSION__}</div>
                 </div>
               )}
             </div>
