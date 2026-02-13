@@ -51,9 +51,9 @@ E2E tests are in `e2e/` and run Playwright against Chrome at multiple viewports 
 ### CI/CD
 Push to `master` or PR triggers three parallel GitHub Actions jobs: unit tests, E2E tests, and lint.
 
-Pushing a version tag (`v*`) triggers cross-platform release builds (macOS arm64/x86_64, Ubuntu, Windows) that sign artifacts and create a draft GitHub release.
+Every push to `master` also triggers cross-platform release builds (macOS arm64/x86_64, Ubuntu, Windows) that auto-increment the version, sign artifacts, and publish a GitHub release. Multiple pushes in a day each produce a new release.
 
-A daily sync workflow (`sync-upstream.yml`) fetches changes from the [web repo](https://github.com/ChadFarrow/MSP-2.0) and opens a PR via `peter-evans/create-pull-request`. Runs at 6 AM UTC or on manual dispatch.
+A daily sync workflow (`sync-upstream.yml`) fetches changes from the [web repo](https://github.com/ChadFarrow/MSP-2.0) and opens a PR via `peter-evans/create-pull-request`. Runs once daily at 6 AM UTC or on manual dispatch (`gh workflow run sync-upstream.yml`). Only works when the merge is conflict-free — shared files like `CLAUDE.md` and `src/App.tsx` require manual sync.
 
 ## Deployment
 
