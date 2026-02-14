@@ -107,13 +107,20 @@ jobs:
           releaseBody: |
             ## MSP Studio Desktop Release
 
-            Download the appropriate version for your system:
-            - **Windows**: `.msi` (recommended) or `.exe`
-            - **macOS (Apple Silicon M1/M2/M3)**: `_aarch64.dmg`
-            - **macOS (Intel)**: `_x64.dmg`
-            - **Linux**: `.deb` (Debian/Ubuntu) or `.AppImage` (universal)
+            ### Downloads
+            | OS | File | Notes |
+            |----|------|-------|
+            | **Windows** | `.msi` | Recommended |
+            | **Windows** | `.exe` | Alternative installer |
+            | **macOS (Apple Silicon)** | `_aarch64.dmg` | M1/M2/M3/M4 |
+            | **macOS (Intel)** | `_x64.dmg` | |
+            | **Linux (Debian/Ubuntu)** | `.deb` | `sudo dpkg -i <file>` |
+            | **Linux (Fedora/RHEL)** | `.rpm` | |
+            | **Linux (Universal)** | `.AppImage` | Works on any distro |
 
-            ### ⚠️ macOS Users
+            > The `.sig`, `.tar.gz`, and `latest.json` files are for auto-updates — you can ignore them.
+
+            ### macOS Users
             This app is not signed with an Apple Developer certificate. To open it:
             1. **Right-click** (or Control-click) the app
             2. Select **Open** from the menu
