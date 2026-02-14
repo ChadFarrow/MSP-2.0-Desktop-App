@@ -89,6 +89,36 @@ export async function downloadAndInstallUpdate(
 }
 
 /**
+ * Clean release notes for in-app display by removing download/install
+ * instructions that are only relevant for manual downloads from GitHub.
+ */
+export function cleanReleaseNotes(body: string): string | null {
+  let cleaned = body;
+
+  // Remove the main header
+  cleaned = cleaned.replace(/^##\s+MSP Studio Desktop Release\s*/m, '');
+
+  // Remove ### sections: Downloads, macOS Users, Linux Users
+  // Each section runs from its heading to the next heading (## or ###) or end
+  const sectionsToRemove = ['Downloads', 'macOS Users', 'Linux Users'];
+  for (const section of sectionsToRemove) {
+    const pattern = new RegExp(
+      `###\\s+${section}[\\s\\S]*?(?=\\n##|$)`,
+      ''
+    );
+    cleaned = cleaned.replace(pattern, '');
+  }
+
+  // Remove the blockquote about .sig files
+  cleaned = cleaned.replace(/>\s*The\s+`\.sig`[^\n]*\n*/g, '');
+
+  // Collapse multiple blank lines and trim
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+
+  return cleaned.length > 0 ? cleaned : null;
+}
+
+/**
  * Check if we're running in Tauri (desktop) environment
  */
 export function isTauri(): boolean {

@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import Markdown from 'react-markdown';
 import { ModalWrapper } from './ModalWrapper';
-import { downloadAndInstallUpdate } from '../../utils/updater';
+import { downloadAndInstallUpdate, cleanReleaseNotes } from '../../utils/updater';
+import { openUrl } from '../../utils/openUrl';
 import type { UpdateInfo, UpdateProgress } from '../../utils/updater';
+
+const RELEASES_URL = 'https://github.com/ChadFarrow/MSP-2.0-Desktop-App/releases/latest';
+
+const isLinux = navigator.platform.includes('Linux');
 
 interface UpdateModalProps {
   updateInfo: UpdateInfo;
@@ -49,7 +54,31 @@ export function UpdateModal({ updateInfo, onClose }: UpdateModalProps) {
       className="update-modal"
       footer={
         <div className="update-modal-footer">
-          {error && <div className="update-error">{error}</div>}
+          {error && (
+            <div className="update-error">
+              {isLinux ? (
+                <>
+                  <p style={{ margin: '0 0 8px 0' }}>
+                    Auto-update failed. Linux .deb installs require elevated permissions.
+                  </p>
+                  <p style={{ margin: '0 0 8px 0' }}>
+                    Download the <code>.deb</code> from the{' '}
+                    <a
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); openUrl(RELEASES_URL); }}
+                      style={{ color: 'inherit', textDecoration: 'underline' }}
+                    >
+                      releases page
+                    </a>
+                    {' '}and install manually:
+                  </p>
+                  <code style={{ fontSize: '0.85em' }}>sudo dpkg -i MSP-Studio_*_amd64.deb</code>
+                </>
+              ) : (
+                error
+              )}
+            </div>
+          )}
           <div className="update-modal-buttons">
             <button
               className="btn btn-secondary"
@@ -92,11 +121,11 @@ export function UpdateModal({ updateInfo, onClose }: UpdateModalProps) {
           </div>
         )}
 
-        {updateInfo.body && (
+        {updateInfo.body && cleanReleaseNotes(updateInfo.body) && (
           <div className="update-release-notes">
             <h4>Release Notes</h4>
             <div className="update-release-notes-content">
-              <Markdown>{updateInfo.body}</Markdown>
+              <Markdown>{cleanReleaseNotes(updateInfo.body)!}</Markdown>
             </div>
           </div>
         )}
