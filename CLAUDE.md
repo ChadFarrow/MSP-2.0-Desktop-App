@@ -44,7 +44,10 @@ npm run test:e2e     # Run Playwright E2E tests (starts dev server automatically
 npm run test:e2e:ui  # Playwright interactive UI mode
 ```
 
-Unit tests use Vitest with jsdom, configured in `vitest.config.ts`. Test files live alongside source as `*.test.{ts,tsx}`.
+Unit tests use Vitest with jsdom, configured in `vitest.config.ts`. Test files live alongside source as `*.test.{ts,tsx}`. Key test files:
+- `feedStore.test.ts` - Reducer unit tests (all action types, community support auto-add logic)
+- `xmlParser.test.ts` - Parser tests (parseRssFeed, parsePublisherRssFeed, feed type detection)
+- `xmlGenerator.test.ts` - Generator tests (publisher reference output)
 
 E2E tests are in `e2e/` and run Playwright against Chrome at multiple viewports (desktop, tablet 1024px, mobile 768px, mobile 480px). Config in `playwright.config.ts`.
 
@@ -145,7 +148,7 @@ Uses React Context + useReducer pattern (not Redux). Three separate stores:
 - `nostrStore.tsx` - Nostr authentication state
 - `themeStore.tsx` - Dark/light theme
 
-Actions are dispatched via reducer pattern. The `FeedAction` union type in `feedStore.tsx` defines all available actions.
+Actions are dispatched via reducer pattern. The `FeedAction` union type in `feedStore.tsx` defines all available actions. The `feedReducer`, `FeedState`, and `initialState` are exported for direct testing.
 
 ### Core Data Types (src/types/feed.ts)
 - `Album` - Feed metadata + array of `Track`s, includes optional `artistNpub`
@@ -216,9 +219,14 @@ gh issue view <number>     # View issue details
 ## Key Patterns
 
 ### Component Structure
-- Modal-based dialogs (`components/modals/`)
+- Modal-based dialogs (`components/modals/`) using `ModalWrapper` for consistent styling + Escape key support
 - Collapsible sections using `Section.tsx`
-- Editor components split between Album (`Editor.tsx`) and Publisher (`PublisherEditor/`)
+- **Editor (Album/Video)**: `Editor.tsx` is a thin composition file that imports section components:
+  - `CreditsSection.tsx` - Person/role management with thumbnail previews
+  - `PublisherLookupSection.tsx` - Podcast Index publisher lookup with debounce
+  - `TracksSection.tsx` - Track list with collapse/expand, per-track value recipients
+  - `modals/RolesModal.tsx` - Podcasting 2.0 roles reference grid
+- **Editor (Publisher)**: `PublisherEditor/index.tsx` follows the same thin-composition pattern
 - `FeedSidebar.tsx` - Desktop-only collapsible sidebar for local feed switching
 - `InfoIcon` component accepts `position` prop (`"right"` default, `"left"` for edge fields)
 - App layout: header → `app-body` (flex row: sidebar + `app-content`)
