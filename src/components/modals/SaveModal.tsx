@@ -41,9 +41,10 @@ interface SaveModalProps {
   isLoggedIn: boolean;
   onImport?: (xml: string) => void;
   onLocalFeedSaved?: (id: string) => void;
+  currentLocalFeedId?: string;
 }
 
-export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', isDirty, isLoggedIn, onImport, onLocalFeedSaved }: SaveModalProps) {
+export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', isDirty, isLoggedIn, onImport, onLocalFeedSaved, currentLocalFeedId }: SaveModalProps) {
   const { state: nostrState } = useNostr();
   const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'hosted' | 'podcastIndex' | 'backup'>('local');
   const [backupPreview, setBackupPreview] = useState<ReturnType<typeof getBackupPreview> | null>(null);
@@ -328,7 +329,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               const localXml = generateCurrentFeedXml();
               const localFeedType = isPublisherMode ? 'publisher' as const : isVideoMode ? 'video' as const : 'album' as const;
               const localTitle = isPublisherMode && publisherFeed ? publisherFeed.title : album.title;
-              const saved = await saveFeedLocal(localTitle || 'Untitled', localFeedType, localXml, currentFeedGuid || undefined);
+              const saved = await saveFeedLocal(localTitle || 'Untitled', localFeedType, localXml, currentLocalFeedId || undefined);
               onLocalFeedSaved?.(saved.id);
             } catch (e) {
               console.error('Failed to save to local feed storage:', e);

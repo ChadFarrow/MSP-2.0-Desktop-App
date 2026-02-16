@@ -61,15 +61,6 @@ struct LocalFeed {
     updated_at: u64,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-struct FeedMeta {
-    id: String,
-    title: String,
-    feed_type: String,
-    created_at: u64,
-    updated_at: u64,
-}
-
 #[derive(Serialize, Deserialize)]
 struct FeedSummary {
     id: String,
@@ -189,7 +180,85 @@ fn get_data_dir() -> Result<PathBuf, String> {
     Ok(feeds_dir)
 }
 
-/// Save a feed locally (XML file + metadata sidecar)
+/// Extract the first <title> value from RSS XML
+fn extract_xml_title(xml: &str) -> Option<String> {
+    // Look for <title> inside <channel> (skip xml declaration and rss tag)
+    let channel_start = xml.find("<channel")?;
+    let xml_after = &xml[channel_start..];
+    let start = xml_after.find("<title>")? + 7;
+    let end = xml_after[start..].find("</title>")?;
+    let title = xml_after[start..start + end].trim();
+    // Strip CDATA if present
+    let title = title.strip_prefix("<![CDATA[").unwrap_or(title);
+    let title = title.strip_suffix("]]>").unwrap_or(title);
+    let title = title.trim();
+    if title.is_empty() { None } else { Some(title.to_string()) }
+}
+
+/// Detect feed type from RSS XML content
+fn detect_feed_type(xml: &str) -> String {
+    // Check <podcast:medium> element content (authoritative), not medium= attributes
+    // which may appear on <podcast:remoteItem> elements
+    if xml.contains("<podcast:medium>publisher</podcast:medium>") {
+        "publisher".to_string()
+    } else if xml.contains("<podcast:medium>video</podcast:medium>") {
+        "video".to_string()
+    } else {
+        "album".to_string()
+    }
+}
+
+/// Sanitize a title into a safe filename
+fn sanitize_filename(title: &str) -> String {
+    let sanitized: String = title
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == '-' || c == ' ' { c } else { '_' })
+        .collect();
+    let mut result = String::new();
+    let mut last_was_separator = false;
+    for c in sanitized.trim().chars() {
+        if c == ' ' || c == '_' {
+            if !last_was_separator {
+                result.push('_');
+            }
+            last_was_separator = true;
+        } else {
+            result.push(c);
+            last_was_separator = false;
+        }
+    }
+    let result = result.trim_matches('_').to_string();
+    if result.is_empty() { "Untitled".to_string() } else { result }
+}
+
+/// Find a unique filename, appending _2, _3, etc. if needed
+fn unique_filename(feeds_dir: &std::path::Path, base: &str, current_slug: Option<&str>) -> String {
+    let candidate = base.to_string();
+    let xml_path = feeds_dir.join(format!("{}.xml", candidate));
+    if !xml_path.exists() || current_slug == Some(base) {
+        return candidate;
+    }
+    for n in 2..100 {
+        let suffixed = format!("{}_{}", base, n);
+        let path = feeds_dir.join(format!("{}.xml", suffixed));
+        if !path.exists() || current_slug == Some(suffixed.as_str()) {
+            return suffixed;
+        }
+    }
+    Uuid::new_v4().to_string()
+}
+
+/// Get file modification time as unix timestamp
+fn file_mtime(path: &std::path::Path) -> u64 {
+    fs::metadata(path)
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// Save a feed locally as a plain XML file with title-based filename
 #[tauri::command]
 fn save_feed_local(
     id: Option<String>,
@@ -198,83 +267,62 @@ fn save_feed_local(
     xml: String,
 ) -> Result<LocalFeed, String> {
     let feeds_dir = get_data_dir()?;
-    let now = get_current_timestamp()?;
 
-    // Use existing ID or generate new one
-    let feed_id = id.unwrap_or_else(|| Uuid::new_v4().to_string());
+    // If an old slug (filename) was provided, delete the old file if title changed
+    let old_slug = id.as_deref();
+    if let Some(slug) = old_slug {
+        // Clean up old .xml file
+        let old_xml = feeds_dir.join(format!("{}.xml", slug));
+        let _ = fs::remove_file(&old_xml);
+        // Clean up leftover .meta.json if present
+        let old_meta = feeds_dir.join(format!("{}.meta.json", slug));
+        let _ = fs::remove_file(&old_meta);
+        // Clean up legacy .json if present
+        let old_json = feeds_dir.join(format!("{}.json", slug));
+        let _ = fs::remove_file(&old_json);
+    }
 
-    let xml_path = feeds_dir.join(format!("{}.xml", feed_id));
-    let meta_path = feeds_dir.join(format!("{}.meta.json", feed_id));
+    let base_slug = sanitize_filename(&title);
+    let slug = unique_filename(&feeds_dir, &base_slug, old_slug);
+    let xml_path = feeds_dir.join(format!("{}.xml", slug));
 
-    // Check if updating existing feed (check meta first, fall back to legacy .json)
-    let created_at = if meta_path.exists() {
-        let existing: FeedMeta = serde_json::from_str(
-            &fs::read_to_string(&meta_path).map_err(|e| e.to_string())?
-        ).map_err(|e| e.to_string())?;
-        existing.created_at
-    } else {
-        // Check for legacy .json format
-        let legacy_path = feeds_dir.join(format!("{}.json", feed_id));
-        if legacy_path.exists() {
-            if let Ok(content) = fs::read_to_string(&legacy_path) {
-                if let Ok(existing) = serde_json::from_str::<LocalFeed>(&content) {
-                    // Clean up legacy file
-                    let _ = fs::remove_file(&legacy_path);
-                    existing.created_at
-                } else { now }
-            } else { now }
-        } else { now }
-    };
-
-    let meta = FeedMeta {
-        id: feed_id.clone(),
-        title: title.clone(),
-        feed_type: feed_type.clone(),
-        created_at,
-        updated_at: now,
-    };
-
-    // Write XML file directly (importable anywhere)
     fs::write(&xml_path, &xml).map_err(|e| e.to_string())?;
 
-    // Write metadata sidecar
-    let meta_json = serde_json::to_string_pretty(&meta).map_err(|e| e.to_string())?;
-    fs::write(&meta_path, meta_json).map_err(|e| e.to_string())?;
+    let mtime = file_mtime(&xml_path);
 
     Ok(LocalFeed {
-        id: feed_id,
+        id: slug,
         title,
         feed_type,
         xml,
-        created_at,
-        updated_at: now,
+        created_at: mtime,
+        updated_at: mtime,
     })
 }
 
-/// Load a feed by ID
+/// Load a feed by slug (filename stem)
 #[tauri::command]
 fn load_feed_local(id: String) -> Result<LocalFeed, String> {
     let feeds_dir = get_data_dir()?;
-    let xml_path = feeds_dir.join(format!("{}.xml", id));
-    let meta_path = feeds_dir.join(format!("{}.meta.json", id));
 
-    // Try new format first (xml + meta)
-    if xml_path.exists() && meta_path.exists() {
+    // Try .xml file
+    let xml_path = feeds_dir.join(format!("{}.xml", id));
+    if xml_path.exists() {
         let xml = fs::read_to_string(&xml_path).map_err(|e| e.to_string())?;
-        let meta: FeedMeta = serde_json::from_str(
-            &fs::read_to_string(&meta_path).map_err(|e| e.to_string())?
-        ).map_err(|e| e.to_string())?;
+        let title = extract_xml_title(&xml).unwrap_or_else(|| id.clone());
+        let feed_type = detect_feed_type(&xml);
+        let mtime = file_mtime(&xml_path);
         return Ok(LocalFeed {
-            id: meta.id,
-            title: meta.title,
-            feed_type: meta.feed_type,
+            id,
+            title,
+            feed_type,
             xml,
-            created_at: meta.created_at,
-            updated_at: meta.updated_at,
+            created_at: mtime,
+            updated_at: mtime,
         });
     }
 
-    // Fall back to legacy .json format
+    // Legacy .json fallback
     let legacy_path = feeds_dir.join(format!("{}.json", id));
     if legacy_path.exists() {
         let content = fs::read_to_string(&legacy_path).map_err(|e| e.to_string())?;
@@ -285,39 +333,40 @@ fn load_feed_local(id: String) -> Result<LocalFeed, String> {
     Err(format!("Feed not found: {}", id))
 }
 
-/// List all local feeds
+/// List all local feeds (scans .xml files in feeds directory)
 #[tauri::command]
 fn list_feeds_local() -> Result<Vec<FeedSummary>, String> {
     let feeds_dir = get_data_dir()?;
 
     let mut feeds = Vec::new();
-    let mut seen_ids = std::collections::HashSet::new();
+    let mut seen_slugs = std::collections::HashSet::new();
 
+    // Scan .xml files
     let entries = fs::read_dir(&feeds_dir).map_err(|e| e.to_string())?;
-
     for entry in entries {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
         let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
 
-        // New format: .meta.json sidecar files
-        if filename.ends_with(".meta.json") {
-            if let Ok(content) = fs::read_to_string(&path) {
-                if let Ok(meta) = serde_json::from_str::<FeedMeta>(&content) {
-                    seen_ids.insert(meta.id.clone());
-                    feeds.push(FeedSummary {
-                        id: meta.id,
-                        title: meta.title,
-                        feed_type: meta.feed_type,
-                        created_at: meta.created_at,
-                        updated_at: meta.updated_at,
-                    });
-                }
+        if filename.ends_with(".xml") {
+            let slug = filename.trim_end_matches(".xml").to_string();
+            if let Ok(xml) = fs::read_to_string(&path) {
+                let title = extract_xml_title(&xml).unwrap_or_else(|| slug.clone());
+                let feed_type = detect_feed_type(&xml);
+                let mtime = file_mtime(&path);
+                seen_slugs.insert(slug.clone());
+                feeds.push(FeedSummary {
+                    id: slug,
+                    title,
+                    feed_type,
+                    created_at: mtime,
+                    updated_at: mtime,
+                });
             }
         }
     }
 
-    // Legacy fallback: scan .json files not already covered
+    // Legacy fallback: .json files
     let entries = fs::read_dir(&feeds_dir).map_err(|e| e.to_string())?;
     for entry in entries {
         let entry = entry.map_err(|e| e.to_string())?;
@@ -327,7 +376,7 @@ fn list_feeds_local() -> Result<Vec<FeedSummary>, String> {
         if filename.ends_with(".json") && !filename.ends_with(".meta.json") {
             if let Ok(content) = fs::read_to_string(&path) {
                 if let Ok(feed) = serde_json::from_str::<LocalFeed>(&content) {
-                    if !seen_ids.contains(&feed.id) {
+                    if !seen_slugs.contains(&feed.id) {
                         feeds.push(FeedSummary {
                             id: feed.id,
                             title: feed.title,
@@ -341,38 +390,29 @@ fn list_feeds_local() -> Result<Vec<FeedSummary>, String> {
         }
     }
 
-    // Sort by updated_at descending (most recent first)
     feeds.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
-
     Ok(feeds)
 }
 
-/// Delete a feed by ID
+/// Delete a feed by slug
 #[tauri::command]
 fn delete_feed_local(id: String) -> Result<(), String> {
     let feeds_dir = get_data_dir()?;
     let xml_path = feeds_dir.join(format!("{}.xml", id));
-    let meta_path = feeds_dir.join(format!("{}.meta.json", id));
     let legacy_path = feeds_dir.join(format!("{}.json", id));
+    let meta_path = feeds_dir.join(format!("{}.meta.json", id));
 
     let mut found = false;
-    if xml_path.exists() {
-        fs::remove_file(&xml_path).map_err(|e| e.to_string())?;
-        found = true;
-    }
-    if meta_path.exists() {
-        fs::remove_file(&meta_path).map_err(|e| e.to_string())?;
-        found = true;
-    }
-    if legacy_path.exists() {
-        fs::remove_file(&legacy_path).map_err(|e| e.to_string())?;
-        found = true;
+    for path in [&xml_path, &legacy_path, &meta_path] {
+        if path.exists() {
+            fs::remove_file(path).map_err(|e| e.to_string())?;
+            found = true;
+        }
     }
 
     if !found {
         return Err(format!("Feed not found: {}", id));
     }
-
     Ok(())
 }
 

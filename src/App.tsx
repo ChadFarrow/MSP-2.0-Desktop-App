@@ -390,6 +390,7 @@ function AppContent() {
           isDirty={state.isDirty}
           isLoggedIn={nostrState.isLoggedIn}
           onImport={handleImport}
+          currentLocalFeedId={currentLocalFeedId}
           onLocalFeedSaved={(id) => {
             setCurrentLocalFeedId(id);
             setSidebarRefreshKey(k => k + 1);
