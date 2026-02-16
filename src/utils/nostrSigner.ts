@@ -28,7 +28,7 @@ export interface NostrSigner {
 
 // Current active signer
 let currentSigner: NostrSigner | null = null;
-let currentMethod: 'nip07' | 'nip46' | null = null;
+let currentMethod: 'nip07' | 'nip46' | 'tauri' | null = null;
 
 // NIP-07 Signer (browser extension)
 class Nip07Signer implements NostrSigner {
@@ -110,14 +110,14 @@ export function clearBunkerPointer(): void {
 }
 
 // Store connection method
-export function storeConnectionMethod(method: 'nip07' | 'nip46'): void {
+export function storeConnectionMethod(method: 'nip07' | 'nip46' | 'tauri'): void {
   localStorage.setItem(CONNECTION_METHOD_KEY, method);
 }
 
 // Load connection method
-export function loadConnectionMethod(): 'nip07' | 'nip46' | null {
+export function loadConnectionMethod(): 'nip07' | 'nip46' | 'tauri' | null {
   const stored = localStorage.getItem(CONNECTION_METHOD_KEY);
-  if (stored === 'nip07' || stored === 'nip46') return stored;
+  if (stored === 'nip07' || stored === 'nip46' || stored === 'tauri') return stored;
   return null;
 }
 
@@ -282,7 +282,7 @@ export function hasSigner(): boolean {
 }
 
 // Get current connection method
-export function getConnectionMethod(): 'nip07' | 'nip46' | null {
+export function getConnectionMethod(): 'nip07' | 'nip46' | 'tauri' | null {
   return currentMethod;
 }
 
