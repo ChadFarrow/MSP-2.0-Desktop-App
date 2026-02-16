@@ -1,6 +1,6 @@
 # MSP 2.0 Desktop App - Music Side Project Studio
 
-A cross-platform desktop application for creating Podcasting 2.0 compatible music album feeds and publisher catalogs with Value 4 Value support.
+A cross-platform desktop application for creating Podcasting 2.0 compatible music album feeds, video feeds, and publisher catalogs with Value 4 Value support.
 
 Built with [Tauri](https://tauri.app/) for Windows, macOS, and Linux.
 
@@ -8,15 +8,14 @@ Built with [Tauri](https://tauri.app/) for Windows, macOS, and Linux.
 
 ## Features
 
-### Album Mode
-- Create and edit podcast RSS feeds for music albums
+### Album & Video Modes
+- Create and edit podcast RSS feeds for music albums and video feeds
 - Podcasting 2.0 namespace support (podcast:person, podcast:value, podcast:funding, etc.)
 - Value 4 Value (V4V) Lightning payment splits
 - Per-track value recipient overrides
 - Funding links for listener support (Patreon, Ko-fi, etc.)
 - Publisher reference linking (connect albums to a publisher feed)
 - Import/export feeds as XML
-- Local storage persistence
 
 ### Publisher Mode
 - Create publisher/label catalog feeds
@@ -26,8 +25,15 @@ Built with [Tauri](https://tauri.app/) for Windows, macOS, and Linux.
 - Host publisher feeds on MSP with automatic Podcast Index notification
 - Nostr identity linking for token-free editing
 
+### Desktop Features
+- **Local feed storage** — feeds saved as plain XML files in your app data folder
+- **Feed sidebar** — collapsible sidebar for quick switching between locally saved feeds
+- **Drop-in import** — place XML files in the feeds folder and they appear in the sidebar automatically
+- **Nostr key management** — sign in with nsec/hex key (no browser extension needed)
+- **Auto-updates** — signed releases with automatic update prompts
+
 ### Integrations
-- Nostr cloud sync (NIP-07 browser extension)
+- Nostr cloud sync (NIP-07 browser extension on web, native key management on desktop)
 - Podcast Index search and feed submission
 - MSP feed hosting with edit tokens
 - Blossom server uploads
@@ -45,49 +51,33 @@ Built with [Tauri](https://tauri.app/) for Windows, macOS, and Linux.
 src/
 ├── components/
 │   ├── Editor/
-│   │   ├── Editor.tsx              # Album editor
+│   │   ├── Editor.tsx              # Album/video editor
 │   │   └── PublisherEditor/        # Publisher mode components
-│   │       ├── index.tsx           # Publisher editor layout
-│   │       ├── PublisherInfoSection.tsx
-│   │       ├── PublisherArtworkSection.tsx
-│   │       ├── CatalogFeedsSection.tsx
-│   │       ├── PublisherValueSection.tsx
-│   │       ├── PublisherFundingSection.tsx
-│   │       ├── DownloadCatalogSection.tsx
-│   │       └── PublishSection.tsx
 │   ├── modals/
 │   │   ├── ImportModal.tsx         # Import feed modal
 │   │   └── SaveModal.tsx           # Save options modal
+│   ├── FeedSidebar.tsx             # Collapsible local feeds sidebar (desktop)
+│   ├── DesktopNostrLogin.tsx       # Desktop Nostr login (nsec/hex)
 │   ├── InfoIcon.tsx                # Tooltip component
 │   ├── NostrLoginButton.tsx        # Nostr auth button
-│   ├── Section.tsx                 # Collapsible section
-│   └── Toggle.tsx                  # Toggle switch
+│   └── Section.tsx                 # Collapsible section
 ├── store/
 │   ├── feedStore.tsx               # Album & publisher state
 │   └── nostrStore.tsx              # Nostr auth state
 ├── types/
-│   ├── feed.ts                     # Album/track/publisher types
-│   └── nostr.ts                    # Nostr types
+│   └── feed.ts                     # Album/track/publisher types
 ├── utils/
-│   ├── nostr.ts                    # Nostr utilities
-│   ├── nostrSync.ts                # Relay sync (kind 30054)
-│   ├── publisherPublish.ts         # Publisher feed hosting
+│   ├── localFeedStorage.ts         # Desktop local feed storage (Tauri)
+│   ├── tauriNostr.ts               # Desktop Nostr key management
+│   ├── tauriBlossom.ts             # Desktop Blossom uploads
 │   ├── xmlGenerator.ts             # RSS XML generation
 │   └── xmlParser.ts                # RSS XML parsing
-├── data/
-│   └── fieldInfo.ts                # Form field tooltips
 ├── App.tsx                         # Main app with mode switching
 └── App.css                         # Styles
 
-api/
-├── pisearch.ts                     # Podcast Index search API
-├── pisubmit.ts                     # Podcast Index feed submission
-├── proxy-feed.ts                   # Feed proxy for CORS
-└── hosted/                         # MSP feed hosting endpoints
-
 src-tauri/
 ├── src/
-│   └── lib.rs                      # Tauri Rust backend
+│   └── main.rs                     # Tauri Rust backend (Nostr, feed storage, Blossom)
 ├── Cargo.toml                      # Rust dependencies
 └── tauri.conf.json                 # Tauri configuration
 ```
@@ -130,7 +120,19 @@ Once all your catalog feeds are hosted on MSP, the "Publish on MSP" section appe
 2. Automatically notify Podcast Index of your publisher feed
 3. Add `<podcast:publisher>` references to all catalog feeds
 
-## Import Options (Album Mode)
+## Local Feed Storage (Desktop)
+
+Feeds are saved as plain XML files in your app data folder:
+
+| OS | Path |
+|----|------|
+| macOS | `~/Library/Application Support/com.podtards.msp-studio/feeds/` |
+| Linux | `~/.local/share/com.podtards.msp-studio/feeds/` |
+| Windows | `%APPDATA%\com.podtards.msp-studio\feeds\` |
+
+Files use human-readable names based on the feed title (e.g., `My_Album.xml`). You can also drop existing RSS XML files into this folder and they'll appear in the sidebar automatically.
+
+## Import Options
 
 - **Upload File** - Upload an RSS/XML feed file from your device
 - **Paste XML** - Paste RSS/XML content directly
@@ -140,33 +142,30 @@ Once all your catalog feeds are hosted on MSP, the "Publish on MSP" section appe
 - **From Nostr** - Load your previously saved albums from Nostr (requires login)
 - **From Nostr Music** - Import tracks from Nostr Music library (requires login)
 
-## Save Options (Album Mode)
+## Save Options
 
-- **Local Storage** - Save to your browser's local storage. Data persists until you clear browser data.
-- **Download XML** - Download the RSS feed as an XML file to your computer.
-- **Copy to Clipboard** - Copy the RSS XML to your clipboard for pasting elsewhere.
-- **Host on MSP** - Host your feed on MSP servers. Get a permanent URL for your RSS feed to use in any app.
-- **Save to Nostr** - Publish to Nostr relays. Load it later on any device with your Nostr key (requires login).
-- **Publish Nostr Music** - Publish each track as a Nostr Music event (kind 36787) for music clients (requires login).
-- **Publish to Blossom** - Upload your feed to a Blossom server. Get a stable MSP URL that always points to your latest upload (requires login).
-
-## Save Options (Publisher Mode)
-
-- **Local Storage** - Save publisher feed to browser storage.
-- **Download XML** - Download the publisher catalog feed as XML.
-- **Copy to Clipboard** - Copy the publisher feed XML.
+- **Save to Computer** - Save feed as XML to your local feeds folder (appears in sidebar)
+- **Download XML** - Download the RSS feed as an XML file
+- **Copy to Clipboard** - Copy the RSS XML to your clipboard
+- **Host on MSP** - Host your feed on MSP servers with a permanent URL
+- **Submit to Podcast Index** - Notify Podcast Index about your feed URL
+- **Save to Nostr** - Publish to Nostr relays (requires login)
+- **Publish Nostr Music** - Publish tracks as Nostr Music events (requires login)
+- **Publish to Blossom** - Upload to a Blossom server (requires login)
 
 ## Nostr Integration
 
-Sign in with a NIP-07 compatible browser extension (Alby, nos2x, etc.) to:
+**Desktop:** Sign in with your nsec or hex private key directly in the app.
+
+**Web:** Sign in with a NIP-07 compatible browser extension (Alby, nos2x, etc.).
+
+Features:
 - Save feeds to Nostr relays (kind 30054)
 - Load feeds from any device with your Nostr key
+- Publish tracks as Nostr Music events (kind 36787)
+- Link Nostr identity to hosted feeds for token-free editing
 
-Default relays:
-- wss://relay.damus.io
-- wss://relay.primal.net
-- wss://nos.lol
-- wss://relay.nostr.band
+Default relays: `relay.damus.io`, `relay.primal.net`, `nos.lol`, `relay.nostr.band`
 
 ## License
 
