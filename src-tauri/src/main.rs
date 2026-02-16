@@ -1066,6 +1066,67 @@ fn change_key_password(
     Ok(())
 }
 
+/// Get the app state directory for persistent key-value storage
+fn get_appstate_dir() -> Result<PathBuf, String> {
+    let proj_dirs = ProjectDirs::from("com", "podtards", "msp-studio")
+        .ok_or("Could not determine app data directory")?;
+
+    let appstate_dir = proj_dirs.data_dir().join("appstate");
+    fs::create_dir_all(&appstate_dir).map_err(|e| e.to_string())?;
+
+    Ok(appstate_dir)
+}
+
+/// Save arbitrary JSON data to the app state directory
+#[tauri::command]
+fn save_app_data(key: String, value: String) -> Result<(), String> {
+    // Validate key to prevent path traversal
+    if key.contains('/') || key.contains('\\') || key.contains("..") {
+        return Err("Invalid key: must not contain path separators".to_string());
+    }
+
+    let appstate_dir = get_appstate_dir()?;
+    let file_path = appstate_dir.join(format!("{}.json", key));
+    fs::write(&file_path, value).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Load JSON data from the app state directory
+#[tauri::command]
+fn load_app_data(key: String) -> Result<Option<String>, String> {
+    if key.contains('/') || key.contains('\\') || key.contains("..") {
+        return Err("Invalid key: must not contain path separators".to_string());
+    }
+
+    let appstate_dir = get_appstate_dir()?;
+    let file_path = appstate_dir.join(format!("{}.json", key));
+
+    if !file_path.exists() {
+        return Ok(None);
+    }
+
+    let content = fs::read_to_string(&file_path).map_err(|e| e.to_string())?;
+    Ok(Some(content))
+}
+
+/// Delete data from the app state directory
+#[tauri::command]
+fn delete_app_data(key: String) -> Result<(), String> {
+    if key.contains('/') || key.contains('\\') || key.contains("..") {
+        return Err("Invalid key: must not contain path separators".to_string());
+    }
+
+    let appstate_dir = get_appstate_dir()?;
+    let file_path = appstate_dir.join(format!("{}.json", key));
+
+    if file_path.exists() {
+        fs::remove_file(&file_path).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -1104,6 +1165,9 @@ fn main() {
             clear_stored_key,
             update_key_label,
             change_key_password,
+            save_app_data,
+            load_app_data,
+            delete_app_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

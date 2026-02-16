@@ -22,7 +22,7 @@ import {
 import { albumStorage, videoStorage, publisherStorage, pendingHostedStorage } from '../../utils/storage';
 import { useNostr } from '../../store/nostrStore';
 import { ModalWrapper } from './ModalWrapper';
-import { apiFetch } from '../../utils/api';
+import { apiFetch, isTauri } from '../../utils/api';
 import {
   createCompleteBackup,
   saveBackupToFile,
@@ -320,7 +320,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
           } else {
             albumStorage.save(album);
           }
-          showSuccessAndClose('Saved to browser storage');
+          showSuccessAndClose(isTauri() ? 'Saved to computer' : 'Saved to browser storage');
           break;
         case 'download': {
           const xml = generateCurrentFeedXml();
@@ -578,7 +578,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               value={mode}
               onChange={(e) => setMode(e.target.value as typeof mode)}
             >
-              <option value="local">Local Storage</option>
+              <option value="local">{isTauri() ? 'Save to Computer' : 'Local Storage'}</option>
               <option value="download">Download XML</option>
               <option value="clipboard">Copy to Clipboard</option>
               <option value="backup">Full Backup (All Feeds)</option>
@@ -610,7 +610,9 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
 
           {mode === 'local' && (
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '16px' }}>
-              Save to your browser's local storage. Data persists until you clear browser data.
+              {isTauri()
+                ? 'Save to your computer. Feed data is automatically stored in your app data folder and persists even if browser data is cleared.'
+                : 'Save to your browser\'s local storage. Data persists until you clear browser data.'}
             </p>
           )}
           {mode === 'download' && (
@@ -978,7 +980,9 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               {!hostedInfo && !pendingToken && !legacyHostedInfo && (
                 <div style={{ marginTop: '12px' }}>
                   <p style={{ color: 'var(--warning, #f59e0b)', fontSize: '0.75rem', padding: '8px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '4px', marginBottom: '12px' }}>
-                    Your edit token will be saved in this browser. If you clear browser data, you won't be able to update this feed.
+                    {isTauri()
+                      ? 'Your edit token will be saved on this computer. It\'s still recommended to save your token as a backup.'
+                      : 'Your edit token will be saved in this browser. If you clear browser data, you won\'t be able to update this feed.'}
                   </p>
                   {!showRestore ? (
                     <button
@@ -1225,7 +1229,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
           }
         >
           <ul className="import-help-list">
-                <li><strong>Local Storage</strong> - Save to your browser's local storage. Data persists until you clear browser data.</li>
+                <li><strong>{isTauri() ? 'Save to Computer' : 'Local Storage'}</strong> - {isTauri() ? 'Save to your computer. Feed data is automatically stored in your app data folder and persists even if browser data is cleared.' : 'Save to your browser\'s local storage. Data persists until you clear browser data.'}</li>
                 <li><strong>Download XML</strong> - Download the RSS feed as an XML file to your computer.</li>
                 <li><strong>Copy to Clipboard</strong> - Copy the RSS XML to your clipboard for pasting elsewhere.</li>
                 <li><strong>Full Backup</strong> - Export all feeds (album, video, publisher) and hosted credentials to a single JSON file for backup and transfer.</li>

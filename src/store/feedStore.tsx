@@ -1,10 +1,14 @@
 /* eslint-disable react-refresh/only-export-components */
 // MSP 2.0 - Feed State Management (React Context)
-import { createContext, useContext, useReducer, useEffect } from 'react';
+import { createContext, useContext, useReducer, useEffect, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import type { Album, Track, Person, PersonRole, ValueRecipient, Funding, PublisherFeed, RemoteItem } from '../types/feed';
 import { createEmptyAlbum, createEmptyTrack, createEmptyPerson, createEmptyPersonRole, createEmptyRecipient, createEmptyFunding, createEmptyPublisherFeed, createEmptyRemoteItem, createEmptyVideoAlbum, createSupportRecipients } from '../types/feed';
 import { albumStorage, videoStorage, publisherStorage, feedTypeStorage } from '../utils/storage';
+import { saveToDesktop, loadFromDesktop, DESKTOP_KEYS } from '../utils/desktopStorage';
+import { isTauri } from '../utils/api';
+import { hydrateHostedCredentials } from '../utils/hostedFeed';
+import { hydrateNostrUser } from '../utils/nostr';
 
 // Community support recipients - identified by both name AND address
 const COMMUNITY_SUPPORT_RECIPIENTS = [
@@ -576,6 +580,82 @@ const FeedContext = createContext<FeedContextType | undefined>(undefined);
 // Provider
 export function FeedProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(feedReducer, initialState);
+  const [hydrated, setHydrated] = useState(!isTauri());
+
+  // Desktop startup hydration: load from filesystem if localStorage is empty
+  const hydrateFromDesktop = useCallback(async () => {
+    if (!isTauri()) return;
+
+    try {
+      let needsReload = false;
+
+      // Hydrate album if localStorage is empty
+      if (!albumStorage.load()) {
+        const desktopAlbum = await loadFromDesktop<Album>(DESKTOP_KEYS.ALBUM_DATA);
+        if (desktopAlbum) {
+          albumStorage.save(desktopAlbum);
+          needsReload = true;
+        }
+      }
+
+      // Hydrate video if localStorage is empty
+      if (!videoStorage.load()) {
+        const desktopVideo = await loadFromDesktop<Album>(DESKTOP_KEYS.VIDEO_DATA);
+        if (desktopVideo) {
+          videoStorage.save(desktopVideo);
+          needsReload = true;
+        }
+      }
+
+      // Hydrate publisher if localStorage is empty
+      if (!publisherStorage.load()) {
+        const desktopPublisher = await loadFromDesktop<PublisherFeed>(DESKTOP_KEYS.PUBLISHER_DATA);
+        if (desktopPublisher) {
+          publisherStorage.save(desktopPublisher);
+          needsReload = true;
+        }
+      }
+
+      // Hydrate feed type
+      const storedType = feedTypeStorage.load();
+      if (storedType === 'album') {
+        const desktopType = await loadFromDesktop<FeedType>(DESKTOP_KEYS.FEED_TYPE);
+        if (desktopType && desktopType !== 'album') {
+          feedTypeStorage.save(desktopType);
+          needsReload = true;
+        }
+      }
+
+      // Hydrate hosted credentials and nostr user from desktop
+      const credentialsRestored = await hydrateHostedCredentials();
+      if (credentialsRestored > 0) {
+        console.log(`[desktopStorage] Restored ${credentialsRestored} hosted credential(s) from desktop filesystem`);
+      }
+      const nostrRestored = await hydrateNostrUser();
+      if (nostrRestored) {
+        console.log('[desktopStorage] Restored Nostr user profile from desktop filesystem');
+      }
+
+      // If we restored any data, reload the state from localStorage
+      if (needsReload) {
+        const album = albumStorage.load() || createEmptyAlbum();
+        const videoFeed = videoStorage.load() || null;
+        const publisherFeed = publisherStorage.load() || null;
+        dispatch({ type: 'SET_ALBUM', payload: album });
+        if (videoFeed) dispatch({ type: 'SET_VIDEO_FEED', payload: videoFeed });
+        if (publisherFeed) dispatch({ type: 'SET_PUBLISHER_FEED', payload: publisherFeed });
+        console.log('[desktopStorage] Restored feed data from desktop filesystem');
+      }
+    } catch (e) {
+      console.error('[desktopStorage] Hydration failed:', e);
+    } finally {
+      setHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    hydrateFromDesktop();
+  }, [hydrateFromDesktop]);
 
   // Auto-save to localStorage whenever album changes
   useEffect(() => {
@@ -595,6 +675,31 @@ export function FeedProvider({ children }: { children: ReactNode }) {
       publisherStorage.save(state.publisherFeed);
     }
   }, [state.publisherFeed]);
+
+  // Desktop auto-save: persist feeds to filesystem (in addition to localStorage)
+  useEffect(() => {
+    if (!hydrated) return;
+    saveToDesktop(DESKTOP_KEYS.ALBUM_DATA, state.album);
+  }, [state.album, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (state.videoFeed) {
+      saveToDesktop(DESKTOP_KEYS.VIDEO_DATA, state.videoFeed);
+    }
+  }, [state.videoFeed, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (state.publisherFeed) {
+      saveToDesktop(DESKTOP_KEYS.PUBLISHER_DATA, state.publisherFeed);
+    }
+  }, [state.publisherFeed, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    saveToDesktop(DESKTOP_KEYS.FEED_TYPE, state.feedType);
+  }, [state.feedType, hydrated]);
 
   return (
     <FeedContext.Provider value={{ state, dispatch }}>

@@ -276,12 +276,14 @@ export function NostrConnectModal({ onClose }: NostrConnectModalProps) {
               Private Key
             </button>
           )}
-          <button
-            className={`modal-tab ${tab === 'extension' ? 'active' : ''}`}
-            onClick={() => { setTab('extension'); setError(null); setConnectUri(null); }}
-          >
-            Browser Extension
-          </button>
+          {!isDesktop && (
+            <button
+              className={`modal-tab ${tab === 'extension' ? 'active' : ''}`}
+              onClick={() => { setTab('extension'); setError(null); setConnectUri(null); }}
+            >
+              Browser Extension
+            </button>
+          )}
           <button
             className={`modal-tab ${tab === 'remote' ? 'active' : ''}`}
             onClick={() => { setTab('remote'); setError(null); setConnectUri(null); }}

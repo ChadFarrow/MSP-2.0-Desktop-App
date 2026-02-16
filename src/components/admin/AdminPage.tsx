@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNostr } from '../../store/nostrStore';
 import { FeedList } from './FeedList';
+import { isTauri } from '../../utils/api';
 import mspLogo from '../../assets/msp-logo.png';
 
 type AuthState = 'checking' | 'no-extension' | 'not-logged-in' | 'ready';
@@ -9,17 +10,19 @@ export function AdminPage() {
   const { state: nostrState, login } = useNostr();
   const [authState, setAuthState] = useState<AuthState>('checking');
   const [error, setError] = useState<string | null>(null);
+  const isDesktop = isTauri();
 
   // Derive auth state from nostr state
   useEffect(() => {
-    if (!nostrState.hasExtension) {
+    // On desktop, skip extension check — users sign in via private key
+    if (!isDesktop && !nostrState.hasExtension) {
       setAuthState('no-extension');
     } else if (!nostrState.isLoggedIn) {
       setAuthState('not-logged-in');
     } else {
       setAuthState('ready');
     }
-  }, [nostrState.hasExtension, nostrState.isLoggedIn]);
+  }, [nostrState.hasExtension, nostrState.isLoggedIn, isDesktop]);
 
   const handleLogin = async () => {
     await login();
@@ -41,7 +44,7 @@ export function AdminPage() {
 
       <main className="admin-main">
         {authState === 'checking' && (
-          <div className="admin-status">Checking extension...</div>
+          <div className="admin-status">Checking authentication...</div>
         )}
 
         {authState === 'no-extension' && (
@@ -54,7 +57,7 @@ export function AdminPage() {
         {authState === 'not-logged-in' && (
           <div className="admin-status">
             <h2>Login Required</h2>
-            <p>Please sign in with your Nostr extension to continue.</p>
+            <p>{isDesktop ? 'Please sign in with your Nostr key to continue.' : 'Please sign in with your Nostr extension to continue.'}</p>
             <button className="btn btn-primary" onClick={handleLogin}>
               Sign In with Nostr
             </button>
