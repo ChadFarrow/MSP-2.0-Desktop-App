@@ -3,9 +3,26 @@ import { hostedFeedStorage, type HostedFeedInfo } from './storage';
 import { createAdminAuthHeader } from './adminAuth';
 import { hasSigner } from './nostrSigner';
 import { apiFetch, resolveApiUrl } from './api';
+import { saveToDesktop, loadFromDesktop, DESKTOP_KEYS } from './desktopStorage';
 
 // Re-export type for backward compatibility
 export type { HostedFeedInfo };
+
+// Type for the desktop credentials map
+type HostedCredentialsMap = Record<string, HostedFeedInfo>;
+
+/**
+ * Sync all hosted credentials to desktop filesystem
+ */
+async function syncCredentialsToDesktop(podcastGuid: string, info: HostedFeedInfo | null): Promise<void> {
+  const existing = await loadFromDesktop<HostedCredentialsMap>(DESKTOP_KEYS.HOSTED_CREDENTIALS) || {};
+  if (info) {
+    existing[podcastGuid] = info;
+  } else {
+    delete existing[podcastGuid];
+  }
+  await saveToDesktop(DESKTOP_KEYS.HOSTED_CREDENTIALS, existing);
+}
 
 /**
  * Get stored hosted feed info from localStorage
@@ -15,17 +32,40 @@ export function getHostedFeedInfo(podcastGuid: string): HostedFeedInfo | null {
 }
 
 /**
- * Save hosted feed info to localStorage
+ * Save hosted feed info to localStorage and desktop filesystem
  */
 export function saveHostedFeedInfo(podcastGuid: string, info: HostedFeedInfo): void {
   hostedFeedStorage.save(podcastGuid, info);
+  // Also persist to desktop filesystem (fire-and-forget)
+  syncCredentialsToDesktop(podcastGuid, info);
 }
 
 /**
- * Clear hosted feed info from localStorage
+ * Clear hosted feed info from localStorage and desktop filesystem
  */
 export function clearHostedFeedInfo(podcastGuid: string): void {
   hostedFeedStorage.clear(podcastGuid);
+  // Also clear from desktop filesystem (fire-and-forget)
+  syncCredentialsToDesktop(podcastGuid, null);
+}
+
+/**
+ * Hydrate hosted credentials from desktop filesystem into localStorage.
+ * Called on startup when running in Tauri.
+ */
+export async function hydrateHostedCredentials(): Promise<number> {
+  const credMap = await loadFromDesktop<HostedCredentialsMap>(DESKTOP_KEYS.HOSTED_CREDENTIALS);
+  if (!credMap) return 0;
+
+  let restored = 0;
+  for (const [guid, info] of Object.entries(credMap)) {
+    // Only restore if localStorage doesn't already have it
+    if (!hostedFeedStorage.load(guid)) {
+      hostedFeedStorage.save(guid, info);
+      restored++;
+    }
+  }
+  return restored;
 }
 
 interface CreateFeedResponse {

@@ -1,5 +1,6 @@
 import type { NostrUser } from '../types/nostr';
 import { nostrUserStorage, STORAGE_KEYS } from './storage';
+import { saveToDesktop, loadFromDesktop, DESKTOP_KEYS } from './desktopStorage';
 
 // Storage key for persisted auth (re-export for backward compatibility)
 export const NOSTR_STORAGE_KEY = STORAGE_KEYS.NOSTR_USER;
@@ -136,17 +137,30 @@ export async function getPublicKey(): Promise<string> {
   return window.nostr.getPublicKey();
 }
 
-// Load user from localStorage
+// Load user from localStorage (with desktop fallback)
 export function loadStoredUser(): NostrUser | null {
   return nostrUserStorage.load();
 }
 
-// Save user to localStorage
-export function saveUser(user: NostrUser): void {
-  nostrUserStorage.save(user);
+// Hydrate nostr user from desktop filesystem if localStorage is empty
+export async function hydrateNostrUser(): Promise<boolean> {
+  if (nostrUserStorage.load()) return false;
+  const desktopUser = await loadFromDesktop<NostrUser>(DESKTOP_KEYS.NOSTR_USER);
+  if (desktopUser) {
+    nostrUserStorage.save(desktopUser);
+    return true;
+  }
+  return false;
 }
 
-// Clear user from localStorage
+// Save user to localStorage and desktop filesystem
+export function saveUser(user: NostrUser): void {
+  nostrUserStorage.save(user);
+  saveToDesktop(DESKTOP_KEYS.NOSTR_USER, user);
+}
+
+// Clear user from localStorage and desktop filesystem
 export function clearStoredUser(): void {
   nostrUserStorage.clear();
+  saveToDesktop(DESKTOP_KEYS.NOSTR_USER, null);
 }
