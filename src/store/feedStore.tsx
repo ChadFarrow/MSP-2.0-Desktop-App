@@ -71,7 +71,7 @@ export type FeedAction =
   | { type: 'CREATE_NEW_VIDEO_FEED' };
 
 // State interface
-interface FeedState {
+export interface FeedState {
   feedType: FeedType;
   album: Album;
   videoFeed: Album | null;
@@ -81,7 +81,7 @@ interface FeedState {
 
 
 // Initial state - try to load from localStorage first
-const initialState: FeedState = {
+export const initialState: FeedState = {
   feedType: feedTypeStorage.load(),
   album: albumStorage.load() || createEmptyAlbum(),
   videoFeed: videoStorage.load() || null,
@@ -106,7 +106,7 @@ function updateActiveFeed(state: FeedState, albumUpdate: Album): FeedState {
 }
 
 // Reducer
-function feedReducer(state: FeedState, action: FeedAction): FeedState {
+export function feedReducer(state: FeedState, action: FeedAction): FeedState {
   // Get the active album for actions that work on the current feed
   const activeAlbum = getActiveAlbum(state);
 
