@@ -117,10 +117,27 @@ The app runs both as a web app (Vercel) and desktop app (Tauri). Code detects th
 Tauri-specific wrappers provide the same API surface as web equivalents:
 - `tauriNostr.ts` - Drop-in replacement for NIP-07 browser extension calls
 - `tauriBlossom.ts` - Blossom uploads via Rust backend (SHA256 hashing, auth events)
-- `localFeedStorage.ts` - Feed persistence to app data directory instead of localStorage
+- `localFeedStorage.ts` - Feed persistence as plain XML files in app data directory
 - `DesktopNostrLogin.tsx` - Login via nsec/hex key instead of browser extension
 
 The Rust backend (`src-tauri/src/main.rs`) exposes Tauri commands for Nostr auth, feed storage, and Blossom operations, using `nostr-sdk` and thread-safe `Mutex<Option<T>>` state.
+
+### Local Feed Storage (Desktop-only)
+Feeds are stored as plain XML files in the app data directory (`com.podtards.msp-studio/feeds/`). No metadata sidecars — title and feed type are extracted directly from XML content, timestamps come from file modification time.
+
+- **Filenames**: Human-readable, sanitized from feed title (e.g., `My_Album.xml`), deduplicated with `_2`, `_3` suffixes
+- **Feed type detection**: Checks `<podcast:medium>` element content (not `medium=` attributes on other elements)
+- **Drop-in import**: Any `.xml` file placed in the feeds folder is automatically detected and listed
+- **Rust commands**: `save_feed_local`, `load_feed_local`, `list_feeds_local`, `delete_feed_local`
+- **Legacy support**: Old `.json` format files are still readable but not created
+
+### Feed Sidebar (Desktop-only)
+`FeedSidebar.tsx` provides a collapsible sidebar for quick feed switching. Only rendered when `hasLocalStorage()` returns true (desktop check).
+
+- Toggle button in header (hidden on screens < 768px)
+- Refreshes feed list on open and when `sidebarRefreshKey` increments (after saves)
+- Loading a feed from sidebar checks `isDirty` state and prompts before switching
+- Active feed highlighted via `currentLocalFeedId` (the filename slug)
 
 ### State Management
 Uses React Context + useReducer pattern (not Redux). Three separate stores:
@@ -202,7 +219,9 @@ gh issue view <number>     # View issue details
 - Modal-based dialogs (`components/modals/`)
 - Collapsible sections using `Section.tsx`
 - Editor components split between Album (`Editor.tsx`) and Publisher (`PublisherEditor/`)
+- `FeedSidebar.tsx` - Desktop-only collapsible sidebar for local feed switching
 - `InfoIcon` component accepts `position` prop (`"right"` default, `"left"` for edge fields)
+- App layout: header → `app-body` (flex row: sidebar + `app-content`)
 
 ### Accessing Nostr State
 Use the `useNostr` hook to access logged-in user info:
