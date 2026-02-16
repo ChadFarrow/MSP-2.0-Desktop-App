@@ -20,6 +20,7 @@ import {
   type HostedFeedInfo
 } from '../../utils/hostedFeed';
 import { albumStorage, videoStorage, publisherStorage, pendingHostedStorage } from '../../utils/storage';
+import { saveFeedLocal, hasLocalStorage } from '../../utils/localFeedStorage';
 import { useNostr } from '../../store/nostrStore';
 import { ModalWrapper } from './ModalWrapper';
 import { apiFetch, isTauri } from '../../utils/api';
@@ -39,9 +40,10 @@ interface SaveModalProps {
   isDirty: boolean;
   isLoggedIn: boolean;
   onImport?: (xml: string) => void;
+  onLocalFeedSaved?: (id: string) => void;
 }
 
-export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', isDirty, isLoggedIn, onImport }: SaveModalProps) {
+export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', isDirty, isLoggedIn, onImport, onLocalFeedSaved }: SaveModalProps) {
   const { state: nostrState } = useNostr();
   const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'hosted' | 'podcastIndex' | 'backup'>('local');
   const [backupPreview, setBackupPreview] = useState<ReturnType<typeof getBackupPreview> | null>(null);
@@ -319,6 +321,18 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
             videoStorage.save(album);
           } else {
             albumStorage.save(album);
+          }
+          // Also save to local feed storage on desktop (for sidebar listing)
+          if (hasLocalStorage()) {
+            try {
+              const localXml = generateCurrentFeedXml();
+              const localFeedType = isPublisherMode ? 'publisher' as const : isVideoMode ? 'video' as const : 'album' as const;
+              const localTitle = isPublisherMode && publisherFeed ? publisherFeed.title : album.title;
+              const saved = await saveFeedLocal(localTitle || 'Untitled', localFeedType, localXml, currentFeedGuid || undefined);
+              onLocalFeedSaved?.(saved.id);
+            } catch (e) {
+              console.error('Failed to save to local feed storage:', e);
+            }
           }
           showSuccessAndClose(isTauri() ? 'Saved to computer' : 'Saved to browser storage');
           break;

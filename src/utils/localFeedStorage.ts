@@ -12,7 +12,7 @@ import { invoke } from '@tauri-apps/api/core';
 export interface LocalFeed {
   id: string;
   title: string;
-  feed_type: 'album' | 'publisher';
+  feed_type: 'album' | 'video' | 'publisher';
   xml: string;
   created_at: number;
   updated_at: number;
@@ -21,7 +21,7 @@ export interface LocalFeed {
 export interface FeedSummary {
   id: string;
   title: string;
-  feed_type: 'album' | 'publisher';
+  feed_type: 'album' | 'video' | 'publisher';
   created_at: number;
   updated_at: number;
 }
@@ -32,7 +32,7 @@ export interface FeedSummary {
  */
 export async function saveFeedLocal(
   title: string,
-  feedType: 'album' | 'publisher',
+  feedType: 'album' | 'video' | 'publisher',
   xml: string,
   id?: string
 ): Promise<LocalFeed> {

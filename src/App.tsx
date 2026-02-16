@@ -29,6 +29,8 @@ import {
   type StoredKeyInfo,
   type NostrProfile,
 } from './utils/tauriNostr';
+import { FeedSidebar } from './components/FeedSidebar';
+import { hasLocalStorage } from './utils/localFeedStorage';
 import mspLogo from './assets/msp-logo.png';
 import './App.css';
 
@@ -48,6 +50,12 @@ function AppContent() {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { state: nostrState, logout: nostrLogout, loginWithProfile } = useNostr();
+
+  // Sidebar state (desktop only)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentLocalFeedId, setCurrentLocalFeedId] = useState<string | undefined>(undefined);
+  const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
+  const isDesktop = hasLocalStorage();
 
   // Auto-unlock state for stored keys (desktop only)
   const [showUnlockModal, setShowUnlockModal] = useState(false);
@@ -187,11 +195,34 @@ function AppContent() {
     }
   };
 
+  const handleSidebarLoadFeed = (xml: string, id: string, feedType: 'album' | 'video' | 'publisher') => {
+    if (state.isDirty) {
+      const proceed = confirm('You have unsaved changes. Load this feed anyway?');
+      if (!proceed) return;
+    }
+    handleImport(xml);
+    setCurrentLocalFeedId(id);
+    // Switch to correct feed type if needed
+    if (feedType !== state.feedType) {
+      handleSwitchFeedType(feedType);
+    }
+  };
+
   return (
     <>
       <div className="app">
         <header className="header">
           <div className="header-left">
+            {isDesktop && (
+              <button
+                className={`sidebar-toggle${sidebarOpen ? ' active' : ''}`}
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+                title="Toggle feed sidebar"
+              >
+                ☰
+              </button>
+            )}
             <div className="header-title">
               <img src={mspLogo} alt="MSP Logo" className="header-logo" />
               <h1><span className="title-short">MSP 2.0</span><span className="title-full"> - Music Side Project Studio</span></h1>
@@ -320,23 +351,25 @@ function AppContent() {
                     </>
                   )}
                   <div className="dropdown-divider" />
-                  <a
-                    className="dropdown-item"
-                    href="https://msp-2-0-git-fafo-chadfs-projects.vercel.app/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setShowDropdown(false)}
-                  >
-                    🧪 Experimental (FAFO)
-                  </a>
-                  <div className="dropdown-divider" />
                   <div className="dropdown-version">v{appVersion ?? __APP_VERSION__}</div>
                 </div>
               )}
             </div>
           </div>
         </header>
-        {state.feedType === 'publisher' ? <PublisherEditor /> : <Editor key={`${state.feedType}-${state.album?.podcastGuid}-${state.videoFeed?.podcastGuid}`} />}
+        <div className="app-body">
+          {isDesktop && (
+            <FeedSidebar
+              isOpen={sidebarOpen}
+              onLoadFeed={handleSidebarLoadFeed}
+              currentFeedId={currentLocalFeedId}
+              refreshKey={sidebarRefreshKey}
+            />
+          )}
+          <div className="app-content">
+            {state.feedType === 'publisher' ? <PublisherEditor /> : <Editor key={`${state.feedType}-${state.album?.podcastGuid}-${state.videoFeed?.podcastGuid}`} />}
+          </div>
+        </div>
       </div>
 
       {showImportModal && (
@@ -357,6 +390,10 @@ function AppContent() {
           isDirty={state.isDirty}
           isLoggedIn={nostrState.isLoggedIn}
           onImport={handleImport}
+          onLocalFeedSaved={(id) => {
+            setCurrentLocalFeedId(id);
+            setSidebarRefreshKey(k => k + 1);
+          }}
         />
       )}
 

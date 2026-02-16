@@ -55,8 +55,17 @@ struct SignedEvent {
 struct LocalFeed {
     id: String,
     title: String,
-    feed_type: String, // "album" or "publisher"
+    feed_type: String, // "album", "video", or "publisher"
     xml: String,
+    created_at: u64,
+    updated_at: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+struct FeedMeta {
+    id: String,
+    title: String,
+    feed_type: String,
     created_at: u64,
     updated_at: u64,
 }
@@ -180,7 +189,7 @@ fn get_data_dir() -> Result<PathBuf, String> {
     Ok(feeds_dir)
 }
 
-/// Save a feed locally
+/// Save a feed locally (XML file + metadata sidecar)
 #[tauri::command]
 fn save_feed_local(
     id: Option<String>,
@@ -190,83 +199,151 @@ fn save_feed_local(
 ) -> Result<LocalFeed, String> {
     let feeds_dir = get_data_dir()?;
     let now = get_current_timestamp()?;
-    
+
     // Use existing ID or generate new one
     let feed_id = id.unwrap_or_else(|| Uuid::new_v4().to_string());
-    
-    // Check if updating existing feed
-    let feed_path = feeds_dir.join(format!("{}.json", feed_id));
-    let created_at = if feed_path.exists() {
-        let existing: LocalFeed = serde_json::from_str(
-            &fs::read_to_string(&feed_path).map_err(|e| e.to_string())?
+
+    let xml_path = feeds_dir.join(format!("{}.xml", feed_id));
+    let meta_path = feeds_dir.join(format!("{}.meta.json", feed_id));
+
+    // Check if updating existing feed (check meta first, fall back to legacy .json)
+    let created_at = if meta_path.exists() {
+        let existing: FeedMeta = serde_json::from_str(
+            &fs::read_to_string(&meta_path).map_err(|e| e.to_string())?
         ).map_err(|e| e.to_string())?;
         existing.created_at
     } else {
-        now
+        // Check for legacy .json format
+        let legacy_path = feeds_dir.join(format!("{}.json", feed_id));
+        if legacy_path.exists() {
+            if let Ok(content) = fs::read_to_string(&legacy_path) {
+                if let Ok(existing) = serde_json::from_str::<LocalFeed>(&content) {
+                    // Clean up legacy file
+                    let _ = fs::remove_file(&legacy_path);
+                    existing.created_at
+                } else { now }
+            } else { now }
+        } else { now }
     };
-    
-    let feed = LocalFeed {
+
+    let meta = FeedMeta {
         id: feed_id.clone(),
+        title: title.clone(),
+        feed_type: feed_type.clone(),
+        created_at,
+        updated_at: now,
+    };
+
+    // Write XML file directly (importable anywhere)
+    fs::write(&xml_path, &xml).map_err(|e| e.to_string())?;
+
+    // Write metadata sidecar
+    let meta_json = serde_json::to_string_pretty(&meta).map_err(|e| e.to_string())?;
+    fs::write(&meta_path, meta_json).map_err(|e| e.to_string())?;
+
+    Ok(LocalFeed {
+        id: feed_id,
         title,
         feed_type,
         xml,
         created_at,
         updated_at: now,
-    };
-    
-    let json = serde_json::to_string_pretty(&feed).map_err(|e| e.to_string())?;
-    fs::write(&feed_path, json).map_err(|e| e.to_string())?;
-    
-    Ok(feed)
+    })
 }
 
 /// Load a feed by ID
 #[tauri::command]
 fn load_feed_local(id: String) -> Result<LocalFeed, String> {
     let feeds_dir = get_data_dir()?;
-    let feed_path = feeds_dir.join(format!("{}.json", id));
-    
-    if !feed_path.exists() {
-        return Err(format!("Feed not found: {}", id));
+    let xml_path = feeds_dir.join(format!("{}.xml", id));
+    let meta_path = feeds_dir.join(format!("{}.meta.json", id));
+
+    // Try new format first (xml + meta)
+    if xml_path.exists() && meta_path.exists() {
+        let xml = fs::read_to_string(&xml_path).map_err(|e| e.to_string())?;
+        let meta: FeedMeta = serde_json::from_str(
+            &fs::read_to_string(&meta_path).map_err(|e| e.to_string())?
+        ).map_err(|e| e.to_string())?;
+        return Ok(LocalFeed {
+            id: meta.id,
+            title: meta.title,
+            feed_type: meta.feed_type,
+            xml,
+            created_at: meta.created_at,
+            updated_at: meta.updated_at,
+        });
     }
-    
-    let content = fs::read_to_string(&feed_path).map_err(|e| e.to_string())?;
-    let feed: LocalFeed = serde_json::from_str(&content).map_err(|e| e.to_string())?;
-    
-    Ok(feed)
+
+    // Fall back to legacy .json format
+    let legacy_path = feeds_dir.join(format!("{}.json", id));
+    if legacy_path.exists() {
+        let content = fs::read_to_string(&legacy_path).map_err(|e| e.to_string())?;
+        let feed: LocalFeed = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+        return Ok(feed);
+    }
+
+    Err(format!("Feed not found: {}", id))
 }
 
 /// List all local feeds
 #[tauri::command]
 fn list_feeds_local() -> Result<Vec<FeedSummary>, String> {
     let feeds_dir = get_data_dir()?;
-    
+
     let mut feeds = Vec::new();
-    
+    let mut seen_ids = std::collections::HashSet::new();
+
     let entries = fs::read_dir(&feeds_dir).map_err(|e| e.to_string())?;
-    
+
     for entry in entries {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
-        
-        if path.extension().map_or(false, |ext| ext == "json") {
+        let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+
+        // New format: .meta.json sidecar files
+        if filename.ends_with(".meta.json") {
             if let Ok(content) = fs::read_to_string(&path) {
-                if let Ok(feed) = serde_json::from_str::<LocalFeed>(&content) {
+                if let Ok(meta) = serde_json::from_str::<FeedMeta>(&content) {
+                    seen_ids.insert(meta.id.clone());
                     feeds.push(FeedSummary {
-                        id: feed.id,
-                        title: feed.title,
-                        feed_type: feed.feed_type,
-                        created_at: feed.created_at,
-                        updated_at: feed.updated_at,
+                        id: meta.id,
+                        title: meta.title,
+                        feed_type: meta.feed_type,
+                        created_at: meta.created_at,
+                        updated_at: meta.updated_at,
                     });
                 }
             }
         }
     }
-    
+
+    // Legacy fallback: scan .json files not already covered
+    let entries = fs::read_dir(&feeds_dir).map_err(|e| e.to_string())?;
+    for entry in entries {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+
+        if filename.ends_with(".json") && !filename.ends_with(".meta.json") {
+            if let Ok(content) = fs::read_to_string(&path) {
+                if let Ok(feed) = serde_json::from_str::<LocalFeed>(&content) {
+                    if !seen_ids.contains(&feed.id) {
+                        feeds.push(FeedSummary {
+                            id: feed.id,
+                            title: feed.title,
+                            feed_type: feed.feed_type,
+                            created_at: feed.created_at,
+                            updated_at: feed.updated_at,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
     // Sort by updated_at descending (most recent first)
     feeds.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
-    
+
     Ok(feeds)
 }
 
@@ -274,14 +351,28 @@ fn list_feeds_local() -> Result<Vec<FeedSummary>, String> {
 #[tauri::command]
 fn delete_feed_local(id: String) -> Result<(), String> {
     let feeds_dir = get_data_dir()?;
-    let feed_path = feeds_dir.join(format!("{}.json", id));
-    
-    if !feed_path.exists() {
+    let xml_path = feeds_dir.join(format!("{}.xml", id));
+    let meta_path = feeds_dir.join(format!("{}.meta.json", id));
+    let legacy_path = feeds_dir.join(format!("{}.json", id));
+
+    let mut found = false;
+    if xml_path.exists() {
+        fs::remove_file(&xml_path).map_err(|e| e.to_string())?;
+        found = true;
+    }
+    if meta_path.exists() {
+        fs::remove_file(&meta_path).map_err(|e| e.to_string())?;
+        found = true;
+    }
+    if legacy_path.exists() {
+        fs::remove_file(&legacy_path).map_err(|e| e.to_string())?;
+        found = true;
+    }
+
+    if !found {
         return Err(format!("Feed not found: {}", id));
     }
-    
-    fs::remove_file(&feed_path).map_err(|e| e.to_string())?;
-    
+
     Ok(())
 }
 
