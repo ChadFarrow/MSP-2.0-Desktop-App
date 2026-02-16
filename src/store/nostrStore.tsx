@@ -20,6 +20,7 @@ import {
   loadBunkerPointer,
 } from '../utils/nostrSigner';
 import { fetchNostrProfile } from '../utils/nostrSync';
+import { isTauri } from '../utils/api';
 
 // Action types
 type NostrAction =
@@ -112,20 +113,43 @@ export function NostrProvider({ children }: { children: ReactNode }) {
   // Check for extension and restore session on mount
   useEffect(() => {
     async function init() {
+      const isDesktop = isTauri();
+
       // Check for stored session
       const storedUser = loadStoredUser();
       const storedMethod = loadConnectionMethod();
-      console.log('[Nostr] Init - storedUser:', storedUser?.npub, 'storedMethod:', storedMethod);
+      console.log('[Nostr] Init - storedUser:', storedUser?.npub, 'storedMethod:', storedMethod, 'isDesktop:', isDesktop);
 
-      // Check for NIP-07 extension
-      // Wait a bit for extension to inject
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const extensionAvailable = hasNip07Extension();
-      dispatch({ type: 'SET_HAS_EXTENSION', payload: extensionAvailable });
+      // Check for NIP-07 extension (skip on desktop — no browser extensions available)
+      if (!isDesktop) {
+        // Wait a bit for extension to inject
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const extensionAvailable = hasNip07Extension();
+        dispatch({ type: 'SET_HAS_EXTENSION', payload: extensionAvailable });
+      }
 
       // Try to restore session based on stored method
       if (storedUser && storedMethod) {
-        if (storedMethod === 'nip46') {
+        if (storedMethod === 'tauri') {
+          // Desktop session — restore from stored user profile
+          // Key unlock happens separately in NostrConnectModal
+          dispatch({ type: 'RESTORE_SESSION', payload: { user: storedUser, method: 'tauri' } });
+
+          // Refresh profile in background
+          fetchNostrProfile(storedUser.pubkey).then((profile) => {
+            if (profile) {
+              dispatch({
+                type: 'UPDATE_PROFILE',
+                payload: {
+                  displayName: profile.display_name || profile.name,
+                  picture: profile.picture,
+                  nip05: profile.nip05
+                }
+              });
+            }
+          });
+          return;
+        } else if (storedMethod === 'nip46') {
           // Try to reconnect NIP-46
           const bunkerPointer = loadBunkerPointer();
           console.log('[Nostr] Attempting NIP-46 reconnect, bunkerPointer:', !!bunkerPointer);
@@ -161,8 +185,8 @@ export function NostrProvider({ children }: { children: ReactNode }) {
           clearStoredUser();
           clearSigner();
           dispatch({ type: 'SET_LOADING', payload: false });
-        } else if (storedMethod === 'nip07' && extensionAvailable) {
-          // Verify NIP-07 session
+        } else if (storedMethod === 'nip07' && !isDesktop && hasNip07Extension()) {
+          // Verify NIP-07 session (web only)
           try {
             const pubkey = await initNip07Signer();
             if (pubkey === storedUser.pubkey) {
