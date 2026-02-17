@@ -34,7 +34,8 @@
   - **Ubuntu/Debian:** download the `.deb` and install with `sudo dpkg -i msp-studio_*.deb`
   - **Fedora/RHEL:** download the `.rpm` and install with `sudo rpm -i msp-studio_*.rpm`
   - **Any distro:** download the `.AppImage`, make it executable (`chmod +x`), and run it directly
-- "Once it's installed, the app will automatically check for updates whenever you open it — no need to come back to this page"
+- "On Linux, auto-update isn't supported — so when a new version comes out, just head back to the releases page and download the latest"
+- "On Mac and Windows, the app will automatically check for updates whenever you open it — no need to come back to this page"
 
 ## 3. The Big Picture (15 sec)
 - "Here's what we're doing: filling in your album info, adding your tracks, and getting an RSS feed you can share anywhere"
