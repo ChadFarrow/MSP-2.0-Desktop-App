@@ -387,6 +387,7 @@ function AppContent() {
             <FeedSidebar
               isOpen={sidebarOpen}
               onLoadFeed={handleSidebarLoadFeed}
+              onDeleteFeed={() => setCurrentLocalFeedId(undefined)}
               currentFeedId={currentLocalFeedId}
               refreshKey={sidebarRefreshKey}
             />

@@ -1,18 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
-import { listFeedsLocal, loadFeedLocal, formatFeedDate } from '../utils/localFeedStorage';
+import { listFeedsLocal, loadFeedLocal, deleteFeedLocal, formatFeedDate } from '../utils/localFeedStorage';
 import type { FeedSummary } from '../utils/localFeedStorage';
 
 interface FeedSidebarProps {
   isOpen: boolean;
   onLoadFeed: (xml: string, id: string, feedType: 'album' | 'video' | 'publisher') => void;
+  onDeleteFeed?: () => void;
   currentFeedId: string | undefined;
   refreshKey?: number;
 }
 
-export function FeedSidebar({ isOpen, onLoadFeed, currentFeedId, refreshKey }: FeedSidebarProps) {
+export function FeedSidebar({ isOpen, onLoadFeed, onDeleteFeed, currentFeedId, refreshKey }: FeedSidebarProps) {
   const [feeds, setFeeds] = useState<FeedSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const refreshFeeds = useCallback(async () => {
     try {
@@ -36,6 +38,7 @@ export function FeedSidebar({ isOpen, onLoadFeed, currentFeedId, refreshKey }: F
 
   const handleClick = async (feed: FeedSummary) => {
     if (loadingId) return;
+    setDeleteConfirmId(null);
     setLoadingId(feed.id);
     try {
       const fullFeed = await loadFeedLocal(feed.id);
@@ -45,6 +48,24 @@ export function FeedSidebar({ isOpen, onLoadFeed, currentFeedId, refreshKey }: F
       alert('Failed to load feed: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setLoadingId(null);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (deleteConfirmId !== id) {
+      setDeleteConfirmId(id);
+      return;
+    }
+    try {
+      await deleteFeedLocal(id);
+      setFeeds(prev => prev.filter(f => f.id !== id));
+      setDeleteConfirmId(null);
+      if (id === currentFeedId) {
+        onDeleteFeed?.();
+      }
+    } catch (err) {
+      console.error('FeedSidebar: deleteFeedLocal error', err);
     }
   };
 
@@ -69,9 +90,18 @@ export function FeedSidebar({ isOpen, onLoadFeed, currentFeedId, refreshKey }: F
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(feed); }}
           >
-            <span className="feed-sidebar-item-title">
-              {loadingId === feed.id ? 'Loading...' : (feed.title || 'Untitled')}
-            </span>
+            <div className="feed-sidebar-item-row">
+              <span className="feed-sidebar-item-title">
+                {loadingId === feed.id ? 'Loading...' : (feed.title || 'Untitled')}
+              </span>
+              <button
+                className={`feed-sidebar-delete${deleteConfirmId === feed.id ? ' confirm' : ''}`}
+                onClick={(e) => handleDelete(e, feed.id)}
+                title={deleteConfirmId === feed.id ? 'Click to confirm delete' : 'Delete feed'}
+              >
+                {deleteConfirmId === feed.id ? 'Confirm?' : '×'}
+              </button>
+            </div>
             <div className="feed-sidebar-item-meta">
               <span className={`feed-sidebar-type ${feed.feed_type}`}>
                 {feed.feed_type}

@@ -400,6 +400,45 @@ body {
   font-size: 0.8125rem;
 }
 
+.feed-sidebar-item-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.feed-sidebar-delete {
+  flex-shrink: 0;
+  margin-left: auto;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1;
+  padding: 2px 6px;
+  opacity: 0;
+  transition: opacity var(--transition), background var(--transition), color var(--transition);
+}
+
+.feed-sidebar-item:hover .feed-sidebar-delete,
+.feed-sidebar-delete.confirm {
+  opacity: 1;
+}
+
+.feed-sidebar-delete:hover {
+  background: var(--error, #ef4444);
+  color: #fff;
+}
+
+.feed-sidebar-delete.confirm {
+  background: var(--error, #ef4444);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
 /* Sidebar toggle button in header */
 .sidebar-toggle {
   display: inline-flex;

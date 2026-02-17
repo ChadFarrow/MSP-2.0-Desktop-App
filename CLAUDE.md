@@ -142,6 +142,7 @@ Feeds are stored as plain XML files in the app data directory (`com.podtards.msp
 - Refreshes feed list on open and when `sidebarRefreshKey` increments (after saves)
 - Loading a feed from sidebar checks `isDirty` state and prompts before switching
 - Active feed highlighted via `currentLocalFeedId` (the filename slug)
+- **Delete**: Two-click pattern (× → Confirm?) with `deleteFeedLocal()`. Deleting the active feed clears `currentLocalFeedId` via `onDeleteFeed` callback
 
 ### State Management
 Uses React Context + useReducer pattern (not Redux). Three separate stores:
