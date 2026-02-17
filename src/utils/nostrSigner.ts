@@ -28,7 +28,22 @@ export interface NostrSigner {
 
 // Current active signer
 let currentSigner: NostrSigner | null = null;
-let currentMethod: 'nip07' | 'nip46' | null = null;
+let currentMethod: 'nip07' | 'nip46' | 'tauri' | null = null;
+
+// Tauri Signer (desktop nsec login)
+class TauriSigner implements NostrSigner {
+  async getPublicKey(): Promise<string> {
+    const { getPubkey } = await import('./tauriNostr');
+    const profile = await getPubkey();
+    if (!profile) throw new Error('Not logged in');
+    return profile.pubkey;
+  }
+
+  async signEvent(event: EventTemplate): Promise<VerifiedEvent> {
+    const { signEvent } = await import('./tauriNostr');
+    return await signEvent(event as { kind: number; content: string; tags: string[][] }) as VerifiedEvent;
+  }
+}
 
 // NIP-07 Signer (browser extension)
 class Nip07Signer implements NostrSigner {
@@ -134,6 +149,13 @@ export function generateNostrConnectUri(clientPubkey: string, secret: string): s
     secret,
     name: 'Music Side Project',
   });
+}
+
+// Initialize Tauri signer (desktop nsec login)
+export function initTauriSigner(): void {
+  currentSigner = new TauriSigner();
+  currentMethod = 'tauri';
+  storeConnectionMethod('tauri');
 }
 
 // Initialize NIP-07 signer
@@ -282,7 +304,7 @@ export function hasSigner(): boolean {
 }
 
 // Get current connection method
-export function getConnectionMethod(): 'nip07' | 'nip46' | null {
+export function getConnectionMethod(): 'nip07' | 'nip46' | 'tauri' | null {
   return currentMethod;
 }
 

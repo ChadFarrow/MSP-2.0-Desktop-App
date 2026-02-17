@@ -40,7 +40,6 @@ This converts MSP 2.0 into a native desktop app using Tauri.
 
 2. Copy the new TypeScript files:
    - `src/lib/tauri-nostr.ts` - Nostr bridge for desktop
-   - `src/components/DesktopNostrLogin.tsx` - Login component
 
 3. Add Tauri dependencies to your `package.json`:
    ```bash
@@ -105,20 +104,7 @@ const signed = await nostr.signEvent(event);
 
 ### Login Component
 
-Replace `NostrLoginButton.tsx` usage:
-
-```tsx
-import { isTauri } from '../lib/tauri-nostr';
-import { DesktopNostrLogin } from './DesktopNostrLogin';
-import NostrLoginButton from './NostrLoginButton'; // Your existing component
-
-function NostrAuth() {
-  if (isTauri()) {
-    return <DesktopNostrLogin onLogin={handleLogin} onLogout={handleLogout} />;
-  }
-  return <NostrLoginButton />;
-}
-```
+The `NostrConnectModal` component handles all login flows (nsec, remote signer, browser extension) in both web and desktop environments.
 
 ## What Changes
 

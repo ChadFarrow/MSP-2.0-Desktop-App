@@ -36,6 +36,7 @@ interface KeyStorageModalProps {
   onUnlock?: (profile: NostrProfile) => void;
   onKeySaved?: () => void;
   onKeyCleared?: () => void;
+  excludePubkey?: string;
 }
 
 export function KeyStorageModal({
@@ -47,6 +48,7 @@ export function KeyStorageModal({
   onUnlock,
   onKeySaved,
   onKeyCleared,
+  excludePubkey,
 }: KeyStorageModalProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -59,7 +61,7 @@ export function KeyStorageModal({
   const [profileCache, setProfileCache] = useState<Record<string, ProfileInfo>>({});
   const [loadingProfiles, setLoadingProfiles] = useState<Set<string>>(new Set());
 
-  const keys = storedKeyInfo?.keys || [];
+  const keys = (storedKeyInfo?.keys || []).filter(k => k.pubkey !== excludePubkey);
   const selectedKey = keys.find(k => k.pubkey === selectedPubkey) || keys[0];
 
   // Select first key by default
@@ -281,6 +283,7 @@ export function KeyStorageModal({
               disabled={loading}
               autoFocus
             />
+            <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Minimum 8 characters</small>
           </div>
           <div className="form-group">
             <label htmlFor="confirm-password">Confirm Password</label>

@@ -20,13 +20,14 @@ export const isTauri = (): boolean => {
 
 /**
  * Get the base URL for API calls.
- * Returns the production URL for Tauri, empty string for web (relative paths).
+ * Returns the production URL for Tauri production builds, empty string otherwise.
+ * In dev mode (tauri:dev), use relative paths so Vite proxy handles CORS.
  */
 export function getApiBaseUrl(): string {
   if (import.meta.env.VITE_CANONICAL_URL) {
     return import.meta.env.VITE_CANONICAL_URL;
   }
-  return isTauri() ? PRODUCTION_API_BASE : '';
+  return isTauri() && !import.meta.env.DEV ? PRODUCTION_API_BASE : '';
 }
 
 /**

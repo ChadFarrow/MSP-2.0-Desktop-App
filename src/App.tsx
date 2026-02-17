@@ -26,6 +26,7 @@ import { openUrl } from './utils/openUrl';
 import type { Album } from './types/feed';
 import {
   tryAutoUnlockStoredKey,
+  checkStoredKey,
   type StoredKeyInfo,
   type NostrProfile,
 } from './utils/tauriNostr';
@@ -43,6 +44,9 @@ function AppContent() {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showNostrConnectModal, setShowNostrConnectModal] = useState(false);
+  const [showSwitchAccountModal, setShowSwitchAccountModal] = useState(false);
+  const [switchStoredKeyInfo, setSwitchStoredKeyInfo] = useState<StoredKeyInfo | undefined>(undefined);
+  const [switchFromPubkey, setSwitchFromPubkey] = useState<string | null>(null);
   const [showConfirmNewModal, setShowConfirmNewModal] = useState(false);
   const [pendingNewFeedType, setPendingNewFeedType] = useState<FeedType>('album');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -322,12 +326,33 @@ function AppContent() {
                   )}
                   <div className="dropdown-divider" />
                   {nostrState.isLoggedIn ? (
+                    <>
+                    <button
+                      className="dropdown-item"
+                      onClick={async () => {
+                        setSwitchFromPubkey(nostrState.user?.pubkey ?? null);
+                        setShowDropdown(false);
+                        try {
+                          const keyInfo = await checkStoredKey();
+                          setSwitchStoredKeyInfo(keyInfo);
+                          nostrLogout();
+                          setShowSwitchAccountModal(true);
+                        } catch {
+                          // Fall back to full sign-in modal if key check fails
+                          nostrLogout();
+                          setShowNostrConnectModal(true);
+                        }
+                      }}
+                    >
+                      🔄 Switch Account
+                    </button>
                     <button
                       className="dropdown-item"
                       onClick={() => { nostrLogout(); setShowDropdown(false); }}
                     >
                       🚪 Sign Out (nostr)
                     </button>
+                    </>
                   ) : (
                     <button
                       className="dropdown-item"
@@ -412,8 +437,17 @@ function AppContent() {
       )}
 
       {showNostrConnectModal && (
-        <NostrConnectModal onClose={() => setShowNostrConnectModal(false)} />
+        <NostrConnectModal onClose={() => { setShowNostrConnectModal(false); setSwitchFromPubkey(null); }} excludePubkey={switchFromPubkey ?? undefined} />
       )}
+
+      <KeyStorageModal
+        isOpen={showSwitchAccountModal}
+        onClose={() => { setShowSwitchAccountModal(false); setSwitchFromPubkey(null); setSwitchStoredKeyInfo(undefined); }}
+        mode="unlock"
+        storedKeyInfo={switchStoredKeyInfo}
+        excludePubkey={switchFromPubkey ?? undefined}
+        onUnlock={(profile) => { loginWithProfile(profile); setShowSwitchAccountModal(false); setSwitchFromPubkey(null); setSwitchStoredKeyInfo(undefined); }}
+      />
 
       <ConfirmModal
         isOpen={showConfirmNewModal}

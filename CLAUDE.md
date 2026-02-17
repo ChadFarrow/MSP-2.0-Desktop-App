@@ -121,7 +121,8 @@ Tauri-specific wrappers provide the same API surface as web equivalents:
 - `tauriNostr.ts` - Drop-in replacement for NIP-07 browser extension calls
 - `tauriBlossom.ts` - Blossom uploads via Rust backend (SHA256 hashing, auth events)
 - `localFeedStorage.ts` - Feed persistence as plain XML files in app data directory
-- `DesktopNostrLogin.tsx` - Login via nsec/hex key instead of browser extension
+
+Login is handled by `NostrConnectModal.tsx` which supports all flows (nsec, remote signer, browser extension) in both web and desktop environments.
 
 The Rust backend (`src-tauri/src/main.rs`) exposes Tauri commands for Nostr auth, feed storage, and Blossom operations, using `nostr-sdk` and thread-safe `Mutex<Option<T>>` state.
 

@@ -18,9 +18,11 @@ import {
   clearSigner,
   loadConnectionMethod,
   loadBunkerPointer,
+  initTauriSigner,
 } from '../utils/nostrSigner';
 import { fetchNostrProfile } from '../utils/nostrSync';
 import { isTauri } from '../utils/api';
+import { hydrateNostrUser } from '../utils/nostr';
 
 // Action types
 type NostrAction =
@@ -115,9 +117,15 @@ export function NostrProvider({ children }: { children: ReactNode }) {
     async function init() {
       const isDesktop = isTauri();
 
+      // On desktop, hydrate user from filesystem before checking localStorage
+      if (isDesktop) {
+        await hydrateNostrUser();
+      }
+
       // Check for stored session
       const storedUser = loadStoredUser();
-      const storedMethod = loadConnectionMethod();
+      // On desktop, default to 'tauri' method if user exists but method was lost (localStorage cleared)
+      const storedMethod = loadConnectionMethod() || (isDesktop && storedUser ? 'tauri' : null);
       console.log('[Nostr] Init - storedUser:', storedUser?.npub, 'storedMethod:', storedMethod, 'isDesktop:', isDesktop);
 
       // Check for NIP-07 extension (skip on desktop — no browser extensions available)
@@ -133,6 +141,7 @@ export function NostrProvider({ children }: { children: ReactNode }) {
         if (storedMethod === 'tauri') {
           // Desktop session — restore from stored user profile
           // Key unlock happens separately in NostrConnectModal
+          initTauriSigner();
           dispatch({ type: 'RESTORE_SESSION', payload: { user: storedUser, method: 'tauri' } });
 
           // Refresh profile in background
@@ -329,6 +338,9 @@ export function NostrProvider({ children }: { children: ReactNode }) {
 
   // Login with profile from Tauri (desktop nsec login)
   const loginWithProfile = useCallback((profile: { pubkey: string; npub: string }) => {
+    // Initialize the signer so hasSigner() returns true for API auth
+    initTauriSigner();
+
     const user: NostrUser = {
       pubkey: profile.pubkey,
       npub: profile.npub,

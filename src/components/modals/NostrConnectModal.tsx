@@ -9,19 +9,23 @@ import {
   loginWithHex,
   checkStoredKey,
   tryAutoUnlockStoredKey,
+  removeStoredKey,
   type NostrProfile,
   type StoredKeyInfo,
 } from '../../utils/tauriNostr';
 import { KeyStorageModal } from './KeyStorageModal';
 import { extractErrorMessage } from '../../utils/errorHandling';
+import { hexToNpub, truncateNpub } from '../../utils/nostr';
+import { fetchNostrProfile } from '../../utils/nostrSync';
 
 interface NostrConnectModalProps {
   onClose: () => void;
+  excludePubkey?: string;
 }
 
 type Tab = 'extension' | 'remote' | 'nsec';
 
-export function NostrConnectModal({ onClose }: NostrConnectModalProps) {
+export function NostrConnectModal({ onClose, excludePubkey }: NostrConnectModalProps) {
   const { state, login, loginWithNip46, loginWithProfile } = useNostr();
   const [tab, setTab] = useState<Tab>(() => {
     // Default to nsec on Tauri, extension if available, otherwise remote
@@ -38,9 +42,13 @@ export function NostrConnectModal({ onClose }: NostrConnectModalProps) {
   const [nsecInput, setNsecInput] = useState('');
   const [storedKeyInfo, setStoredKeyInfo] = useState<StoredKeyInfo | null>(null);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [unlockPubkey, setUnlockPubkey] = useState<string | null>(null);
+  const [confirmRemovePubkey, setConfirmRemovePubkey] = useState<string | null>(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [pendingNsec, setPendingNsec] = useState<string | null>(null);
   const [checkingStoredKey, setCheckingStoredKey] = useState(isTauri());
+
+  const [keyProfiles, setKeyProfiles] = useState<Record<string, { name?: string; picture?: string }>>({});
 
   const hasExtension = hasNip07Extension();
   const isDesktop = isTauri();
@@ -59,9 +67,9 @@ export function NostrConnectModal({ onClose }: NostrConnectModalProps) {
           loginWithProfile(result.profile);
           onClose();
           return;
-        } else if (result.showUnlockModal) {
-          setShowUnlockModal(true);
         }
+        // Don't auto-show unlock modal — let user see login options first
+        // They can click "Unlock" in the stored key notice
       } finally {
         setConnecting(false);
         setCheckingStoredKey(false);
@@ -70,6 +78,24 @@ export function NostrConnectModal({ onClose }: NostrConnectModalProps) {
 
     checkKey();
   }, [isDesktop, loginWithProfile, onClose]);
+
+  // Fetch Nostr profiles for stored keys
+  useEffect(() => {
+    if (!storedKeyInfo?.keys?.length) return;
+    for (const key of storedKeyInfo.keys) {
+      fetchNostrProfile(key.pubkey).then((profile) => {
+        if (profile) {
+          setKeyProfiles(prev => ({
+            ...prev,
+            [key.pubkey]: {
+              name: profile.display_name || profile.name,
+              picture: profile.picture,
+            }
+          }));
+        }
+      });
+    }
+  }, [storedKeyInfo]);
 
   // Generate QR code when connectUri changes
   useEffect(() => {
@@ -219,6 +245,7 @@ export function NostrConnectModal({ onClose }: NostrConnectModalProps) {
 
   const handleUnlockModalClose = () => {
     setShowUnlockModal(false);
+    setUnlockPubkey(null);
     // Stay on modal so user can enter nsec manually
   };
 
@@ -239,6 +266,8 @@ export function NostrConnectModal({ onClose }: NostrConnectModalProps) {
     }
     onClose();
   };
+
+  const visibleKeys = storedKeyInfo?.keys?.filter(k => k.pubkey !== excludePubkey) ?? [];
 
   // Show loading while checking for stored key
   if (checkingStoredKey) {
@@ -298,9 +327,51 @@ export function NostrConnectModal({ onClose }: NostrConnectModalProps) {
               Enter your Nostr private key (nsec) to sign in. Your key will be encrypted and stored securely on this device.
             </p>
 
-            {storedKeyInfo?.keys && storedKeyInfo.keys.length > 0 && (
+            {visibleKeys.length > 0 && (
               <div className="stored-key-notice">
-                <p>You have {storedKeyInfo.keys.length} saved key{storedKeyInfo.keys.length > 1 ? 's' : ''}. <button className="link-btn" onClick={() => setShowUnlockModal(true)}>Unlock</button></p>
+                <p style={{ marginBottom: '8px' }}>Saved key{visibleKeys.length > 1 ? 's' : ''}:</p>
+                {visibleKeys.map((key) => {
+                  const profile = keyProfiles[key.pubkey];
+                  const npub = hexToNpub(key.pubkey);
+                  const isConfirming = confirmRemovePubkey === key.pubkey;
+                  return (
+                    <div
+                      key={key.pubkey}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}
+                    >
+                      {profile?.picture ? (
+                        <img
+                          src={profile.picture}
+                          alt=""
+                          style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <span style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
+                          🔑
+                        </span>
+                      )}
+                      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.875rem' }}>
+                        {profile?.name || key.label || truncateNpub(npub)}
+                        {!isConfirming && (
+                          <button className="link-btn" style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', marginLeft: '6px', verticalAlign: 'middle' }} onClick={() => setConfirmRemovePubkey(key.pubkey)} title="Remove saved key">✕</button>
+                        )}
+                      </span>
+                      {isConfirming ? (
+                        <>
+                          <button className="link-btn" style={{ color: 'var(--color-danger, #e53e3e)' }} onClick={async () => {
+                            await removeStoredKey(key.pubkey);
+                            setConfirmRemovePubkey(null);
+                            const updated = await checkStoredKey();
+                            setStoredKeyInfo(updated);
+                          }}>Remove</button>
+                          <button className="link-btn" onClick={() => setConfirmRemovePubkey(null)}>Cancel</button>
+                        </>
+                      ) : (
+                        <button className="link-btn" onClick={() => { setUnlockPubkey(key.pubkey); setShowUnlockModal(true); }}>Unlock</button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -440,7 +511,9 @@ export function NostrConnectModal({ onClose }: NostrConnectModalProps) {
         isOpen={showUnlockModal}
         onClose={handleUnlockModalClose}
         mode="unlock"
-        storedKeyInfo={storedKeyInfo || undefined}
+        storedKeyInfo={unlockPubkey && storedKeyInfo
+          ? { keys: storedKeyInfo.keys.filter(k => k.pubkey === unlockPubkey) }
+          : storedKeyInfo || undefined}
         onUnlock={handleUnlock}
       />
 
