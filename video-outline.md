@@ -16,10 +16,12 @@
 - "Head to the GitHub releases page to grab the latest version"
 - Show: navigating to **github.com/ChadFarrow/MSP-2.0-Desktop-App/releases/latest**
 
-### macOS (15 sec)
+### macOS (20 sec)
 - Download the `.dmg` file — **Apple Silicon** (M1/M2/M3/M4) or **Intel**, pick the one that matches your Mac
 - Open the DMG and drag MSP Studio into your Applications folder
-- First launch: right-click (or Control-click) the app and select **Open** — "macOS will warn you because the app isn't from the App Store, but it's safe — just click Open"
+- "macOS blocks unsigned apps by default, so you'll need to run one command in Terminal to allow it"
+- Show opening Terminal and running: `xattr -cr /Applications/MSP\ Studio.app`
+- "That removes the quarantine flag — you only have to do this once"
 - Show the app launching successfully
 
 ### Windows (10 sec)
