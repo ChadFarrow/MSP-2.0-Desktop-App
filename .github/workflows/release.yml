@@ -138,4 +138,102 @@ jobs:
             ```
           releaseDraft: false
           prerelease: false
+          includeUpdaterJson: false
           args: ${{ matrix.args }}
+
+  upload-updater-json:
+    needs: [prepare, build-tauri]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Build and upload latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ needs.prepare.outputs.tag_name }}"
+          VERSION="${{ needs.prepare.outputs.version }}"
+          REPO="ChadFarrow/MSP-2.0-Desktop-App"
+
+          # Wait for all assets to be available
+          sleep 5
+
+          # Get release info
+          RELEASE_JSON=$(gh api repos/$REPO/releases/tags/$TAG)
+          RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id')
+          RELEASE_BODY=$(echo "$RELEASE_JSON" | jq -r '.body')
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+          DOWNLOAD_BASE="https://github.com/$REPO/releases/download/$TAG"
+
+          # Download all .sig files
+          TMPDIR=$(mktemp -d)
+          gh release download "$TAG" --repo "$REPO" --pattern '*.sig' --dir "$TMPDIR"
+
+          # Read signatures
+          read_sig() { cat "$TMPDIR/$1" 2>/dev/null || echo ""; }
+
+          DARWIN_X64_SIG=$(read_sig "MSP.Studio_x64.app.tar.gz.sig")
+          DARWIN_AARCH64_SIG=$(read_sig "MSP.Studio_aarch64.app.tar.gz.sig")
+          LINUX_APPIMAGE_SIG=$(read_sig "MSP.Studio_${VERSION}_amd64.AppImage.sig")
+          LINUX_DEB_SIG=$(read_sig "MSP.Studio_${VERSION}_amd64.deb.sig")
+          LINUX_RPM_SIG=$(read_sig "MSP.Studio-${VERSION}-1.x86_64.rpm.sig")
+          WINDOWS_MSI_SIG=$(read_sig "MSP.Studio_${VERSION}_x64_en-US.msi.sig")
+          WINDOWS_NSIS_SIG=$(read_sig "MSP.Studio_${VERSION}_x64-setup.exe.sig")
+
+          # Build latest.json using jq for proper escaping
+          jq -n \
+            --arg version "$VERSION" \
+            --arg notes "$RELEASE_BODY" \
+            --arg pub_date "$PUB_DATE" \
+            --arg darwin_x64_sig "$DARWIN_X64_SIG" \
+            --arg darwin_x64_url "$DOWNLOAD_BASE/MSP.Studio_x64.app.tar.gz" \
+            --arg darwin_aarch64_sig "$DARWIN_AARCH64_SIG" \
+            --arg darwin_aarch64_url "$DOWNLOAD_BASE/MSP.Studio_aarch64.app.tar.gz" \
+            --arg linux_sig "$LINUX_APPIMAGE_SIG" \
+            --arg linux_url "$DOWNLOAD_BASE/MSP.Studio_${VERSION}_amd64.AppImage" \
+            --arg linux_appimage_sig "$LINUX_APPIMAGE_SIG" \
+            --arg linux_appimage_url "$DOWNLOAD_BASE/MSP.Studio_${VERSION}_amd64.AppImage" \
+            --arg linux_deb_sig "$LINUX_DEB_SIG" \
+            --arg linux_deb_url "$DOWNLOAD_BASE/MSP.Studio_${VERSION}_amd64.deb" \
+            --arg linux_rpm_sig "$LINUX_RPM_SIG" \
+            --arg linux_rpm_url "$DOWNLOAD_BASE/MSP.Studio-${VERSION}-1.x86_64.rpm" \
+            --arg windows_sig "$WINDOWS_MSI_SIG" \
+            --arg windows_url "$DOWNLOAD_BASE/MSP.Studio_${VERSION}_x64_en-US.msi" \
+            --arg windows_msi_sig "$WINDOWS_MSI_SIG" \
+            --arg windows_msi_url "$DOWNLOAD_BASE/MSP.Studio_${VERSION}_x64_en-US.msi" \
+            --arg windows_nsis_sig "$WINDOWS_NSIS_SIG" \
+            --arg windows_nsis_url "$DOWNLOAD_BASE/MSP.Studio_${VERSION}_x64-setup.exe" \
+            '{
+              version: $version,
+              notes: $notes,
+              pub_date: $pub_date,
+              platforms: {
+                "darwin-x86_64": { signature: $darwin_x64_sig, url: $darwin_x64_url },
+                "darwin-x86_64-app": { signature: $darwin_x64_sig, url: $darwin_x64_url },
+                "darwin-aarch64": { signature: $darwin_aarch64_sig, url: $darwin_aarch64_url },
+                "darwin-aarch64-app": { signature: $darwin_aarch64_sig, url: $darwin_aarch64_url },
+                "linux-x86_64": { signature: $linux_sig, url: $linux_url },
+                "linux-x86_64-appimage": { signature: $linux_appimage_sig, url: $linux_appimage_url },
+                "linux-x86_64-deb": { signature: $linux_deb_sig, url: $linux_deb_url },
+                "linux-x86_64-rpm": { signature: $linux_rpm_sig, url: $linux_rpm_url },
+                "windows-x86_64": { signature: $windows_sig, url: $windows_url },
+                "windows-x86_64-msi": { signature: $windows_msi_sig, url: $windows_msi_url },
+                "windows-x86_64-nsis": { signature: $windows_nsis_sig, url: $windows_nsis_url }
+              }
+            }' > "$TMPDIR/latest.json"
+
+          echo "Generated latest.json:"
+          cat "$TMPDIR/latest.json" | jq '.platforms | keys'
+
+          # Delete existing latest.json if present (from a partial upload)
+          EXISTING_ASSET_ID=$(echo "$RELEASE_JSON" | jq -r '.assets[] | select(.name == "latest.json") | .id')
+          if [ -n "$EXISTING_ASSET_ID" ] && [ "$EXISTING_ASSET_ID" != "null" ]; then
+            echo "Deleting existing latest.json (asset $EXISTING_ASSET_ID)..."
+            gh api -X DELETE repos/$REPO/releases/assets/$EXISTING_ASSET_ID
+          fi
+
+          # Upload new latest.json
+          gh release upload "$TAG" "$TMPDIR/latest.json" --repo "$REPO"
+          echo "Uploaded latest.json successfully"
+
+          rm -rf "$TMPDIR"

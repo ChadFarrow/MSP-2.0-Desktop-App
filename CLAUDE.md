@@ -103,6 +103,7 @@ For manual version control (optional):
 | "Command plugin:updater\|check not allowed by ACL" | Updater plugin permissions missing from capabilities | Add `updater:default` and `process:allow-restart` to `src-tauri/capabilities/default.json` |
 | "error sending request for url" on Linux update check | System CA certificates not detected by reqwest | Fixed in v0.1.28+ via `native-tls-vendored` feature; older versions must manually download update |
 | Linux auto-update downloads but fails to install | `tauri-plugin-updater` <2.10 lacks privilege escalation for `.deb` installs (`/usr/bin/` is root-owned) | Fixed by upgrading to `tauri-plugin-updater` 2.10+; users on older versions must manually install `.deb` via `sudo dpkg -i` |
+| "Not Found" uploading `latest.json` in release | Parallel build jobs race to upload/update the same `latest.json` asset | Fixed: `includeUpdaterJson: false` on build jobs; separate `upload-updater-json` job assembles it after all builds complete |
 
 ## Architecture
 
