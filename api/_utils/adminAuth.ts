@@ -16,7 +16,7 @@ secp.hashes.hmacSha256 = (key: Uint8Array, ...msgs: Uint8Array[]) => {
 const { schnorr } = secp;
 
 // Nostr event structure
-interface NostrEvent {
+export interface NostrEvent {
   id: string;
   pubkey: string;
   created_at: number;

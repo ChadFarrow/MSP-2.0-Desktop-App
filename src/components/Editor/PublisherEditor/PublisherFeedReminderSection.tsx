@@ -22,6 +22,9 @@ export function PublisherFeedReminderSection({ publisherFeed }: PublisherFeedRem
   const { state: nostrState } = useNostr();
   const [isHosting, setIsHosting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string; url?: string } | null>(null);
+  const [selfHostedUrl, setSelfHostedUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [piResult, setPiResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const podcastGuid = publisherFeed.podcastGuid;
   const existingInfo = podcastGuid ? getHostedFeedInfo(podcastGuid) : null;
@@ -108,6 +111,28 @@ export function PublisherFeedReminderSection({ publisherFeed }: PublisherFeedRem
     downloadXml(xml, `${safeTitle}.xml`);
   };
 
+  const handleSubmitToPodcastIndex = async () => {
+    if (!selfHostedUrl.trim()) return;
+
+    setIsSubmitting(true);
+    setPiResult(null);
+
+    try {
+      const response = await fetch(`/api/pubnotify?url=${encodeURIComponent(selfHostedUrl.trim())}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to submit to Podcast Index');
+      }
+
+      setPiResult({ success: true, message: 'Feed submitted to Podcast Index! It may take a moment to appear.' });
+    } catch (err) {
+      setPiResult({ success: false, message: err instanceof Error ? err.message : 'Failed to submit' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Section title="Before adding the publisher feed to the catalog feeds" icon="&#9888;">
       <div style={{
@@ -146,6 +171,48 @@ export function PublisherFeedReminderSection({ publisherFeed }: PublisherFeedRem
               {isHosting ? 'Hosting...' : isAlreadyHosted ? 'Already Hosted' : 'Host on MSP'}
             </button>
           </div>
+        </div>
+
+        {/* Submit self-hosted feed to Podcast Index */}
+        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(139, 92, 246, 0.2)' }}>
+          <p style={{ margin: 0, marginBottom: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+            Already hosting your feed? Submit the URL to Podcast Index.
+          </p>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input
+              type="text"
+              value={selfHostedUrl}
+              onChange={(e) => setSelfHostedUrl(e.target.value)}
+              placeholder="https://example.com/publisher-feed.xml"
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: '4px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                fontFamily: 'monospace'
+              }}
+            />
+            <button
+              className="btn btn-secondary"
+              onClick={handleSubmitToPodcastIndex}
+              disabled={isSubmitting || !selfHostedUrl.trim()}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit to PI'}
+            </button>
+          </div>
+          {piResult && (
+            <p style={{
+              color: piResult.success ? 'var(--success-color, #22c55e)' : 'var(--danger-color, #ef4444)',
+              fontSize: '13px',
+              marginTop: '8px',
+              margin: '8px 0 0 0'
+            }}>
+              {piResult.success ? '✓ ' : ''}{piResult.message}
+            </p>
+          )}
         </div>
 
         {isAlreadyHosted && existingInfo && (

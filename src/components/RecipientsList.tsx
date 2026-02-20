@@ -1,17 +1,9 @@
 import type { ValueRecipient } from '../types/feed';
+import { createSupportRecipients, isCommunitySupport } from '../types/feed';
 import { FIELD_INFO } from '../data/fieldInfo';
 import { detectAddressType } from '../utils/addressUtils';
 import { InfoIcon } from './InfoIcon';
 import { AddRecipientSelect } from './AddRecipientSelect';
-
-// Community support recipients - identified by both name AND address
-const COMMUNITY_SUPPORT_RECIPIENTS = [
-  { name: 'MSP 2.0', address: 'chadf@getalby.com' },
-  { name: 'Podcastindex.org', address: 'podcastindex@getalby.com' },
-];
-
-const isCommunitySupport = (recipient: ValueRecipient): boolean =>
-  COMMUNITY_SUPPORT_RECIPIENTS.some(cs => cs.name === recipient.name && cs.address === recipient.address);
 
 interface RecipientsListProps {
   recipients: ValueRecipient[];
@@ -114,12 +106,42 @@ export function RecipientsList({ recipients, onUpdate, onRemove, onAdd }: Recipi
     </div>
   );
 
+  const hasUserWithAddress = userRecipients.some(({ recipient }) => recipient.address);
+
+  const handleAddSupport = () => {
+    createSupportRecipients().forEach(r => onAdd(r));
+  };
+
   return (
     <>
       <h4 style={{ marginBottom: '12px', color: 'var(--text-secondary)' }}>Recipients</h4>
       <div className="repeatable-list">
         {userRecipients.map(({ recipient, originalIndex }) => renderRecipient(recipient, originalIndex))}
         <AddRecipientSelect onAdd={onAdd} />
+        {platformRecipients.length === 0 && hasUserWithAddress && (
+          <div style={{
+            borderTop: '1px solid var(--border-color)',
+            marginTop: '16px',
+            paddingTop: '16px',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              fontSize: '13px',
+              color: 'var(--text-secondary)',
+              marginBottom: '8px',
+              lineHeight: 1.4
+            }}>
+              Support the Podcasting 2.0 ecosystem? Add small splits for MSP 2.0 and Podcast Index.
+            </div>
+            <button
+              className="btn btn-secondary"
+              style={{ fontSize: '13px' }}
+              onClick={handleAddSupport}
+            >
+              Add Community Support
+            </button>
+          </div>
+        )}
         {platformRecipients.length > 0 && (
           <>
             <div style={{

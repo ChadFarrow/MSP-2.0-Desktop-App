@@ -1,29 +1,20 @@
 // Shared API utilities for hosted feed endpoints
 import type { VercelRequest } from '@vercel/node';
 import { createHash } from 'crypto';
+import { getAuthHeaders } from './podcastIndex.js';
 
 const PI_API_KEY = process.env.PODCASTINDEX_API_KEY;
 const PI_API_SECRET = process.env.PODCASTINDEX_API_SECRET;
 
 /**
- * Generate Podcast Index API auth headers
+ * Generate Podcast Index API auth headers (throws if not configured)
  */
 function getPodcastIndexHeaders(): Record<string, string> {
-  if (!PI_API_KEY || !PI_API_SECRET) {
+  const headers = getAuthHeaders();
+  if (!headers) {
     throw new Error('Podcast Index API credentials not configured');
   }
-
-  const apiHeaderTime = Math.floor(Date.now() / 1000);
-  const hash = createHash('sha1')
-    .update(PI_API_KEY + PI_API_SECRET + apiHeaderTime)
-    .digest('hex');
-
-  return {
-    'X-Auth-Key': PI_API_KEY,
-    'X-Auth-Date': apiHeaderTime.toString(),
-    'Authorization': hash,
-    'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)'
-  };
+  return headers;
 }
 
 /**

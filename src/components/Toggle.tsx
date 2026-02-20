@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 export function Toggle({ checked, onChange, label, labelSuffix }: {
   checked: boolean;
   onChange: (val: boolean) => void;
-  label?: string;
+  label?: ReactNode;
   labelSuffix?: ReactNode;
 }) {
   return (
