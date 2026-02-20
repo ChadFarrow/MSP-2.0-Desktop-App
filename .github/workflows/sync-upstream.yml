@@ -30,25 +30,58 @@ jobs:
 
       - name: Merge upstream changes
         if: steps.check.outputs.new_commits != '0'
+        id: merge
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git merge upstream/master --no-edit
+          if git merge upstream/master --no-edit; then
+            echo "conflicts=false" >> $GITHUB_OUTPUT
+          else
+            # Capture conflicting files before resolving
+            CONFLICTING=$(git diff --name-only --diff-filter=U)
+            echo "conflicting_files<<EOF" >> $GITHUB_OUTPUT
+            echo "$CONFLICTING" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "conflicts=true" >> $GITHUB_OUTPUT
+
+            # Resolve conflicts by keeping our (desktop) version
+            echo "$CONFLICTING" | xargs git checkout --ours --
+            git add -A
+            git -c core.editor=true merge --continue
+          fi
+
+      - name: Build PR body
+        if: steps.check.outputs.new_commits != '0'
+        id: pr_body
+        env:
+          CONFLICTS: ${{ steps.merge.outputs.conflicts }}
+          CONFLICTING_FILES: ${{ steps.merge.outputs.conflicting_files }}
+          NEW_COMMITS: ${{ steps.check.outputs.new_commits }}
+        run: |
+          {
+            echo "body<<EOF"
+            echo "Automated sync from [MSP-2.0 web repo](https://github.com/ChadFarrow/MSP-2.0)."
+            echo ""
+            echo "**New commits:** $NEW_COMMITS"
+            echo ""
+            if [ "$CONFLICTS" = "true" ]; then
+              echo "⚠️ **Merge conflicts were auto-resolved (kept desktop version):**"
+              echo "\`\`\`"
+              echo "$CONFLICTING_FILES"
+              echo "\`\`\`"
+              echo "These files have desktop-specific changes. Review whether any upstream updates to these files need to be manually incorporated."
+            else
+              echo "✅ No merge conflicts."
+            fi
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
         if: steps.check.outputs.new_commits != '0'
         uses: peter-evans/create-pull-request@v7
         with:
           title: "Sync updates from web repo"
-          body: |
-            Automated sync from [MSP-2.0 web repo](https://github.com/ChadFarrow/MSP-2.0).
-
-            **New commits:** ${{ steps.check.outputs.new_commits }}
-
-            Review for conflicts in:
-            - `package.json`
-            - `src/App.tsx`
-            - `CLAUDE.md`
+          body: ${{ steps.pr_body.outputs.body }}
           branch: sync-upstream
           delete-branch: true
           labels: automated
