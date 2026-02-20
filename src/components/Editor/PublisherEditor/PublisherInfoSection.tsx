@@ -68,13 +68,28 @@ export function PublisherInfoSection({ publisherFeed, dispatch }: PublisherInfoS
         </div>
         <div className="form-group">
           <label className="form-label">Publisher GUID <span className="required">*</span><InfoIcon text={FIELD_INFO.podcastGuid} /></label>
-          <input
-            type="text"
-            className="form-input"
-            placeholder="Auto-generated UUID"
-            value={publisherFeed.podcastGuid || ''}
-            onChange={e => dispatch({ type: 'UPDATE_PUBLISHER_FEED', payload: { podcastGuid: e.target.value } })}
-          />
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Auto-generated UUID"
+              value={publisherFeed.podcastGuid || ''}
+              onChange={e => dispatch({ type: 'UPDATE_PUBLISHER_FEED', payload: { podcastGuid: e.target.value } })}
+              style={{ flex: 1 }}
+            />
+            <button
+              type="button"
+              className="btn btn-secondary btn-small"
+              title="Generate new GUID"
+              onClick={() => {
+                if (confirm('Generate a new GUID? This will create a new feed identity. Only do this if you are using this feed as a template for a new publisher feed.')) {
+                  dispatch({ type: 'UPDATE_PUBLISHER_FEED', payload: { podcastGuid: crypto.randomUUID() } });
+                }
+              }}
+            >
+              New
+            </button>
+          </div>
         </div>
         <div className="form-group">
           <Toggle

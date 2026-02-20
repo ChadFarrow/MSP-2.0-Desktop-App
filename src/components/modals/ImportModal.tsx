@@ -27,9 +27,10 @@ interface ImportModalProps {
   onImport: (xml: string, sourceUrl?: string) => void;
   onLoadAlbum: (album: Album) => void;
   isLoggedIn: boolean;
+  templateMode?: boolean;
 }
 
-export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: ImportModalProps) {
+export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templateMode }: ImportModalProps) {
   const { state: nostrState } = useNostr();
   const [mode, setMode] = useState<'file' | 'paste' | 'url' | 'nostr' | 'nostrMusic' | 'nostrEvent' | 'hosted'>('file');
   const [xmlContent, setXmlContent] = useState('');
@@ -273,7 +274,7 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
         onClose={onClose}
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Import Feed
+            {templateMode ? 'Import Feed as Template' : 'Import Feed'}
             <span
               className="import-help-icon"
               onClick={() => setShowHelp(true)}
@@ -284,8 +285,7 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
           </div>
         }
         footer={
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
             {mode === 'nostrMusic' ? (
               <button className="btn btn-secondary" onClick={fetchMusicTracks} disabled={loadingMusic}>
                 {loadingMusic ? 'Loading...' : 'Refresh'}
@@ -314,9 +314,24 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn }: Impo
                 {loading ? 'Importing...' : 'Import Feed'}
               </button>
             )}
+            <div style={{ flex: 1 }} />
+            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
           </div>
         }
       >
+          {templateMode && (
+            <div style={{
+              padding: '10px 14px',
+              marginBottom: '16px',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--accent-bg-subtle)',
+              border: '1px solid var(--border-color)',
+              fontSize: '0.85rem',
+              color: 'var(--text-secondary)',
+            }}>
+              The imported feed will get a new GUID and won't be linked to any hosted feed.
+            </div>
+          )}
           <div className="form-group" style={{ marginBottom: '16px' }}>
             <label className="form-label">Import Source</label>
             <select

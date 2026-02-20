@@ -234,6 +234,14 @@ gh issue view <number>     # View issue details
 - `InfoIcon` component accepts `position` prop (`"right"` default, `"left"` for edge fields)
 - App layout: header → `app-body` (flex row: sidebar + `app-content`)
 
+### Modal Footer Convention
+All modal footers place action buttons on the left and the Cancel button on the far right, separated by a `<div style={{ flex: 1 }} />` spacer. Footer wrapper divs need `width: '100%'` so the spacer works inside `.modal-footer`.
+
+### New Feed Flow
+The "New" button opens `NewFeedChoiceModal` with two paths:
+- **Start Blank** — creates an empty feed (clears data)
+- **Use Template** — opens `ImportModal` in template mode (`templateMode` prop), which imports a feed with a regenerated GUID and no hosted credentials. Template handlers (`handleTemplateImport`, `handleTemplateLoadAlbum`) in `App.tsx` call `crypto.randomUUID()` for the new GUID and clear `pendingHostedStorage`
+
 ### Accessing Nostr State
 Use the `useNostr` hook to access logged-in user info:
 ```tsx

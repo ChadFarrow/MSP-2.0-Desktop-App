@@ -1,0 +1,17 @@
+name: Notify Desktop App
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Desktop App sync
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.DESKTOP_SYNC_TOKEN }}" \
+            https://api.github.com/repos/ChadFarrow/MSP-2.0-Desktop-App/dispatches \
+            -d '{"event_type":"web-repo-updated"}'
