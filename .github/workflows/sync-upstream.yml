@@ -52,6 +52,12 @@ jobs:
             git -c core.editor=true merge --continue
           fi
 
+      - name: Remove web-only workflows
+        if: steps.check.outputs.new_commits != '0'
+        run: |
+          rm -f .github/workflows/notify-desktop.yml
+          git add -A
+
       - name: Build PR body
         if: steps.check.outputs.new_commits != '0'
         id: pr_body
