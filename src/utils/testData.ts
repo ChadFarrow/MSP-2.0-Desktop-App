@@ -136,6 +136,7 @@ export function generateTestAlbum(): Album {
     funding: [
       { url: 'https://example.com/support', text: 'Support the band' }
     ],
+    op3: false,
     tracks: testTracks
   };
 }

@@ -14,6 +14,7 @@ export const FIELD_INFO = {
   ownerName: "The feed owner's name. Used for podcast directory contact info.",
   ownerEmail: "The feed owner's email address. Used for podcast directory contact info.",
   explicit: "Mark if your content contains explicit language or themes.",
+  op3: "Enable OP3 (Open Podcast Prefix Project) analytics. Adds a transparent prefix to track URLs for open, privacy-respecting download stats. Free, no signup required. Save/update your hosted feed after toggling for changes to take effect.",
 
   // Artwork
   imageUrl: "Direct link to your album art image. Ensure CORS policy allows all origins and headers.",

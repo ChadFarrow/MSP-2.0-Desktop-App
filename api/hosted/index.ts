@@ -6,7 +6,8 @@ import {
   notifyPodcastIndex,
   lookupPodcastIndexId,
   getBaseUrl,
-  hashToken
+  hashToken,
+  isValidFeedId
 } from '../_utils/feedUtils.js';
 
 // Generate a secure edit token
@@ -120,8 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(podcastGuid)) {
+    if (!isValidFeedId(podcastGuid)) {
       return res.status(400).json({ error: 'Invalid podcast GUID format' });
     }
 

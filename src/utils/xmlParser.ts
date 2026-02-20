@@ -5,6 +5,19 @@ import { createEmptyTrack } from '../types/feed';
 import { areValueBlocksStrictEqual, arePersonsEqual } from './comparison';
 import { apiFetch } from './api';
 
+// OP3 prefix pattern: https://op3.dev/e/ or https://op3.dev/e,pg=GUID/
+const OP3_PREFIX_RE = /^https:\/\/op3\.dev\/e(?:,[^/]*)?\//;
+
+// Strip OP3 prefix from a URL, restoring the original URL
+function stripOp3Prefix(url: string): string {
+  const stripped = url.replace(OP3_PREFIX_RE, '');
+  // If the remaining URL doesn't start with a protocol, it was HTTPS
+  if (!stripped.startsWith('http://') && !stripped.startsWith('https://')) {
+    return `https://${stripped}`;
+  }
+  return stripped;
+}
+
 // Known channel keys that we explicitly parse (don't capture as unknown)
 const KNOWN_CHANNEL_KEYS = new Set([
   'title',
@@ -78,6 +91,7 @@ export const parseRssFeed = (xmlString: string): Album => {
     ...common,
     medium: (getText(channel['podcast:medium']) as 'music' | 'video') || 'music',
     bannerArtUrl: '',
+    op3: false,
     unknownChannelElements: captureUnknownElements(channel, KNOWN_CHANNEL_KEYS),
     tracks: []
   };
@@ -175,6 +189,17 @@ export const parseRssFeed = (xmlString: string): Album => {
   if (items) {
     const itemArray = Array.isArray(items) ? items : [items];
     album.tracks = itemArray.map((item, index) => parseTrack(item, index + 1, album.value, album.persons));
+  }
+
+  // Detect OP3 prefix on any track enclosure URLs
+  const hasOp3 = album.tracks.some(t => OP3_PREFIX_RE.test(t.enclosureUrl));
+  album.op3 = hasOp3;
+  if (hasOp3) {
+    for (const track of album.tracks) {
+      if (OP3_PREFIX_RE.test(track.enclosureUrl)) {
+        track.enclosureUrl = stripOp3Prefix(track.enclosureUrl);
+      }
+    }
   }
 
   return album;

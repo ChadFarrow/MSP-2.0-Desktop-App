@@ -111,24 +111,6 @@ export function hasNostrExtension(): boolean {
   return typeof window !== 'undefined' && typeof window.nostr !== 'undefined';
 }
 
-// Wait for extension to be available (some inject late)
-export async function waitForNostrExtension(timeout = 3000): Promise<boolean> {
-  if (hasNostrExtension()) return true;
-
-  return new Promise((resolve) => {
-    const startTime = Date.now();
-    const interval = setInterval(() => {
-      if (hasNostrExtension()) {
-        clearInterval(interval);
-        resolve(true);
-      } else if (Date.now() - startTime > timeout) {
-        clearInterval(interval);
-        resolve(false);
-      }
-    }, 100);
-  });
-}
-
 // Get public key from extension
 export async function getPublicKey(): Promise<string> {
   if (!window.nostr) {

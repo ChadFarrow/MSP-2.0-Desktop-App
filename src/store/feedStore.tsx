@@ -2,29 +2,15 @@
 // MSP 2.0 - Feed State Management (React Context)
 import { createContext, useContext, useReducer, useEffect, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import type { Album, Track, Person, PersonRole, ValueRecipient, Funding, PublisherFeed, RemoteItem } from '../types/feed';
-import { createEmptyAlbum, createEmptyTrack, createEmptyPerson, createEmptyPersonRole, createEmptyRecipient, createEmptyFunding, createEmptyPublisherFeed, createEmptyRemoteItem, createEmptyVideoAlbum, createSupportRecipients } from '../types/feed';
+import type { Album, Track, Person, PersonRole, ValueRecipient, Funding, PublisherFeed, RemoteItem, FeedType } from '../types/feed';
+import { createEmptyAlbum, createEmptyTrack, createEmptyPerson, createEmptyPersonRole, createEmptyRecipient, createEmptyFunding, createEmptyPublisherFeed, createEmptyRemoteItem, createEmptyVideoAlbum, createSupportRecipients, isCommunitySupport, hasUserRecipients } from '../types/feed';
 import { albumStorage, videoStorage, publisherStorage, feedTypeStorage } from '../utils/storage';
 import { saveToDesktop, loadFromDesktop, DESKTOP_KEYS } from '../utils/desktopStorage';
 import { isTauri } from '../utils/api';
 import { hydrateHostedCredentials } from '../utils/hostedFeed';
 import { hydrateNostrUser } from '../utils/nostr';
 
-// Community support recipients - identified by both name AND address
-const COMMUNITY_SUPPORT_RECIPIENTS = [
-  { name: 'MSP 2.0', address: 'chadf@getalby.com' },
-  { name: 'Podcastindex.org', address: 'podcastindex@getalby.com' },
-];
-
-const isCommunitySupport = (r: ValueRecipient): boolean =>
-  COMMUNITY_SUPPORT_RECIPIENTS.some(cs => cs.name === r.name && cs.address === r.address);
-
-// Check if recipients have any user-added (non-support, non-empty) recipients
-const hasUserRecipients = (recipients: ValueRecipient[]): boolean =>
-  recipients.some(r => r.address && !isCommunitySupport(r));
-
-// Feed type enum
-export type FeedType = 'album' | 'video' | 'publisher';
+export type { FeedType };
 
 // Action types
 export type FeedAction =

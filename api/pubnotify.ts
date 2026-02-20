@@ -1,26 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import crypto from 'crypto';
-
-const API_KEY = process.env.PODCASTINDEX_API_KEY;
-const API_SECRET = process.env.PODCASTINDEX_API_SECRET;
-
-// Generate Podcast Index API auth headers
-function getAuthHeaders() {
-  if (!API_KEY || !API_SECRET) return null;
-
-  const apiHeaderTime = Math.floor(Date.now() / 1000);
-  const hash = crypto
-    .createHash('sha1')
-    .update(API_KEY + API_SECRET + apiHeaderTime)
-    .digest('hex');
-
-  return {
-    'X-Auth-Key': API_KEY,
-    'X-Auth-Date': apiHeaderTime.toString(),
-    'Authorization': hash,
-    'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)'
-  };
-}
+import { getAuthHeaders } from './_utils/podcastIndex.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -107,6 +86,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } catch (lookupErr) {
           // Lookup failed but pubnotify succeeded, continue without ID
           console.warn('Failed to lookup feed by URL:', lookupErr);
+        }
+      }
+
+      // If still not found, register the feed via add/byfeedurl (for new feeds)
+      if (!podcastIndexId) {
+        try {
+          const addResponse = await fetch(
+            `https://api.podcastindex.org/api/1.0/add/byfeedurl?url=${encodeURIComponent(url)}`,
+            { method: 'POST', headers: authHeaders }
+          );
+          const addText = await addResponse.text();
+          if (addText) {
+            try {
+              const addData = JSON.parse(addText);
+              if (addData.feed?.id) {
+                podcastIndexId = addData.feed.id;
+                podcastIndexPageUrl = `https://podcastindex.org/podcast/${podcastIndexId}`;
+              }
+            } catch {
+              // JSON parse failed
+            }
+          }
+        } catch (addErr) {
+          console.warn('Failed to add feed to Podcast Index:', addErr);
         }
       }
     }

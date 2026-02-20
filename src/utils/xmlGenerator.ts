@@ -2,9 +2,6 @@
 import type { Album, Track, Person, ValueBlock, ValueRecipient, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData } from '../types/feed';
 import { formatRFC822Date } from './dateUtils';
 
-// Re-export for backward compatibility
-export { formatRFC822Date };
-
 // Escape XML special characters
 const escapeXml = (str: string): string => {
   if (!str) return '';
@@ -377,6 +374,16 @@ const generateCommonChannelElements = (data: BaseChannelData, medium: string, le
   return lines;
 };
 
+// Apply OP3 analytics prefix to a URL
+// See https://op3.dev/setup for details
+const applyOp3Prefix = (url: string, podcastGuid?: string): string => {
+  if (!url) return url;
+  const pgParam = podcastGuid ? `,pg=${podcastGuid}` : '';
+  // For HTTPS URLs, strip the protocol; for HTTP, keep it
+  const urlWithoutProtocol = url.startsWith('https://') ? url.slice(8) : url;
+  return `https://op3.dev/e${pgParam}/${urlWithoutProtocol}`;
+};
+
 // Generate track/item XML
 const generateTrackXml = (track: Track, album: Album, level: number): string => {
   const lines: string[] = [];
@@ -408,7 +415,8 @@ const generateTrackXml = (track: Track, album: Album, level: number): string => 
 
   // Enclosure (audio file)
   const fileLength = track.enclosureLength || '0';
-  lines.push(`${indent(level + 1)}<enclosure url="${escapeXml(track.enclosureUrl)}" length="${fileLength}" type="${track.enclosureType}"/>`);
+  const enclosureUrl = album.op3 ? applyOp3Prefix(track.enclosureUrl, album.podcastGuid) : track.enclosureUrl;
+  lines.push(`${indent(level + 1)}<enclosure url="${escapeXml(enclosureUrl)}" length="${fileLength}" type="${track.enclosureType}"/>`);
 
 
   // Duration

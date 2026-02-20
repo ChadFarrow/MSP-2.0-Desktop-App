@@ -1,5 +1,5 @@
 // Centralized localStorage utilities for MSP 2.0
-import type { Album, Person, PersonRole, PersonGroup, PublisherFeed } from '../types/feed';
+import type { Album, Person, PersonRole, PersonGroup, PublisherFeed, FeedType } from '../types/feed';
 import type { NostrUser } from '../types/nostr';
 
 // Storage keys
@@ -133,7 +133,6 @@ export const publisherStorage = {
 };
 
 // Feed type storage operations
-export type FeedType = 'album' | 'video' | 'publisher';
 export const feedTypeStorage = {
   load: (): FeedType => {
     const stored = getItem<FeedType>(STORAGE_KEYS.FEED_TYPE);

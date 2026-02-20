@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { WebSocket } from 'ws';
+import { isValidFeedId } from '../../_utils/feedUtils.js';
 
 // Bech32 alphabet for decoding npub
 const BECH32_ALPHABET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
@@ -172,8 +173,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Validate guid format (basic UUID check)
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(guid)) {
+  if (!isValidFeedId(guid)) {
     return res.status(400).json({ error: 'Invalid guid format' });
   }
 
