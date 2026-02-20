@@ -56,14 +56,15 @@ export function ConfirmModal({
       className="confirm-modal"
       footer={
         <div className="confirm-modal-footer">
-          <button className="btn btn-secondary" onClick={onCancel}>
-            {cancelText}
-          </button>
           <button
             className={`btn ${config.buttonClass}`}
             onClick={onConfirm}
           >
             {confirmText}
+          </button>
+          <div style={{ flex: 1 }} />
+          <button className="btn btn-secondary" onClick={onCancel}>
+            {cancelText}
           </button>
         </div>
       }

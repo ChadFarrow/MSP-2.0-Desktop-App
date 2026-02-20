@@ -62,8 +62,7 @@ export function PodcastIndexModal({ onClose, feedGuid }: PodcastIndexModalProps)
       onClose={onClose}
       title="Submit to Podcast Index"
       footer={
-        <>
-          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
           <button
             className="btn btn-primary"
             onClick={handleSubmit}
@@ -71,7 +70,9 @@ export function PodcastIndexModal({ onClose, feedGuid }: PodcastIndexModalProps)
           >
             {submitting ? 'Submitting...' : 'Submit'}
           </button>
-        </>
+          <div style={{ flex: 1 }} />
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        </div>
       }
     >
       <ul style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '12px', paddingLeft: '20px' }}>
