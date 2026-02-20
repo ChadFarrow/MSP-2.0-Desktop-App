@@ -1,6 +1,8 @@
 name: Sync from Web Repo
 
 on:
+  repository_dispatch:
+    types: [web-repo-updated]
   schedule:
     - cron: '0 6 * * *'  # Daily at 6 AM UTC
   workflow_dispatch:  # Manual trigger
