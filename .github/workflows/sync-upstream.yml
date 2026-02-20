@@ -10,7 +10,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  workflows: write
 
 jobs:
   sync:
@@ -83,6 +82,7 @@ jobs:
         if: steps.check.outputs.new_commits != '0'
         uses: peter-evans/create-pull-request@v7
         with:
+          token: ${{ secrets.SYNC_PAT }}
           title: "Sync updates from web repo"
           body: ${{ steps.pr_body.outputs.body }}
           branch: sync-upstream
