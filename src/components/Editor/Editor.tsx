@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useFeed } from '../../store/feedStore';
 import { useNostr } from '../../store/nostrStore';
-import { LANGUAGES, PERSON_GROUPS, PERSON_ROLES, createEmptyPersonRole, createEmptyTrack, isVideoMedium } from '../../types/feed';
+import { LANGUAGES, PERSON_GROUPS, PERSON_ROLES, createEmptyPersonRole, createEmptyTrack, isVideoMedium, isCommunitySupport, createSupportRecipients, hasUserRecipients } from '../../types/feed';
 import type { PersonGroup } from '../../types/feed';
 import { FIELD_INFO } from '../../data/fieldInfo';
 import { detectAddressType } from '../../utils/addressUtils';
@@ -1043,11 +1043,18 @@ export function Editor() {
                   )}
 
                   {/* Track-specific Value Block */}
-                  {track.overrideValue && !collapsedTracks[track.id] && (
+                  {track.overrideValue && !collapsedTracks[track.id] && (() => {
+                    const trackRecipients = track.value?.recipients || [];
+                    const trackUserRecipients = trackRecipients.filter(r => !isCommunitySupport(r));
+                    const trackPlatformRecipients = trackRecipients.filter(r => isCommunitySupport(r));
+                    const trackHasUserWithAddress = hasUserRecipients(trackRecipients);
+                    return (
                     <div style={{ marginTop: '12px', padding: '12px', background: 'var(--bg-primary)', borderRadius: '8px' }}>
                       <h5 style={{ marginBottom: '12px', color: 'var(--text-secondary)' }}>Track Value Recipients</h5>
                       <div className="repeatable-list">
-                        {(track.value?.recipients || []).map((recipient, rIndex) => (
+                        {trackUserRecipients.map((recipient) => {
+                          const rIndex = trackRecipients.indexOf(recipient);
+                          return (
                           <div key={rIndex} className="repeatable-item">
                             <div className="repeatable-item-content">
                               <div className="form-grid">
@@ -1059,7 +1066,7 @@ export function Editor() {
                                     placeholder="Recipient name"
                                     value={recipient.name || ''}
                                     onChange={e => {
-                                      const newRecipients = [...(track.value?.recipients || [])];
+                                      const newRecipients = [...trackRecipients];
                                       newRecipients[rIndex] = { ...recipient, name: e.target.value };
                                       dispatch({
                                         type: 'UPDATE_TRACK',
@@ -1078,7 +1085,7 @@ export function Editor() {
                                     onChange={e => {
                                       const address = e.target.value;
                                       const detectedType = detectAddressType(address);
-                                      const newRecipients = [...(track.value?.recipients || [])];
+                                      const newRecipients = [...trackRecipients];
                                       newRecipients[rIndex] = { ...recipient, address, type: detectedType };
                                       dispatch({
                                         type: 'UPDATE_TRACK',
@@ -1097,7 +1104,7 @@ export function Editor() {
                                     max="100"
                                     value={recipient.split ?? 0}
                                     onChange={e => {
-                                      const newRecipients = [...(track.value?.recipients || [])];
+                                      const newRecipients = [...trackRecipients];
                                       newRecipients[rIndex] = { ...recipient, split: parseInt(e.target.value) || 0 };
                                       dispatch({
                                         type: 'UPDATE_TRACK',
@@ -1112,7 +1119,7 @@ export function Editor() {
                               <button
                                 className="btn btn-icon btn-danger"
                                 onClick={() => {
-                                  const newRecipients = [...(track.value?.recipients || [])];
+                                  const newRecipients = [...trackRecipients];
                                   newRecipients.splice(rIndex, 1);
                                   dispatch({
                                     type: 'UPDATE_TRACK',
@@ -1124,14 +1131,134 @@ export function Editor() {
                               </button>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                         <AddRecipientSelect onAdd={recipient => {
-                          const newRecipients = [...(track.value?.recipients || []), recipient];
+                          const newRecipients = [...trackRecipients, recipient];
                           dispatch({ type: 'UPDATE_TRACK', payload: { index, track: { value: { type: 'lightning', method: 'keysend', recipients: newRecipients } } } });
                         }} />
+                        {trackPlatformRecipients.length === 0 && trackHasUserWithAddress && (
+                          <div style={{
+                            borderTop: '1px solid var(--border-color)',
+                            marginTop: '16px',
+                            paddingTop: '16px',
+                            textAlign: 'center'
+                          }}>
+                            <div style={{
+                              fontSize: '13px',
+                              color: 'var(--text-secondary)',
+                              marginBottom: '8px',
+                              lineHeight: 1.4
+                            }}>
+                              Support the Podcasting 2.0 ecosystem? Add small splits for MSP 2.0 and Podcast Index.
+                            </div>
+                            <button
+                              className="btn btn-secondary"
+                              style={{ fontSize: '13px' }}
+                              onClick={() => {
+                                const newRecipients = [...trackRecipients, ...createSupportRecipients()];
+                                dispatch({ type: 'UPDATE_TRACK', payload: { index, track: { value: { type: 'lightning', method: 'keysend', recipients: newRecipients } } } });
+                              }}
+                            >
+                              Add Community Support
+                            </button>
+                          </div>
+                        )}
+                        {trackPlatformRecipients.length > 0 && (
+                          <div style={{
+                            borderTop: '1px solid var(--border-color)',
+                            marginTop: '16px',
+                            paddingTop: '16px',
+                            opacity: 0.8
+                          }}>
+                            <div style={{
+                              fontSize: '12px',
+                              color: 'var(--text-secondary)',
+                              marginBottom: '4px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px'
+                            }}>
+                              Community Support <span style={{ textTransform: 'none', opacity: 0.7 }}>(optional)</span>
+                            </div>
+                            <div style={{
+                              fontSize: '13px',
+                              color: 'var(--text-secondary)',
+                              marginBottom: '12px',
+                              lineHeight: 1.4
+                            }}>
+                              Help sustain the Podcasting 2.0 ecosystem. These splits support MSP 2.0 and Podcast Index. Click the red X to remove.
+                            </div>
+                            {trackPlatformRecipients.map((recipient) => {
+                              const rIndex = trackRecipients.indexOf(recipient);
+                              return (
+                              <div key={rIndex} className="repeatable-item">
+                                <div className="repeatable-item-content">
+                                  <div className="form-grid">
+                                    <div className="form-group">
+                                      <label className="form-label">Name</label>
+                                      <input
+                                        type="text"
+                                        className="form-input"
+                                        value={recipient.name || ''}
+                                        readOnly
+                                        style={{ opacity: 0.7, cursor: 'default' }}
+                                      />
+                                    </div>
+                                    <div className="form-group">
+                                      <label className="form-label">Address</label>
+                                      <input
+                                        type="text"
+                                        className="form-input"
+                                        value={recipient.address || ''}
+                                        readOnly
+                                        style={{ opacity: 0.7, cursor: 'default' }}
+                                      />
+                                    </div>
+                                    <div className="form-group">
+                                      <label className="form-label">Split %<InfoIcon text={FIELD_INFO.recipientSplit} /></label>
+                                      <input
+                                        type="number"
+                                        className="form-input"
+                                        placeholder="0"
+                                        min="0"
+                                        max="100"
+                                        value={recipient.split || ''}
+                                        onChange={e => {
+                                          const newRecipients = [...trackRecipients];
+                                          newRecipients[rIndex] = { ...recipient, split: parseInt(e.target.value) || 0 };
+                                          dispatch({
+                                            type: 'UPDATE_TRACK',
+                                            payload: { index, track: { value: { type: 'lightning', method: 'keysend', recipients: newRecipients } } }
+                                          });
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="repeatable-item-actions">
+                                  <button
+                                    className="btn btn-icon btn-danger"
+                                    onClick={() => {
+                                      const newRecipients = [...trackRecipients];
+                                      newRecipients.splice(rIndex, 1);
+                                      dispatch({
+                                        type: 'UPDATE_TRACK',
+                                        payload: { index, track: { value: { type: 'lightning', method: 'keysend', recipients: newRecipients } } }
+                                      });
+                                    }}
+                                  >
+                                    &#10005;
+                                  </button>
+                                </div>
+                              </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               ))}
               <button className="add-item-btn" onClick={() => {
