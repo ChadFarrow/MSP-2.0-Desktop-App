@@ -1,5 +1,5 @@
 // Nostr Video Event (NIP-71, kind 34235/34236) resolution and parsing
-// Decodes naddr strings, fetches events from relays, and extracts video metadata
+// Decodes naddr strings, fetches events from relays, and extracts the video URL
 
 import { decode } from 'nostr-tools/nip19';
 import type { NostrEvent } from '../types/nostr';
@@ -9,18 +9,10 @@ import { queryEventsFromRelays, DEFAULT_RELAYS } from './nostrRelay';
 const VIDEO_KIND = 34235;
 const SHORT_VIDEO_KIND = 34236;
 
-/** Extracted video metadata from a NIP-71 event */
+/** Extracted video data from a NIP-71 event */
 export interface VideoTrackData {
   url: string;
   mimeType: string;
-  title: string;
-  description: string;
-  thumbnailUrl?: string;
-  duration?: string;         // seconds as string (from event), converted to HH:MM:SS by caller
-  durationSeconds?: number;
-  fileSize?: string;
-  publishedAt?: string;      // RFC 822 date string for RSS
-  categories: string[];
 }
 
 /**
@@ -85,13 +77,11 @@ export async function resolveNaddr(input: string): Promise<NostrEvent> {
  */
 function parseImetaTag(tag: string[]): Record<string, string> {
   const result: Record<string, string> = {};
-  // Skip tag[0] which is "imeta"
   for (let i = 1; i < tag.length; i++) {
     const spaceIndex = tag[i].indexOf(' ');
     if (spaceIndex > 0) {
       const key = tag[i].substring(0, spaceIndex);
       const value = tag[i].substring(spaceIndex + 1);
-      // For repeatable keys like "fallback", only keep first
       if (!result[key]) {
         result[key] = value;
       }
@@ -101,17 +91,7 @@ function parseImetaTag(tag: string[]): Record<string, string> {
 }
 
 /**
- * Convert seconds (number or string) to HH:MM:SS format
- */
-function secondsToHHMMSS(totalSeconds: number): string {
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = Math.floor(totalSeconds % 60);
-  return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
-}
-
-/**
- * Parse a NIP-71 video event (kind 34235 or 34236) and extract track data.
+ * Parse a NIP-71 video event and extract the video URL and MIME type.
  * Supports both modern imeta tags and legacy separate tags.
  */
 export function parseVideoEvent(event: NostrEvent): VideoTrackData {
@@ -136,57 +116,11 @@ export function parseVideoEvent(event: NostrEvent): VideoTrackData {
   // Extract MIME type
   const mimeType = imeta?.m || getTag('m') || 'video/mp4';
 
-  // Extract title
-  const title = getTag('title') || '';
-
-  // Extract description from content
-  const description = event.content || '';
-
-  // Extract thumbnail
-  const thumbnailUrl = imeta?.image || getTag('thumb') || getTag('image');
-
-  // Extract duration (imeta stores as seconds string)
-  let durationSeconds: number | undefined;
-  const durationStr = imeta?.duration;
-  if (durationStr) {
-    durationSeconds = parseFloat(durationStr);
-  }
-
-  // Extract file size
-  const fileSize = imeta?.size || getTag('size');
-
-  // Extract published_at and convert to RFC 822
-  let publishedAt: string | undefined;
-  const publishedAtTag = getTag('published_at');
-  if (publishedAtTag) {
-    const timestamp = parseInt(publishedAtTag);
-    if (!isNaN(timestamp)) {
-      publishedAt = new Date(timestamp * 1000).toUTCString();
-    }
-  }
-
-  // Extract categories from t tags
-  const categories = event.tags
-    .filter(t => t[0] === 't')
-    .map(t => t[1])
-    .filter(Boolean);
-
-  return {
-    url,
-    mimeType,
-    title,
-    description,
-    thumbnailUrl,
-    duration: durationSeconds ? secondsToHHMMSS(durationSeconds) : undefined,
-    durationSeconds,
-    fileSize,
-    publishedAt,
-    categories,
-  };
+  return { url, mimeType };
 }
 
 /**
- * Full pipeline: detect naddr, resolve from relays, parse video metadata.
+ * Full pipeline: detect naddr, resolve from relays, extract video URL.
  * Returns null if the input is not an naddr string.
  * Throws on resolution or parsing errors.
  */

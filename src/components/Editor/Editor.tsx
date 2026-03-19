@@ -815,13 +815,7 @@ export function Editor() {
                                     track: {
                                       enclosureUrl: videoData.url,
                                       enclosureType: videoData.mimeType,
-                                      ...(videoData.title && { title: videoData.title }),
-                                      ...(videoData.duration && { duration: videoData.duration }),
-                                      ...(videoData.thumbnailUrl && { trackArtUrl: videoData.thumbnailUrl }),
-                                      ...(videoData.description && { description: videoData.description }),
-                                      ...(videoData.fileSize && { enclosureLength: videoData.fileSize }),
-                                      ...(videoData.publishedAt && { pubDate: videoData.publishedAt }),
-                                      ...(!videoData.fileSize && { enclosureLength: '33' }),
+                                      enclosureLength: '33',
                                     }
                                   }
                                 });
