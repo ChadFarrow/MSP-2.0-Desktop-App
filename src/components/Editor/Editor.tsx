@@ -7,6 +7,7 @@ import { FIELD_INFO } from '../../data/fieldInfo';
 import { detectAddressType } from '../../utils/addressUtils';
 import { getMediaDuration, secondsToHHMMSS, formatDuration } from '../../utils/audioUtils';
 import { getVideoMimeType } from '../../utils/videoUtils';
+import { isNaddrString, resolveNostrVideo } from '../../utils/nostrVideoConverter';
 import { InfoIcon } from '../InfoIcon';
 import { Section } from '../Section';
 import { Toggle } from '../Toggle';
@@ -123,6 +124,10 @@ export function Editor() {
     feedTitle: string | null;
     feedImage: string | null;
   }>({ loading: false, error: null, feedTitle: null, feedImage: null });
+
+  // Nostr naddr resolution state (per-track index)
+  const [resolvingNaddr, setResolvingNaddr] = useState<Record<number, boolean>>({});
+  const [naddrError, setNaddrError] = useState<Record<number, string>>({});
 
   // Submit to Podcast Index state
   const [piSubmitting, setPiSubmitting] = useState(false);
@@ -794,7 +799,42 @@ export function Editor() {
                           }
                         }}
                         onPaste={async e => {
-                          const url = e.clipboardData.getData('text').trim();
+                          const pastedText = e.clipboardData.getData('text').trim();
+                          // Detect Nostr naddr strings (video feed only)
+                          if (isVideo && isNaddrString(pastedText)) {
+                            e.preventDefault();
+                            setResolvingNaddr(prev => ({ ...prev, [index]: true }));
+                            setNaddrError(prev => { const next = { ...prev }; delete next[index]; return next; });
+                            try {
+                              const videoData = await resolveNostrVideo(pastedText);
+                              if (videoData) {
+                                dispatch({
+                                  type: 'UPDATE_TRACK',
+                                  payload: {
+                                    index,
+                                    track: {
+                                      enclosureUrl: videoData.url,
+                                      enclosureType: videoData.mimeType,
+                                      ...(videoData.title && { title: videoData.title }),
+                                      ...(videoData.duration && { duration: videoData.duration }),
+                                      ...(videoData.thumbnailUrl && { trackArtUrl: videoData.thumbnailUrl }),
+                                      ...(videoData.description && { description: videoData.description }),
+                                      ...(videoData.fileSize && { enclosureLength: videoData.fileSize }),
+                                      ...(videoData.publishedAt && { pubDate: videoData.publishedAt }),
+                                      ...(!videoData.fileSize && { enclosureLength: '33' }),
+                                    }
+                                  }
+                                });
+                              }
+                            } catch (err) {
+                              const msg = err instanceof Error ? err.message : 'Failed to resolve Nostr video';
+                              setNaddrError(prev => ({ ...prev, [index]: msg }));
+                            } finally {
+                              setResolvingNaddr(prev => ({ ...prev, [index]: false }));
+                            }
+                            return;
+                          }
+                          const url = pastedText;
                           if (url && url.startsWith('http')) {
                             e.preventDefault();
                             const isNewUrl = url !== track.enclosureUrl;
@@ -852,6 +892,21 @@ export function Editor() {
                           }
                         }}
                       />
+                      {isVideo && resolvingNaddr[index] && (
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.85em', marginTop: '4px' }}>
+                          Resolving Nostr video...
+                        </div>
+                      )}
+                      {isVideo && naddrError[index] && (
+                        <div style={{ color: 'var(--error)', fontSize: '0.85em', marginTop: '4px' }}>
+                          {naddrError[index]}
+                        </div>
+                      )}
+                      {isVideo && !resolvingNaddr[index] && !track.enclosureUrl && (
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.8em', marginTop: '4px', opacity: 0.7 }}>
+                          Tip: Paste a Nostr naddr to auto-fill video details
+                        </div>
+                      )}
                       {track.enclosureUrl && (
                         isVideo ? (
                           <video
