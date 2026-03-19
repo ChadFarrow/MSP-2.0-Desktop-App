@@ -13,6 +13,7 @@ const SHORT_VIDEO_KIND = 34236;
 export interface VideoTrackData {
   url: string;
   mimeType: string;
+  duration?: string; // HH:MM:SS format
 }
 
 /**
@@ -116,7 +117,20 @@ export function parseVideoEvent(event: NostrEvent): VideoTrackData {
   // Extract MIME type
   const mimeType = imeta?.m || getTag('m') || 'video/mp4';
 
-  return { url, mimeType };
+  // Extract duration from imeta (seconds) and convert to HH:MM:SS
+  let duration: string | undefined;
+  const durationStr = imeta?.duration;
+  if (durationStr) {
+    const totalSeconds = parseFloat(durationStr);
+    if (!isNaN(totalSeconds)) {
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = Math.floor(totalSeconds % 60);
+      duration = [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
+    }
+  }
+
+  return { url, mimeType, duration };
 }
 
 /**

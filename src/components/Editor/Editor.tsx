@@ -816,6 +816,7 @@ export function Editor() {
                                       enclosureUrl: videoData.url,
                                       enclosureType: videoData.mimeType,
                                       enclosureLength: '33',
+                                      ...(videoData.duration && { duration: videoData.duration }),
                                     }
                                   }
                                 });
