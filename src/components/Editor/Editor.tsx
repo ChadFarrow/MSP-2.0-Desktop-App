@@ -1033,7 +1033,12 @@ export function Editor() {
                         checked={track.overridePersons}
                         onChange={val => dispatch({
                           type: 'UPDATE_TRACK',
-                          payload: { index, track: { overridePersons: val } }
+                          payload: { index, track: {
+                            overridePersons: val,
+                            ...(val && track.persons.length === 0 ? {
+                              persons: album.persons.map(p => ({ ...p, roles: p.roles.map(r => ({ ...r })) }))
+                            } : {})
+                          } }
                         })}
                         label="Override Persons"
                         labelSuffix={<InfoIcon text={FIELD_INFO.overridePersons} />}
