@@ -206,16 +206,18 @@ export async function uploadFeedToBlossom(
     const pubkey = await signer.getPublicKey();
 
     // Generate RSS XML based on feed type
+    // Update lastBuildDate to current time per RSS 2.0 spec
+    const now = new Date().toUTCString();
     let rssXml: string;
     let feedGuid: string;
 
     if (feedType === 'publisher') {
       const publisherFeed = feed as PublisherFeed;
-      rssXml = generatePublisherRssFeed(publisherFeed);
+      rssXml = generatePublisherRssFeed({ ...publisherFeed, lastBuildDate: now });
       feedGuid = publisherFeed.podcastGuid;
     } else {
       const album = feed as Album;
-      rssXml = generateRssFeed(album);
+      rssXml = generateRssFeed({ ...album, lastBuildDate: now });
       feedGuid = album.podcastGuid;
     }
 

@@ -118,11 +118,12 @@ export function DownloadCatalogSection({ publisherFeed }: DownloadCatalogSection
       const xml = await fetchFeedFromUrl(item.feedUrl);
       const album = parseRssFeed(xml);
 
-      // Add publisher reference
+      // Add publisher reference and update lastBuildDate
       album.publisher = {
         feedGuid: publisherFeed.podcastGuid,
         feedUrl: publisherFeedUrl
       };
+      album.lastBuildDate = new Date().toUTCString();
 
       // Generate new XML with publisher reference
       const newXml = generateRssFeed(album);
@@ -154,11 +155,12 @@ export function DownloadCatalogSection({ publisherFeed }: DownloadCatalogSection
         const xml = await fetchFeedFromUrl(item.feedUrl);
         const album = parseRssFeed(xml);
 
-        // Add publisher reference
+        // Add publisher reference and update lastBuildDate
         album.publisher = {
           feedGuid: publisherFeed.podcastGuid,
           feedUrl: publisherFeedUrl
         };
+        album.lastBuildDate = new Date().toUTCString();
 
         // Generate new XML with publisher reference
         const newXml = generateRssFeed(album);

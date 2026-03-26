@@ -46,11 +46,13 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   const currentFeedTitle = isPublisherMode && publisherFeed ? publisherFeed.title : album.title;
 
   // Helper function to generate XML for current feed type
+  // Always updates lastBuildDate to current time per RSS 2.0 spec
   const generateCurrentFeedXml = () => {
+    const now = new Date().toUTCString();
     if (isPublisherMode && publisherFeed) {
-      return generatePublisherRssFeed(publisherFeed);
+      return generatePublisherRssFeed({ ...publisherFeed, lastBuildDate: now });
     }
-    return generateRssFeed(album);
+    return generateRssFeed({ ...album, lastBuildDate: now });
   };
 
   const [loading, setLoading] = useState(false);
