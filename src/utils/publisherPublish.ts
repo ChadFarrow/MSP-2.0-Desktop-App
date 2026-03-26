@@ -164,7 +164,8 @@ async function hostCatalogFeed(
     const xml = await fetchFeedFromUrl(item.feedUrl);
     const album = parseRssFeed(xml);
 
-    // Regenerate the XML (ensures it's in our format)
+    // Regenerate the XML (ensures it's in our format) with updated lastBuildDate
+    album.lastBuildDate = new Date().toUTCString();
     const cleanXml = generateRssFeed(album);
     const feedTitle = album.title || title;
 
@@ -465,7 +466,8 @@ export async function publishPublisherFeed(
   let feedUrl: string;
 
   try {
-    // Use the updated publisher feed with new catalog URLs
+    // Use the updated publisher feed with new catalog URLs and updated lastBuildDate
+    updatedPublisherFeed.lastBuildDate = new Date().toUTCString();
     const xml = generatePublisherRssFeed(updatedPublisherFeed);
     const title = updatedPublisherFeed.title || 'Publisher Feed';
 

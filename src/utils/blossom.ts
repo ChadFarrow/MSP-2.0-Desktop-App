@@ -122,8 +122,8 @@ export async function uploadToBlossom(
     const signer = getSigner();
     const pubkey = await signer.getPublicKey();
 
-    // Generate RSS XML
-    const rssXml = generateRssFeed(album);
+    // Generate RSS XML with updated lastBuildDate
+    const rssXml = generateRssFeed({ ...album, lastBuildDate: new Date().toUTCString() });
 
     // Calculate hash
     const hash = await sha256Hash(rssXml);
