@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { generateRssFeed, generatePublisherRssFeed, downloadXml, copyToClipboard } from '../../utils/xmlGenerator';
 import { saveFeedToNostr, publishNostrMusicTracks } from '../../utils/nostrSync';
 import { uploadFeedToBlossom } from '../../utils/blossom';
-import { publishToNsite, defaultSiteId, isValidSiteId, buildNsiteUrl } from '../../utils/nsite';
+import { publishToNsite, defaultSiteId } from '../../utils/nsite';
 import type { PublishProgress } from '../../utils/nostrSync';
 import type { Album, PublisherFeed } from '../../types/feed';
 import type { FeedType } from '../../store/feedStore';
@@ -74,7 +74,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   const [tokenAcknowledged, setTokenAcknowledged] = useState(false);
   const [linkingNostr, setLinkingNostr] = useState(false);
   const [podcastIndexPending, setPodcastIndexPending] = useState(false); // True when PI notified but not yet indexed
-  const [nsiteSiteId, setNsiteSiteId] = useState(() => defaultSiteId(currentFeedGuid));
+  const [nsiteSiteId] = useState(() => defaultSiteId(currentFeedGuid));
   const [nsiteUrl, setNsiteUrl] = useState<string | null>(null);
   const [nsiteBlossomUrl, setNsiteBlossomUrl] = useState<string | null>(null);
   const [nsiteProgress, setNsiteProgress] = useState<string | null>(null);
@@ -688,35 +688,9 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                     border: '1px solid var(--border-color)',
                     backgroundColor: 'var(--bg-secondary)',
                     color: 'var(--text-primary)',
-                    fontSize: '0.875rem',
-                    marginBottom: '12px'
+                    fontSize: '0.875rem'
                   }}
                 />
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem' }}>
-                  Site Identifier <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>(1-13 chars, lowercase a-z, 0-9, hyphens)</span>
-                </label>
-                <input
-                  type="text"
-                  value={nsiteSiteId}
-                  onChange={(e) => setNsiteSiteId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 13))}
-                  placeholder="my-feed"
-                  maxLength={13}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '4px',
-                    border: `1px solid ${nsiteSiteId && !isValidSiteId(nsiteSiteId) ? 'var(--error, #ef4444)' : 'var(--border-color)'}`,
-                    backgroundColor: 'var(--bg-secondary)',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.875rem',
-                    fontFamily: 'monospace'
-                  }}
-                />
-                {nostrState.user?.pubkey && nsiteSiteId && isValidSiteId(nsiteSiteId) && (
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', marginTop: '8px', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                    Preview: {buildNsiteUrl(nostrState.user.pubkey, nsiteSiteId, '/feed.xml')}
-                  </p>
-                )}
               </div>
               {nsiteProgress && (
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '12px' }}>
