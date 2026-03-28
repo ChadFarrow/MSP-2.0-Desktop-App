@@ -40,7 +40,7 @@ export function PublisherFeedReminderSection({ publisherFeed }: PublisherFeedRem
     setResult(null);
 
     try {
-      const xml = generatePublisherRssFeed(publisherFeed);
+      const xml = generatePublisherRssFeed({ ...publisherFeed, lastBuildDate: new Date().toUTCString() });
       const title = publisherFeed.title || 'Publisher Feed';
       const editToken = generateEditToken();
       const shouldLinkNostr = nostrState.isLoggedIn && nostrState.user?.pubkey && hasSigner();
@@ -102,7 +102,7 @@ export function PublisherFeedReminderSection({ publisherFeed }: PublisherFeedRem
   };
 
   const handleDownload = () => {
-    const xml = generatePublisherRssFeed(publisherFeed);
+    const xml = generatePublisherRssFeed({ ...publisherFeed, lastBuildDate: new Date().toUTCString() });
     const safeTitle = (publisherFeed.title || 'publisher-feed')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')

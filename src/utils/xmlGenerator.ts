@@ -431,9 +431,10 @@ const generateTrackXml = (track: Track, album: Album, level: number): string => 
   // Explicit
   lines.push(`${indent(level + 1)}<itunes:explicit>${track.explicit ? 'true' : 'false'}</itunes:explicit>`);
 
-  // Persons (override or inherit from album)
-  const persons = track.overridePersons ? track.persons : album.persons;
-  persons.forEach(p => lines.push(generatePersonXml(p, level + 1)));
+  // Persons (only output at item level when overriding album persons)
+  if (track.overridePersons) {
+    track.persons.forEach(p => lines.push(generatePersonXml(p, level + 1)));
+  }
 
   // Value block (override or inherit from album)
   const value = track.overrideValue && track.value ? track.value : album.value;

@@ -220,7 +220,7 @@ export async function convertNostrMusicToAlbum(
 }
 
 // Parse content field for lyrics, credits, license
-function parseNostrMusicContent(content: string): { lyrics?: string; credits?: string; license?: string } {
+export function parseNostrMusicContent(content: string): { lyrics?: string; credits?: string; license?: string } {
   const result: { lyrics?: string; credits?: string; license?: string } = {};
 
   if (!content || !content.trim()) return result;
@@ -247,7 +247,7 @@ function parseNostrMusicContent(content: string): { lyrics?: string; credits?: s
 }
 
 // Parse a raw kind 36787 Nostr event into NostrMusicTrackInfo
-function parseNostrMusicEvent(event: NostrEvent): NostrMusicTrackInfo | null {
+export function parseNostrMusicEvent(event: NostrEvent): NostrMusicTrackInfo | null {
   const getTag = (name: string): string | undefined =>
     event.tags.find(t => t[0] === name)?.[1];
 

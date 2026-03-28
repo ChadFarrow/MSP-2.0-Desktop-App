@@ -1,5 +1,5 @@
 import type { Album, Track, Person, ValueRecipient, PublisherFeed } from '../types/feed';
-import type { NostrEvent, SavedAlbumInfo, NostrMusicTrackInfo, NostrMusicAlbumGroup, NostrZapSplit, NostrMusicContent, PublishedTrackRef } from '../types/nostr';
+import type { NostrEvent, SavedAlbumInfo, NostrMusicTrackInfo, NostrMusicAlbumGroup, PublishedTrackRef } from '../types/nostr';
 import { generateRssFeed, generatePublisherRssFeed } from './xmlGenerator';
 import { parseRssFeed } from './xmlParser';
 import { formatReleasedDate } from './dateUtils';
@@ -10,6 +10,7 @@ import {
   publishEventToRelays
 } from './nostrRelay';
 import { getSigner, hasSigner } from './nostrSigner';
+import { parseNostrMusicEvent } from './nostrMusicConverter';
 
 // Re-export for backward compatibility
 export { DEFAULT_RELAYS };
@@ -338,82 +339,6 @@ export async function loadAlbumByDTag(
     const message = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, album: null, message };
   }
-}
-
-// Parse content field for lyrics, credits, license
-function parseNostrMusicContent(content: string): NostrMusicContent {
-  const result: NostrMusicContent = {};
-
-  if (!content || !content.trim()) return result;
-
-  // Split by known section headers
-  const sections = content.split(/\n\n(?=Lyrics:|Credits:|License:)/i);
-
-  for (const section of sections) {
-    const trimmed = section.trim();
-
-    if (trimmed.toLowerCase().startsWith('lyrics:')) {
-      result.lyrics = trimmed.substring(7).trim();
-    } else if (trimmed.toLowerCase().startsWith('credits:')) {
-      result.credits = trimmed.substring(8).trim();
-    } else if (trimmed.toLowerCase().startsWith('license:')) {
-      result.license = trimmed.substring(8).trim();
-    } else if (!result.lyrics && trimmed) {
-      // If no section header and no lyrics yet, treat as lyrics
-      result.lyrics = trimmed;
-    }
-  }
-
-  return result;
-}
-
-// Parse a kind 36787 event into NostrMusicTrackInfo
-function parseNostrMusicEvent(event: NostrEvent): NostrMusicTrackInfo | null {
-  const getTag = (name: string): string | undefined =>
-    event.tags.find(t => t[0] === name)?.[1];
-
-  const dTag = getTag('d');
-  const title = getTag('title');
-  const url = getTag('url');
-
-  // Required fields
-  if (!dTag || !title || !url) return null;
-
-  // Parse genres from 't' tags
-  const genres = event.tags
-    .filter(t => t[0] === 't')
-    .map(t => t[1])
-    .filter(Boolean);
-
-  // Parse zap splits from 'zap' tags
-  const zapSplits: NostrZapSplit[] = event.tags
-    .filter(t => t[0] === 'zap')
-    .map(t => ({
-      pubkey: t[1] || '',
-      relay: t[2] || undefined,
-      splitPercentage: parseInt(t[3]) || 0
-    }))
-    .filter(z => z.pubkey && z.splitPercentage > 0);
-
-  // Parse content for lyrics, credits, license
-  const parsedContent = parseNostrMusicContent(event.content);
-
-  return {
-    id: event.id || '',
-    dTag,
-    title,
-    artist: getTag('artist') || 'Unknown Artist',
-    album: getTag('album') || 'Singles',
-    trackNumber: parseInt(getTag('track_number') || '1') || 1,
-    url,
-    imageUrl: getTag('image'),
-    released: getTag('released'),
-    language: getTag('language'),
-    genres,
-    zapSplits,
-    content: parsedContent,
-    createdAt: event.created_at
-  };
 }
 
 // Group tracks by album for UI display
