@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { generateRssFeed, generatePublisherRssFeed, downloadXml, copyToClipboard } from '../../utils/xmlGenerator';
 import { saveFeedToNostr, publishNostrMusicTracks } from '../../utils/nostrSync';
 import { uploadFeedToBlossom } from '../../utils/blossom';
+import { publishToNsite, defaultSiteId } from '../../utils/nsite';
 import type { PublishProgress } from '../../utils/nostrSync';
 import type { Album, PublisherFeed } from '../../types/feed';
 import type { FeedType } from '../../store/feedStore';
@@ -37,7 +38,7 @@ interface SaveModalProps {
 
 export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', isDirty, isLoggedIn, onImport }: SaveModalProps) {
   const { state: nostrState } = useNostr();
-  const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'hosted'>('local');
+  const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'nsite' | 'hosted'>('local');
   const isPublisherMode = feedType === 'publisher';
   const isVideoMode = feedType === 'video';
 
@@ -73,6 +74,11 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   const [tokenAcknowledged, setTokenAcknowledged] = useState(false);
   const [linkingNostr, setLinkingNostr] = useState(false);
   const [podcastIndexPending, setPodcastIndexPending] = useState(false); // True when PI notified but not yet indexed
+  const nsiteSiteId = defaultSiteId(currentFeedGuid);
+  const [nsiteUrl, setNsiteUrl] = useState<string | null>(null);
+  const [nsiteBlossomUrl, setNsiteBlossomUrl] = useState<string | null>(null);
+  const [nsitePiUrl, setNsitePiUrl] = useState<string | null>(null);
+  const [nsiteProgress, setNsiteProgress] = useState<string | null>(null);
 
   // Check if feed is linked to current user's Nostr identity
   const isNostrLinked = hostedInfo?.ownerPubkey && nostrState.user?.pubkey === hostedInfo.ownerPubkey;
@@ -80,13 +86,13 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   // Helper to get button text based on mode and loading state
   const getButtonText = () => {
     if (loading) {
-      if (mode === 'nostrMusic' || mode === 'blossom' || mode === 'hosted') return 'Uploading...';
+      if (mode === 'nostrMusic' || mode === 'blossom' || mode === 'hosted' || mode === 'nsite') return 'Uploading...';
       if (mode === 'download') return 'Downloading...';
       if (mode === 'clipboard') return 'Copying...';
       return 'Saving...';
     }
     if (mode === 'nostrMusic') return 'Publish';
-    if (mode === 'blossom' || mode === 'hosted') return 'Upload';
+    if (mode === 'blossom' || mode === 'hosted' || mode === 'nsite') return 'Upload';
     if (mode === 'download') return 'Download';
     if (mode === 'clipboard') return 'Copy to Clipboard';
     return 'Save';
@@ -343,6 +349,42 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
             text: blossomResult.message
           });
           break;
+        case 'nsite': {
+          const nsiteFeed = isPublisherMode && publisherFeed ? publisherFeed : album;
+          const nsiteFeedType = isPublisherMode ? 'publisher' as const : (feedType === 'video' ? 'video' as const : 'album' as const);
+          const nsiteResult = await publishToNsite(
+            nsiteFeed,
+            nsiteFeedType,
+            blossomServer,
+            nsiteSiteId,
+            (status) => setNsiteProgress(status)
+          );
+          if (nsiteResult.success) {
+            if (nsiteResult.nsiteUrl) {
+              setNsiteUrl(nsiteResult.nsiteUrl);
+              // Submit to Podcast Index
+              setNsiteProgress('Submitting to Podcast Index...');
+              try {
+                const piRes = await fetch(`/api/pubnotify?url=${encodeURIComponent(nsiteResult.nsiteUrl)}&guid=${encodeURIComponent(currentFeedGuid)}`);
+                if (piRes.ok) {
+                  const piData = await piRes.json();
+                  if (piData.podcastIndexUrl) setNsitePiUrl(piData.podcastIndexUrl);
+                }
+              } catch {
+                // Non-fatal — feed is already published to nsite
+              }
+            }
+            if (nsiteResult.blossomUrl) setNsiteBlossomUrl(nsiteResult.blossomUrl);
+          }
+          setNsiteProgress(null);
+          setMessage({
+            type: nsiteResult.success ? 'success' : 'error',
+            text: nsiteResult.success
+              ? nsiteResult.message + ' Feed submitted to Podcast Index.'
+              : nsiteResult.message
+          });
+          break;
+        }
         case 'hosted':
           const hostedXml = generateCurrentFeedXml();
 
@@ -509,6 +551,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               {isLoggedIn && <option value="nostr">Save to Nostr</option>}
               {!isPublisherMode && isLoggedIn && <option value="nostrMusic">Publish Nostr Music</option>}
               {isLoggedIn && <option value="blossom">Publish to Blossom</option>}
+              {isLoggedIn && <option value="nsite">Publish to nsite</option>}
             </select>
           </div>
 
@@ -636,6 +679,110 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                   >
                     Copy Stable URL
                   </button>
+                </div>
+              )}
+            </div>
+          )}
+          {mode === 'nsite' && (
+            <div style={{ marginTop: '16px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '12px' }}>
+                Publish your feed to a decentralized nsite via Blossom + Nostr (NIP-5A). Accessible through any nsite gateway.
+              </p>
+              <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem' }}>
+                  Blossom Server URL
+                </label>
+                <input
+                  type="text"
+                  value={blossomServer}
+                  onChange={(e) => setBlossomServer(e.target.value)}
+                  placeholder="https://blossom.example.com"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '4px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              {nsiteProgress && (
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '12px' }}>
+                  {nsiteProgress}
+                </p>
+              )}
+              {nsiteUrl && (
+                <div style={{ marginTop: '12px', padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--success)' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem', fontWeight: 600, color: 'var(--success)' }}>
+                    nsite Feed URL
+                  </label>
+                  <input
+                    type="text"
+                    value={nsiteUrl}
+                    readOnly
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '4px',
+                      border: '1px solid var(--success)',
+                      backgroundColor: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.75rem',
+                      fontFamily: 'monospace'
+                    }}
+                  />
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '8px', marginBottom: '8px' }}>
+                    This URL serves your feed through the nsite.lol gateway. It may take a moment for gateways to pick up the manifest.
+                  </p>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                      if (nsiteUrl) {
+                        navigator.clipboard.writeText(nsiteUrl);
+                        setMessage({ type: 'success', text: 'nsite URL copied to clipboard' });
+                      }
+                    }}
+                  >
+                    Copy nsite URL
+                  </button>
+                </div>
+              )}
+              {nsiteBlossomUrl && (
+                <div style={{ marginTop: '8px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    Direct Blossom URL (changes with each update)
+                  </label>
+                  <input
+                    type="text"
+                    value={nsiteBlossomUrl}
+                    readOnly
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '4px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.7rem',
+                      fontFamily: 'monospace'
+                    }}
+                  />
+                </div>
+              )}
+              {nsitePiUrl && (
+                <div style={{ marginTop: '8px' }}>
+                  <a
+                    href={nsitePiUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: '0.875rem', color: 'var(--accent-color)' }}
+                  >
+                    View on Podcast Index →
+                  </a>
                 </div>
               )}
             </div>

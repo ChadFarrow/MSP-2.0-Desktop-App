@@ -89,28 +89,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // If still not found, register the feed via add/byfeedurl (for new feeds)
-      if (!podcastIndexId) {
-        try {
-          const addResponse = await fetch(
-            `https://api.podcastindex.org/api/1.0/add/byfeedurl?url=${encodeURIComponent(url)}`,
-            { method: 'POST', headers: authHeaders }
-          );
-          const addText = await addResponse.text();
-          if (addText) {
-            try {
-              const addData = JSON.parse(addText);
-              if (addData.feed?.id) {
-                podcastIndexId = addData.feed.id;
-                podcastIndexPageUrl = `https://podcastindex.org/podcast/${podcastIndexId}`;
-              }
-            } catch {
-              // JSON parse failed
+      // Always call add/byfeedurl to register the URL with Podcast Index.
+      // Even if the feed exists by GUID, the URL may be new (e.g. nsite URL).
+      try {
+        const addResponse = await fetch(
+          `https://api.podcastindex.org/api/1.0/add/byfeedurl?url=${encodeURIComponent(url)}`,
+          { method: 'POST', headers: authHeaders }
+        );
+        const addText = await addResponse.text();
+        if (addText) {
+          try {
+            const addData = JSON.parse(addText);
+            if (addData.feed?.id) {
+              podcastIndexId = addData.feed.id;
+              podcastIndexPageUrl = `https://podcastindex.org/podcast/${podcastIndexId}`;
             }
+          } catch {
+            // JSON parse failed
           }
-        } catch (addErr) {
-          console.warn('Failed to add feed to Podcast Index:', addErr);
         }
+      } catch (addErr) {
+        console.warn('Failed to add feed to Podcast Index:', addErr);
       }
     }
 
