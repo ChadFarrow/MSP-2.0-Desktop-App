@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuthHeaders } from './_utils/podcastIndex.js';
+import { isValidFeedId } from './_utils/feedUtils.js';
 
 // Extract Podcast Index feed ID from URL or plain number
 function extractFeedId(input: string): string | null {
@@ -11,11 +12,6 @@ function extractFeedId(input: string): string | null {
   if (/^\d+$/.test(input.trim())) return input.trim();
 
   return null;
-}
-
-// Check if input looks like a UUID/GUID
-function isGuid(input: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.trim());
 }
 
 // Check if input looks like a feed URL
@@ -48,7 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Check if input is a feed ID, GUID, or feed URL
     const feedId = extractFeedId(q);
-    const guid = isGuid(q) ? q.trim() : null;
+    const guid = isValidFeedId(q.trim()) ? q.trim() : null;
     const feedUrl = isFeedUrl(q) ? q.trim() : null;
 
     let searchUrl: string;

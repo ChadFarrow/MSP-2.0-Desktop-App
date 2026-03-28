@@ -35,6 +35,9 @@ export type FeedAction =
   | { type: 'ADD_TRACK_PERSON'; payload: { trackIndex: number; person?: Person } }
   | { type: 'UPDATE_TRACK_PERSON'; payload: { trackIndex: number; personIndex: number; person: Person } }
   | { type: 'REMOVE_TRACK_PERSON'; payload: { trackIndex: number; personIndex: number } }
+  | { type: 'ADD_TRACK_PERSON_ROLE'; payload: { trackIndex: number; personIndex: number; role?: PersonRole } }
+  | { type: 'UPDATE_TRACK_PERSON_ROLE'; payload: { trackIndex: number; personIndex: number; roleIndex: number; role: PersonRole } }
+  | { type: 'REMOVE_TRACK_PERSON_ROLE'; payload: { trackIndex: number; personIndex: number; roleIndex: number } }
   | { type: 'ADD_TRACK_RECIPIENT'; payload: { trackIndex: number; recipient?: ValueRecipient } }
   | { type: 'UPDATE_TRACK_RECIPIENT'; payload: { trackIndex: number; recipientIndex: number; recipient: ValueRecipient } }
   | { type: 'REMOVE_TRACK_RECIPIENT'; payload: { trackIndex: number; recipientIndex: number } }
@@ -304,6 +307,59 @@ export function feedReducer(state: FeedState, action: FeedAction): FeedState {
           ...track,
           persons: track.persons.filter((_, i) => i !== action.payload.personIndex)
         };
+      }
+      return updateActiveFeed(state, { ...activeAlbum, tracks });
+    }
+
+    case 'ADD_TRACK_PERSON_ROLE': {
+      const tracks = [...activeAlbum.tracks];
+      const track = tracks[action.payload.trackIndex];
+      if (track) {
+        const persons = [...track.persons];
+        const person = persons[action.payload.personIndex];
+        if (person) {
+          persons[action.payload.personIndex] = {
+            ...person,
+            roles: [...person.roles, action.payload.role || createEmptyPersonRole()]
+          };
+          tracks[action.payload.trackIndex] = { ...track, persons };
+        }
+      }
+      return updateActiveFeed(state, { ...activeAlbum, tracks });
+    }
+
+    case 'UPDATE_TRACK_PERSON_ROLE': {
+      const tracks = [...activeAlbum.tracks];
+      const track = tracks[action.payload.trackIndex];
+      if (track) {
+        const persons = [...track.persons];
+        const person = persons[action.payload.personIndex];
+        if (person) {
+          persons[action.payload.personIndex] = {
+            ...person,
+            roles: person.roles.map((r, i) =>
+              i === action.payload.roleIndex ? action.payload.role : r
+            )
+          };
+          tracks[action.payload.trackIndex] = { ...track, persons };
+        }
+      }
+      return updateActiveFeed(state, { ...activeAlbum, tracks });
+    }
+
+    case 'REMOVE_TRACK_PERSON_ROLE': {
+      const tracks = [...activeAlbum.tracks];
+      const track = tracks[action.payload.trackIndex];
+      if (track) {
+        const persons = [...track.persons];
+        const person = persons[action.payload.personIndex];
+        if (person && person.roles.length > 1) {
+          persons[action.payload.personIndex] = {
+            ...person,
+            roles: person.roles.filter((_, i) => i !== action.payload.roleIndex)
+          };
+          tracks[action.payload.trackIndex] = { ...track, persons };
+        }
       }
       return updateActiveFeed(state, { ...activeAlbum, tracks });
     }
