@@ -113,8 +113,8 @@ jobs:
             ### Downloads
             | OS | File | Notes |
             |----|------|-------|
-            | **Windows** | `.msi` | Recommended |
-            | **Windows** | `.exe` | Alternative installer |
+            | **Windows** | `.msi` | **Recommended** — least likely to trigger antivirus |
+            | **Windows** | `.exe` | NSIS installer (may trigger antivirus false positives) |
             | **macOS (Apple Silicon)** | `_aarch64.dmg` | M1/M2/M3/M4 |
             | **macOS (Intel)** | `_x64.dmg` | |
             | **Linux (Debian/Ubuntu)** | `.deb` | `sudo dpkg -i <file>` |
@@ -122,6 +122,16 @@ jobs:
             | **Linux (Universal)** | `.AppImage` | Works on any distro |
 
             > The `.sig`, `.tar.gz`, and `latest.json` files are for auto-updates — you can ignore them.
+
+            ### Windows Users
+            The Windows `.exe` installer may be flagged by antivirus software (e.g., Avast, Windows Defender) as a false positive. This is a known issue with NSIS-based installers that are not signed with an EV code signing certificate — it is **not** malware.
+
+            **To avoid this, use the `.msi` installer** which is less likely to trigger false positives.
+
+            If your antivirus blocks the download:
+            1. Check your antivirus quarantine and restore the file
+            2. Add an exception for the MSP Studio installer
+            3. Or use the `.msi` installer instead
 
             ### macOS Users
             This app is not signed with an Apple Developer certificate. To open it:
