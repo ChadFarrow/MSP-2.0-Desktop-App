@@ -104,6 +104,7 @@ For manual version control (optional):
 | "error sending request for url" on Linux update check | System CA certificates not detected by reqwest | Fixed in v0.1.28+ via `native-tls-vendored` feature; older versions must manually download update |
 | Linux auto-update downloads but fails to install | `tauri-plugin-updater` <2.10 lacks privilege escalation for `.deb` installs (`/usr/bin/` is root-owned) | Fixed by upgrading to `tauri-plugin-updater` 2.10+; users on older versions must manually install `.deb` via `sudo dpkg -i` |
 | "Not Found" uploading `latest.json` in release | Parallel build jobs race to upload/update the same `latest.json` asset | Fixed: `includeUpdaterJson: false` on build jobs; separate `upload-updater-json` job assembles it after all builds complete |
+| Windows AV false positive (NSIS:MalwareX-gen) | NSIS `.exe` installers without Authenticode EV code signing trigger heuristic AV detections | Recommend `.msi` installer; long-term fix is purchasing an EV code signing certificate (~$400-600/yr) |
 
 ## Architecture
 
