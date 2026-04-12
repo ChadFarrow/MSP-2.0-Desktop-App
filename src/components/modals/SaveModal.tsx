@@ -568,7 +568,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               {isLoggedIn && <option value="nostr">Save RSS feed to Nostr</option>}
               {!isPublisherMode && isLoggedIn && <option value="nostrMusic">Publish to Nostr Music</option>}
               {isLoggedIn && <option value="blossom">Publish RSS feed to a Blossom server</option>}
-              {isLoggedIn && <option value="nsite">Publish to nsite (experimental)</option>}
+              {isLoggedIn && <option value="nsite">Publish RSS feed to nsite (experimental)</option>}
             </select>
           </div>
 
@@ -1187,10 +1187,10 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                 <li><strong>Download XML</strong> - Download the RSS feed as an XML file to your computer.</li>
                 <li><strong>Copy to Clipboard</strong> - Copy the RSS XML to your clipboard for pasting elsewhere.</li>
                 <li><strong>Host on MSP</strong> - Host your feed on MSP servers. Get a permanent URL for your RSS feed to use in any app.{isLoggedIn && ' You can link your Nostr identity to edit from any device without needing the token.'}</li>
-                <li><strong>Save RSS feed to Nostr</strong> - Publish to Nostr relays. Load it later on any device with your Nostr key.</li>
-                <li><strong>Publish to Nostr Music</strong> - Publish tracks and playlist (kinds 36787 + 34139) for Nostr music clients.</li>
-                <li><strong>Publish RSS feed to a Blossom server</strong> - Upload your RSS feed to a Blossom server. Get a permanent MSP-hosted URL for podcast apps that always resolves to your latest upload.</li>
-                <li><strong>Publish to nsite (experimental)</strong> - Publish your feed as a decentralized nsite (NIP-5A). Uploads to Blossom and creates a Nostr site manifest, reachable through any nsite gateway.</li>
+                <li><strong>Save RSS feed to Nostr</strong> - Stores the entire RSS XML inside a Nostr event (kind 30054) on your relays. Personal cross-device backup tied to your Nostr key. Not readable by podcast apps.</li>
+                <li><strong>Publish to Nostr Music</strong> - Publishes each track (kind 36787) and the playlist (kind 34139) as Nostr events for Nostr-native music clients like Wavlake and Fountain. Audio files must already be hosted somewhere - these events just point to them. Not a podcast RSS feed.</li>
+                <li><strong>Publish RSS feed to a Blossom server</strong> - Uploads the RSS file to a Blossom server and registers a Nostr pointer (kind 1063) so MSP can serve a permanent URL. Subscribable in any podcast app.</li>
+                <li><strong>Publish RSS feed to nsite (experimental)</strong> - Uploads the RSS file to a Blossom server and publishes an nsite site manifest (NIP-5A). Reachable as a permanent web URL through any nsite gateway. Subscribable in podcast apps.</li>
               </ul>
             </ModalWrapper>
       )}
