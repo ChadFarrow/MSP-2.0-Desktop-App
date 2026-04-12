@@ -29,10 +29,13 @@ A web-based RSS feed editor for creating Podcasting 2.0 compatible music album f
 
 ### Integrations
 - Nostr cloud sync (NIP-07 browser extension + NIP-46 remote signer)
-- Nostr Music publishing (kind 36787 events)
+- Nostr Music publishing (kind 36787 track events + kind 34139 playlist) with NIP-09 unpublish
+- NIP-71 `naddr` video resolution (paste an `naddr` into a Video URL field to auto-fill)
 - Podcast Index search, feed submission, and pubnotify
 - MSP feed hosting with edit tokens and Nostr-linked ownership
-- Blossom server uploads for file hosting
+- Blossom server uploads (BUD-01) for file hosting
+- nsite (NIP-5A) publishing — decentralized feed hosting via Blossom + site manifest
+- OP3 analytics prefix support for privacy-respecting download stats
 - Dark/light theme support
 
 ## Tech Stack
@@ -65,6 +68,8 @@ src/
 │   │   ├── PreviewModal.tsx        # Feed preview modal
 │   │   ├── InfoModal.tsx           # Info/about modal
 │   │   ├── NostrConnectModal.tsx   # NIP-46 remote signer
+│   │   ├── NewFeedChoiceModal.tsx  # Start blank vs. use template
+│   │   ├── PodcastIndexModal.tsx   # Manual Podcast Index submission
 │   │   ├── ConfirmModal.tsx        # Confirmation dialog
 │   │   └── ModalWrapper.tsx        # Shared modal layout
 │   ├── admin/
@@ -156,20 +161,22 @@ Once all your catalog feeds are hosted on MSP, the "Publish on MSP" section appe
 - **Upload File** - Upload an RSS/XML feed file from your device
 - **Paste XML** - Paste RSS/XML content directly
 - **From URL** - Fetch a feed from any URL
-- **Nostr Event** - Import from a Nostr Event (kind 36787)
+- **Nostr Event** - Import from a Nostr Music event (kind 36787)
 - **MSP Hosted** - Load a feed hosted on MSP servers using its Feed ID
-- **From Nostr** - Load your previously saved albums from Nostr (requires login)
+- **From Nostr** - Load your previously saved feeds from Nostr (kind 30054, requires login)
 - **From Nostr Music** - Import tracks from Nostr Music library (requires login)
+- **naddr paste (Video mode)** - Paste a NIP-71 `naddr` (or a URL containing one) into a Video URL field to auto-resolve URL, MIME type, and duration
 
 ## Save Options (Album/Video Mode)
 
 - **Local Storage** - Save to your browser's local storage. Data persists until you clear browser data.
 - **Download XML** - Download the RSS feed as an XML file to your computer.
 - **Copy to Clipboard** - Copy the RSS XML to your clipboard for pasting elsewhere.
-- **Host on MSP** - Host your feed on MSP servers. Get a permanent URL for your RSS feed to use in any app.
-- **Save to Nostr** - Publish to Nostr relays. Load it later on any device with your Nostr key (requires login).
-- **Publish Nostr Music** - Publish each track as a Nostr Music event (kind 36787) for music clients (requires login).
-- **Publish to Blossom** - Upload your feed to a Blossom server. Get a stable MSP URL that always points to your latest upload (requires login).
+- **Host on MSP** - Host your feed on MSP servers. Get a permanent subscribable URL (`https://msp.podtards.com/api/hosted/{feedId}`) to use in any podcast app.
+- **Save RSS feed to Nostr** - Embed the full RSS XML in a kind 30054 event for personal cross-device sync. Only MSP reads this event — not subscribable in podcast apps (requires login).
+- **Publish to Nostr Music** - Publish each track as a kind 36787 event plus a kind 34139 playlist event for Nostr-native music clients (Wavlake, Fountain, etc.). Includes an Unpublish button that sends a NIP-09 deletion request (requires login).
+- **Publish RSS feed to a Blossom server** - Upload your feed to a Blossom server with a kind 1063 (NIP-94) pointer event so `${origin}/api/feed/{npub}/{podcastGuid}.xml` always resolves to the latest upload. Subscribable in podcast apps (requires login).
+- **Publish RSS feed to nsite (experimental)** - Publish via Blossom + a NIP-5A site manifest (kind 35128). Subscribable via any nsite gateway URL, and auto-submitted to Podcast Index (requires login).
 
 ## Save Options (Publisher Mode)
 
@@ -180,9 +187,11 @@ Once all your catalog feeds are hosted on MSP, the "Publish on MSP" section appe
 ## Nostr Integration
 
 Sign in with a NIP-07 compatible browser extension (Alby, nos2x, etc.) or connect a NIP-46 remote signer (Amber, nsecBunker) to:
-- Save feeds to Nostr relays (kind 30054)
+- Save RSS feeds to Nostr relays (kind 30054, for cross-device sync)
 - Load feeds from any device with your Nostr key
-- Publish Nostr Music events (kind 36787)
+- Publish Nostr Music (kind 36787 track events + kind 34139 playlist), with NIP-09 unpublish
+- Publish to Blossom servers (BUD-01 auth, NIP-94 pointer events)
+- Publish to nsite (NIP-5A site manifests, kind 35128)
 - Link your identity to MSP-hosted feeds for token-free editing
 
 Default relays:
