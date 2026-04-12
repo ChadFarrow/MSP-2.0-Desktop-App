@@ -565,7 +565,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               <option value="download">Download XML</option>
               <option value="clipboard">Copy to Clipboard</option>
               <option value="hosted">Host on MSP</option>
-              {isLoggedIn && <option value="nostr">Save to Nostr</option>}
+              {isLoggedIn && <option value="nostr">Save RSS feed to Nostr</option>}
               {!isPublisherMode && isLoggedIn && <option value="nostrMusic">Publish to Nostr Music</option>}
               {isLoggedIn && <option value="blossom">Publish to Blossom</option>}
               {isLoggedIn && <option value="nsite">Publish to nsite</option>}
@@ -1187,7 +1187,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                 <li><strong>Download XML</strong> - Download the RSS feed as an XML file to your computer.</li>
                 <li><strong>Copy to Clipboard</strong> - Copy the RSS XML to your clipboard for pasting elsewhere.</li>
                 <li><strong>Host on MSP</strong> - Host your feed on MSP servers. Get a permanent URL for your RSS feed to use in any app.{isLoggedIn && ' You can link your Nostr identity to edit from any device without needing the token.'}</li>
-                <li><strong>Save to Nostr</strong> - Publish to Nostr relays. Load it later on any device with your Nostr key (requires login).</li>
+                <li><strong>Save RSS feed to Nostr</strong> - Publish to Nostr relays. Load it later on any device with your Nostr key (requires login).</li>
                 <li><strong>Publish to Nostr Music</strong> - Publish tracks and playlist (kinds 36787 + 34139) for Nostr music clients (requires login).</li>
                 <li><strong>Publish to Blossom</strong> - Upload your feed to a Blossom server. Get a stable MSP URL that always points to your latest upload (requires login).</li>
               </ul>
