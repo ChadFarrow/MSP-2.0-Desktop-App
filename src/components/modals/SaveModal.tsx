@@ -546,7 +546,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                 disabled={loading}
                 style={{ color: 'var(--error)' }}
               >
-                Unpublish
+                Unpublish (delete)
               </button>
             )}
             <div style={{ flex: 1 }} />
@@ -568,7 +568,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               {isLoggedIn && <option value="nostr">Save RSS feed to Nostr</option>}
               {!isPublisherMode && isLoggedIn && <option value="nostrMusic">Publish to Nostr Music</option>}
               {isLoggedIn && <option value="blossom">Publish RSS feed to a Blossom server</option>}
-              {isLoggedIn && <option value="nsite">Publish to nsite</option>}
+              {isLoggedIn && <option value="nsite">Publish to nsite (experimental)</option>}
             </select>
           </div>
 
@@ -618,7 +618,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
           {mode === 'blossom' && (
             <div style={{ marginTop: '16px' }}>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '12px' }}>
-                Upload your RSS feed to a Blossom server. Get a permanent URL for podcast apps.
+                Upload your RSS feed to a Blossom server. Get a permanent MSP-hosted URL for podcast apps that always resolves to your latest upload.
               </p>
               <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                 <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem' }}>
@@ -703,7 +703,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
           {mode === 'nsite' && (
             <div style={{ marginTop: '16px' }}>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '12px' }}>
-                Publish your feed to a decentralized nsite via Blossom + Nostr (NIP-5A). Accessible through any nsite gateway.
+                Publish your feed as a decentralized nsite (NIP-5A) — experimental. Uploads to Blossom and creates a Nostr site manifest, reachable through any nsite gateway.
               </p>
               <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                 <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem' }}>
@@ -1190,6 +1190,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                 <li><strong>Save RSS feed to Nostr</strong> - Publish to Nostr relays. Load it later on any device with your Nostr key.</li>
                 <li><strong>Publish to Nostr Music</strong> - Publish tracks and playlist (kinds 36787 + 34139) for Nostr music clients.</li>
                 <li><strong>Publish RSS feed to a Blossom server</strong> - Upload your RSS feed to a Blossom server. Get a permanent MSP-hosted URL for podcast apps that always resolves to your latest upload.</li>
+                <li><strong>Publish to nsite (experimental)</strong> - Publish your feed as a decentralized nsite (NIP-5A). Uploads to Blossom and creates a Nostr site manifest, reachable through any nsite gateway.</li>
               </ul>
             </ModalWrapper>
       )}
