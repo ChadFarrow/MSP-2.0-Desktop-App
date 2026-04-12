@@ -796,12 +796,12 @@ body {
   cursor: pointer;
   font-family: Georgia, 'Times New Roman', serif;
   font-style: italic;
-  font-size: 1rem;
+  font-size: 0.75rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.1rem;
+  height: 1.1rem;
   border-radius: 50%;
   background: #ffffff;
   color: var(--accent-primary);
