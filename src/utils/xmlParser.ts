@@ -5,10 +5,10 @@ import { createEmptyTrack } from '../types/feed';
 import { areValueBlocksStrictEqual, arePersonsEqual } from './comparison';
 
 // OP3 prefix pattern: https://op3.dev/e/ or https://op3.dev/e,pg=GUID/
-const OP3_PREFIX_RE = /^https:\/\/op3\.dev\/e(?:,[^/]*)?\//;
+export const OP3_PREFIX_RE = /^https:\/\/op3\.dev\/e(?:,[^/]*)?\//;
 
 // Strip OP3 prefix from a URL, restoring the original URL
-function stripOp3Prefix(url: string): string {
+export function stripOp3Prefix(url: string): string {
   const stripped = url.replace(OP3_PREFIX_RE, '');
   // If the remaining URL doesn't start with a protocol, it was HTTPS
   if (!stripped.startsWith('http://') && !stripped.startsWith('https://')) {

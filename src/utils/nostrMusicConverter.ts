@@ -4,6 +4,7 @@ import { createEmptyAlbum, createEmptyTrack } from '../types/feed';
 import { fetchNostrProfile } from './nostrSync';
 import { areValueBlocksEqual } from './comparison';
 import { parseReleasedDate } from './dateUtils';
+import { OP3_PREFIX_RE } from './xmlParser';
 
 // Kind 36787 for Nostr music tracks
 const MUSIC_TRACK_KIND = 36787;
@@ -223,6 +224,11 @@ export async function convertNostrMusicToAlbum(
       convertNostrTrackToTrack(track, index + 1, aggregateValueBlock, fetchProfiles)
     )
   );
+
+  // Detect OP3 prefix on track URLs and preserve it
+  if (album.tracks.some(t => OP3_PREFIX_RE.test(t.enclosureUrl))) {
+    album.op3 = true;
+  }
 
   return album;
 }
