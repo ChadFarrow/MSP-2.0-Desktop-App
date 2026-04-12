@@ -777,9 +777,10 @@ export async function deleteNostrMusicTracks(
 
     const trackCount = album.tracks.filter(t => t.guid).length;
     const hasPlaylist = album.tracks.length >= 2 && album.podcastGuid;
-    const message = hasPlaylist
-      ? `Requested deletion of ${trackCount} track(s) and playlist from ${successCount}/${relays.length} relays`
-      : `Requested deletion of ${trackCount} track(s) from ${successCount}/${relays.length} relays`;
+    const target = hasPlaylist
+      ? `${trackCount} track(s) and playlist`
+      : `${trackCount} track(s)`;
+    const message = `Sent deletion request for ${target} to ${successCount}/${relays.length} relays (relays may take time to honor it)`;
 
     return { success: true, message };
   } catch (error) {
