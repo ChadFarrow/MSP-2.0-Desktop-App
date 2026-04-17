@@ -80,7 +80,6 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   const [nsitePiUrl, setNsitePiUrl] = useState<string | null>(null);
   const [nsiteProgress, setNsiteProgress] = useState<string | null>(null);
   const [podpingUrl, setPodpingUrl] = useState('');
-  const [podpingReason, setPodpingReason] = useState<'update' | 'live' | 'liveEnd'>('update');
   const [podpingStatus, setPodpingStatus] = useState<
     | { kind: 'idle' }
     | { kind: 'loading' }
@@ -495,7 +494,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
           try {
             const body: { url: string; reason: string; medium?: string } = {
               url: podpingUrl,
-              reason: podpingReason
+              reason: 'update'
             };
             const medium = isPublisherMode ? publisherFeed?.medium : album.medium;
             if (medium) body.medium = medium;
@@ -1228,19 +1227,6 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                     marginBottom: '12px'
                   }}
                 />
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem' }}>
-                  Reason
-                </label>
-                <select
-                  value={podpingReason}
-                  onChange={(e) => setPodpingReason(e.target.value as 'update' | 'live' | 'liveEnd')}
-                  className="form-select"
-                  style={{ marginBottom: '12px' }}
-                >
-                  <option value="update">update</option>
-                  <option value="live">live</option>
-                  <option value="liveEnd">liveEnd</option>
-                </select>
                 {podpingStatus.kind === 'success' && (
                   <p style={{ color: 'var(--success-color, #22c55e)', fontSize: '0.875rem' }}>
                     Podping sent.
