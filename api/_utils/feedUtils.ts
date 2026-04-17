@@ -74,7 +74,10 @@ function getPodcastIndexHeaders(): Record<string, string> {
  * Submit feed to Podcast Index and return PI ID if available
  * Uses pubnotify to trigger re-crawl, then add/byfeedurl for new feeds
  */
-export async function notifyPodcastIndex(feedUrl: string): Promise<number | null> {
+export async function notifyPodcastIndex(
+  feedUrl: string,
+  options: { medium?: string } = {}
+): Promise<number | null> {
   // First, send pubnotify to trigger re-crawl (works for updates, no auth required)
   try {
     await fetch(
@@ -88,7 +91,7 @@ export async function notifyPodcastIndex(feedUrl: string): Promise<number | null
   }
 
   // Broadcast feed update via podping.cloud (no-ops without PODPING_TOKEN)
-  void notifyPodping(feedUrl);
+  void notifyPodping(feedUrl, { medium: options.medium });
 
   // Then try to get PI ID via add/byfeedurl (for new feeds) or lookup
   if (!PI_API_KEY || !PI_API_SECRET) return null;

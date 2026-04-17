@@ -180,8 +180,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Build stable URL
     const stableUrl = `${getBaseUrl(req)}/api/hosted/${feedId}.xml`;
 
+    // Extract podcast:medium from XML for podping broadcast (music/video/publisher)
+    const mediumMatch = xml.match(/<podcast:medium>([^<]+)<\/podcast:medium>/);
+    const medium = mediumMatch?.[1];
+
     // Notify Podcast Index and get PI ID
-    const podcastIndexId = await notifyPodcastIndex(stableUrl);
+    const podcastIndexId = await notifyPodcastIndex(stableUrl, { medium });
 
     // Store metadata separately (Vercel Blob doesn't support custom metadata)
     await put(`feeds/${feedId}.meta.json`, JSON.stringify({

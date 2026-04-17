@@ -292,7 +292,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Notify Podcast Index and get PI ID (may update existing ID)
         const stableUrl = `${getBaseUrl(req)}/api/hosted/${feedId}.xml`;
-        const newPodcastIndexId = await notifyPodcastIndex(stableUrl);
+        const mediumMatch = xml.match(/<podcast:medium>([^<]+)<\/podcast:medium>/);
+        const medium = mediumMatch?.[1];
+        const newPodcastIndexId = await notifyPodcastIndex(stableUrl, { medium });
         const podcastIndexId = newPodcastIndexId || existingPodcastIndexId;
 
         await put(metaPath, JSON.stringify({
