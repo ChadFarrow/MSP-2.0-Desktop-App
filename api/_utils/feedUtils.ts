@@ -5,6 +5,59 @@ import { getAuthHeaders } from './podcastIndex.js';
 
 const PI_API_KEY = process.env.PODCASTINDEX_API_KEY;
 const PI_API_SECRET = process.env.PODCASTINDEX_API_SECRET;
+const PODPING_ENDPOINT = 'https://podping.cloud/';
+const PODPING_USER_AGENT = 'MSP2.0/1.0 (Music Side Project Studio)';
+
+export interface PodpingOptions {
+  reason?: string;
+  medium?: string;
+}
+
+export interface PodpingResult {
+  ok: boolean;
+  status?: number;
+  error?: string;
+}
+
+/**
+ * Submit a feed-update notification to podping.cloud.
+ * No-ops (returns ok: false) when PODPING_TOKEN is unset so callers can fire-and-forget.
+ */
+export async function notifyPodping(
+  feedUrl: string,
+  options: PodpingOptions = {}
+): Promise<PodpingResult> {
+  const token = process.env.PODPING_TOKEN;
+  if (!token) {
+    return { ok: false, error: 'PODPING_TOKEN not configured' };
+  }
+
+  const params = new URLSearchParams({ url: feedUrl });
+  if (options.reason) params.set('reason', options.reason);
+  if (options.medium) params.set('medium', options.medium);
+
+  try {
+    const response = await fetch(`${PODPING_ENDPOINT}?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        Authorization: token,
+        'User-Agent': PODPING_USER_AGENT
+      }
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      console.warn(`Podping submission failed: ${response.status} ${body}`);
+      return { ok: false, status: response.status, error: body || response.statusText };
+    }
+
+    return { ok: true, status: response.status };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('Failed to submit podping:', message);
+    return { ok: false, error: message };
+  }
+}
 
 /**
  * Generate Podcast Index API auth headers (throws if not configured)
@@ -27,12 +80,15 @@ export async function notifyPodcastIndex(feedUrl: string): Promise<number | null
     await fetch(
       `https://api.podcastindex.org/api/1.0/hub/pubnotify?url=${encodeURIComponent(feedUrl)}`,
       {
-        headers: { 'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)' }
+        headers: { 'User-Agent': PODPING_USER_AGENT }
       }
     );
   } catch (err) {
     console.warn('Failed to send pubnotify:', err instanceof Error ? err.message : err);
   }
+
+  // Broadcast feed update via podping.cloud (no-ops without PODPING_TOKEN)
+  void notifyPodping(feedUrl);
 
   // Then try to get PI ID via add/byfeedurl (for new feeds) or lookup
   if (!PI_API_KEY || !PI_API_SECRET) return null;

@@ -19,6 +19,7 @@ A `.env` file is required with the following variables:
 - `BLOB_READ_WRITE_TOKEN` - Vercel Blob storage token
 - `MSP_ADMIN_PUBKEYS` - Admin public keys for authentication
 - `VITE_CANONICAL_URL` - Canonical URL for the application
+- `PODPING_TOKEN` - podping.cloud Authorization token (optional; podping notifications are skipped when unset)
 
 No `.env.example` exists - request credentials from the team.
 
@@ -147,12 +148,13 @@ Vercel serverless functions:
 - `pisearch.ts` - Podcast Index search
 - `pisubmit.ts` - Submit feed to Podcast Index
 - `pubnotify.ts` - Podcast Index pub notification + feed lookup
+- `podping.ts` - Broadcast feed update via podping.cloud (requires `PODPING_TOKEN`)
 - `proxy-feed.ts` - CORS proxy for fetching external feeds
 - `hosted/` - MSP feed hosting endpoints (create, update, delete, backup/restore)
 - `feed/[npub]/[guid].ts` - Nostr-stored feed retrieval
 - `admin/` - Admin authentication (challenge/verify)
 - `_utils/podcastIndex.ts` - Shared Podcast Index auth headers
-- `_utils/feedUtils.ts` - Shared feed utilities (PI notification, UUID validation, token hashing)
+- `_utils/feedUtils.ts` - Shared feed utilities (PI notification, podping notification, UUID validation, token hashing)
 - `_utils/adminAuth.ts` - Nostr NIP-98 auth verification, `NostrEvent` type
 
 ### Feed Hosting & Podcast Index
@@ -162,6 +164,7 @@ Vercel serverless functions:
 - **Manual PI submission**: `PodcastIndexModal` (standalone bottom toolbar button) and `PublisherFeedReminderSection` (self-hosted URL field) both call `/api/pubnotify` for feeds not hosted on MSP
 - `pubnotify.ts` does pubnotify ping, GUID/URL lookup, then `add/byfeedurl` for new feeds — returns PI page URL for immediate user feedback
 - **Backup retention**: `backupFeed()` helper in `api/hosted/[feedId].ts` creates timestamped backups before PUT, DELETE, and restore operations; keeps only the 10 most recent backups per feed
+- **Podping**: `notifyPodcastIndex()` fire-and-forgets `notifyPodping()` after the PI pubnotify ping. Sends `GET https://podping.cloud/?url=...` with `Authorization: ${PODPING_TOKEN}`. Silently no-ops when `PODPING_TOKEN` is unset, so podping is off until the token is added. `/api/podping` also exposes it for manual pings
 
 ### Save Modal Destinations
 The Save modal (`src/components/modals/SaveModal.tsx`) offers eight destinations. Each is a different combination of *where the bytes live* and *who can consume them* — important context when deciding which one to point a user at:
