@@ -155,7 +155,9 @@ Vercel serverless functions:
 - `feed/[npub]/[guid].ts` - Nostr-stored feed retrieval
 - `admin/` - Admin authentication (challenge/verify)
 - `_utils/podcastIndex.ts` - Shared Podcast Index auth headers
-- `_utils/feedUtils.ts` - Shared feed utilities (PI notification, podping notification, UUID validation, token hashing)
+- `_utils/feedUtils.ts` - Shared feed utilities (PI notification, podping notification, `isPodpingConfigured()` helper, UUID validation, token hashing)
+- `_utils/rateLimiter.ts` - In-memory fixed-window IP rate limiter used by `/api/podping`
+- `_utils/xmlUtils.ts` - RSS XML helpers (`extractPodcastMedium()` — used by hosted POST/PUT before podping broadcast)
 - `_utils/adminAuth.ts` - Nostr NIP-98 auth verification, `NostrEvent` type
 
 ### Feed Hosting & Podcast Index
@@ -165,7 +167,7 @@ Vercel serverless functions:
 - **Manual PI submission**: `PodcastIndexModal` (standalone bottom toolbar button) and `PublisherFeedReminderSection` (self-hosted URL field) both call `/api/pubnotify` for feeds not hosted on MSP
 - `pubnotify.ts` does pubnotify ping, GUID/URL lookup, then `add/byfeedurl` for new feeds — returns PI page URL for immediate user feedback
 - **Backup retention**: `backupFeed()` helper in `api/hosted/[feedId].ts` creates timestamped backups before PUT, DELETE, and restore operations; keeps only the 10 most recent backups per feed
-- **Podping**: `notifyPodcastIndex()` fire-and-forgets `notifyPodping()` after the PI pubnotify ping. Sends `GET ${PODPING_ENDPOINT_URL}?url=...` with `Authorization: Bearer ${PODPING_BEARER_TOKEN}`. The endpoint is MSP's self-hosted [podping-hivepinger](https://github.com/brianoflondon/podping-hivepinger) deployment on Railway (repo: `ChadFarrow/msp-podping-service`), fronted by a Caddy sidecar enforcing the bearer token. Silently no-ops when either env var is unset, so podping is off until both are configured. `/api/podping` exposes a manual endpoint behind a 10/hour per-IP rate limit; the "Send Podping" row in the SaveModal is the UI for it.
+- **Podping**: `notifyPodcastIndex()` fire-and-forgets `notifyPodping()` after the PI pubnotify ping. Sends `GET ${PODPING_ENDPOINT_URL}?url=...` with `Authorization: Bearer ${PODPING_BEARER_TOKEN}`. The endpoint is MSP's self-hosted [podping-hivepinger](https://github.com/brianoflondon/podping-hivepinger) deployment on Railway (repo: `ChadFarrow/msp-podping-service`), fronted by a Caddy sidecar enforcing the bearer token. Silently no-ops when either env var is unset (`isPodpingConfigured()` in `api/_utils/feedUtils.ts` is the canonical gate). The fire-and-forget call site uses a `.then()` that `console.warn`s on failure so Vercel function logs surface hivepinger outages. `/api/podping` exposes a manual endpoint behind a 10/hour per-IP rate limit. Two UI entry points: the **Send Podping** row in the SaveModal (flow-integrated, URL auto-fills from `hostedUrl`/`stableUrl`/`nsiteUrl`) and a standalone **Podping** button on the bottom toolbar (`PodpingModal.tsx` — opens a mini modal with just a URL field + submit, `reason` is hardcoded to `'update'`).
 
 ### Save Modal Destinations
 The Save modal (`src/components/modals/SaveModal.tsx`) offers nine destinations. Each is a different combination of *where the bytes live* and *who can consume them* — important context when deciding which one to point a user at:
