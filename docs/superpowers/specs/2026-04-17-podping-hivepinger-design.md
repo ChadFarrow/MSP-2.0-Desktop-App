@@ -24,7 +24,7 @@ Three layers:
 
 1. **MSP** (Vercel, existing): auto-fires podpings on hosted feed create/update; exposes `/api/podping` for manual pings. Never talks to Hive directly.
 2. **Railway service** (new repo, `ChadFarrow/msp-podping-service`): unmodified `brianoflondon/podping-hivepinger` image, fronted by Caddy sidecar that validates a shared bearer token before reverse-proxying to hivepinger:1820.
-3. **Hive blockchain**: hivepinger signs `podping` `custom_json` ops with the MSP Hive posting key. Indexers watch whitelisted accounts and pick up updates.
+3. **Hive blockchain**: hivepinger signs `podping` `custom_json` ops with the MSP Hive posting key. Indexers watch Hive for podpings and pick up updates (Podping is permissionless — no notifier approval required).
 
 ## Railway service
 
@@ -201,19 +201,18 @@ Mock: `vi.spyOn(global, 'fetch')`.
 
 ### Out of scope for tests
 
-- Real Hive broadcast (flaky, requires whitelist, not useful)
+- Real Hive broadcast (flaky, slow, not useful)
 - Railway service itself (unmodified upstream image; Caddy config trivial)
 - End-to-end from publish → Hive — covered by the one-time manual smoke test
 
 ## One-time manual setup
 
-1. Hive account on `v4v.app` (done)
+1. Hive account on `v4v.app` (done). Any funded Hive account works — no notifier approval required.
 2. Posting key exported (done)
-3. Email `gethive@podping.org` with Hive username + "running hivepinger for MSP 2.0" — wait for whitelist confirmation (hours to couple days; blocks effectiveness but not code deploy)
-4. Create `ChadFarrow/msp-podping-service` repo with files in Section 2
-5. Connect Railway to that repo, set `HIVE_ACCOUNT_NAME`, `HIVE_POSTING_KEY`, `PODPING_SHARED_SECRET` (generate with `openssl rand -hex 32`)
-6. Copy Railway public URL + shared secret to Vercel MSP env: `PODPING_ENDPOINT_URL`, `PODPING_BEARER_TOKEN`
-7. Smoke test: `curl "$MSP/api/podping?url=https://msp.podtards.com/api/hosted/<feedId>.xml"` → 200; watch `hiveblocks.com/@<account>` for a `custom_json` op with id `podping`
+3. Create `ChadFarrow/msp-podping-service` repo with files in Section 2
+4. Connect Railway to that repo, set `HIVE_ACCOUNT_NAME`, `HIVE_POSTING_KEY`, `PODPING_SHARED_SECRET` (generate with `openssl rand -hex 32`)
+5. Copy Railway public URL + shared secret to Vercel MSP env: `PODPING_ENDPOINT_URL`, `PODPING_BEARER_TOKEN`
+6. Smoke test: `curl "$MSP/api/podping?url=https://msp.podtards.com/api/hosted/<feedId>.xml"` → 200; watch `hiveblocks.com/@<account>` for a `custom_json` op with id `podping`
 
 ## Rollback
 

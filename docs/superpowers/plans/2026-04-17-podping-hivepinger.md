@@ -121,7 +121,7 @@ Self-hosted [podping-hivepinger](https://github.com/brianoflondon/podping-hivepi
 
 ## What it does
 
-Receives HTTP podping requests from MSP, validates a shared bearer token, and forwards to hivepinger which queues, dedups, and broadcasts `podping` `custom_json` ops to the Hive blockchain. Podcast Index and other indexers watch whitelisted Hive accounts and re-crawl feeds when a podping lands.
+Receives HTTP podping requests from MSP, validates a shared bearer token, and forwards to hivepinger which queues, dedups, and broadcasts `podping` `custom_json` ops to the Hive blockchain. Podcast Index and other indexers watch Hive for podpings and re-crawl feeds when they land.
 
 ## Architecture
 
@@ -131,7 +131,7 @@ MSP (Vercel) ──Bearer──► Caddy :8080 ──► hivepinger :1820 ──
 
 ## Prerequisites
 
-- A Hive account on the [Podping notifier whitelist](https://github.com/Podcastindex-org/podping-hivewriter#accounts-whitelisted-to-send-podpings). Email `gethive@podping.org` to request whitelisting.
+- A funded Hive account (minimum ~20 HP so the account has Resource Credits to post; `hiveonboard.com?ref=podping` delegates enough to start). Any Hive account can send podpings — no notifier approval is required anymore.
 - The account's **posting key** (STM… prefix, never the owner or active key).
 
 ## Deploy to Railway
@@ -1286,14 +1286,13 @@ deployment on Railway, fronted by Caddy for bearer auth.
 
 ## Deploy steps
 
-1. Verify Hive account (done) and posting key (done).
-2. Request Podping whitelist at `gethive@podping.org` (blocks
-   effectiveness but not merge).
-3. Deploy the `msp-podping-service` repo to Railway with
+1. Verify Hive account (done) and posting key (done). Any funded Hive
+   account works — Podping is permissionless.
+2. Deploy the `msp-podping-service` repo to Railway with
    `HIVE_ACCOUNT_NAME`, `HIVE_POSTING_KEY`, `PODPING_SHARED_SECRET`.
-4. Set `PODPING_ENDPOINT_URL` and `PODPING_BEARER_TOKEN` on the MSP
+3. Set `PODPING_ENDPOINT_URL` and `PODPING_BEARER_TOKEN` on the MSP
    Vercel project.
-5. Smoke test `/api/podping?url=...` and watch `hiveblocks.com` for the
+4. Smoke test `/api/podping?url=...` and watch `hiveblocks.com` for the
    custom_json op.
 EOF
 )"
@@ -1327,4 +1326,4 @@ Eleven tasks total:
 10. Rewrite CLAUDE.md podping docs
 11. Final verification + PR push
 
-After merge, the remaining work is operational (whitelist email, Railway deploy, Vercel env vars) — no more code changes needed.
+After merge, the remaining work is operational (Railway deploy, Vercel env vars) — no more code changes needed.
