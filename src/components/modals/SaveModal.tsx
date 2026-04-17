@@ -38,7 +38,7 @@ interface SaveModalProps {
 
 export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', isDirty, isLoggedIn, onImport }: SaveModalProps) {
   const { state: nostrState } = useNostr();
-  const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'nsite' | 'hosted'>('local');
+  const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'nsite' | 'hosted' | 'podping'>('local');
   const isPublisherMode = feedType === 'publisher';
   const isVideoMode = feedType === 'video';
 
@@ -79,6 +79,14 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   const [nsiteBlossomUrl, setNsiteBlossomUrl] = useState<string | null>(null);
   const [nsitePiUrl, setNsitePiUrl] = useState<string | null>(null);
   const [nsiteProgress, setNsiteProgress] = useState<string | null>(null);
+  const [podpingUrl, setPodpingUrl] = useState('');
+  const [podpingReason, setPodpingReason] = useState<'update' | 'live' | 'liveEnd'>('update');
+  const [podpingStatus, setPodpingStatus] = useState<
+    | { kind: 'idle' }
+    | { kind: 'loading' }
+    | { kind: 'success' }
+    | { kind: 'error'; message: string }
+  >({ kind: 'idle' });
 
   // Check if feed is linked to current user's Nostr identity
   const isNostrLinked = hostedInfo?.ownerPubkey && nostrState.user?.pubkey === hostedInfo.ownerPubkey;
@@ -89,12 +97,14 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
       if (mode === 'nostrMusic' || mode === 'blossom' || mode === 'hosted' || mode === 'nsite') return 'Uploading...';
       if (mode === 'download') return 'Downloading...';
       if (mode === 'clipboard') return 'Copying...';
+      if (mode === 'podping') return 'Sending\u2026';
       return 'Saving...';
     }
     if (mode === 'nostrMusic') return 'Publish';
     if (mode === 'blossom' || mode === 'hosted' || mode === 'nsite') return 'Upload';
     if (mode === 'download') return 'Download';
     if (mode === 'clipboard') return 'Copy to Clipboard';
+    if (mode === 'podping') return 'Send Podping';
     return 'Save';
   };
 
@@ -102,6 +112,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   const isButtonDisabled = () => {
     if (loading) return true;
     if (mode === 'hosted' && !hostedInfo && !legacyHostedInfo && !tokenAcknowledged) return true;
+    if (mode === 'podping' && podpingStatus.kind === 'loading') return true;
     return false;
   };
 
@@ -111,6 +122,15 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
       setPendingToken(generateEditToken());
     }
   }, [mode, hostedInfo, legacyHostedInfo, pendingToken, showRestore]);
+
+  // Pre-fill podping URL from hosted feed URL when podping mode is selected
+  useEffect(() => {
+    if (mode !== 'podping') return;
+    if (podpingUrl) return; // don't overwrite user edits
+    if (hostedUrl) {
+      setPodpingUrl(hostedUrl);
+    }
+  }, [mode, hostedUrl, podpingUrl]);
 
   // Check for existing hosted feed on mount, and apply pending credentials
   useEffect(() => {
@@ -241,8 +261,8 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
     setMessage(null);
     setProgress(null);
 
-    // Validate required fields only for publishing modes (not local/download/clipboard)
-    const requiresValidation = !['local', 'download', 'clipboard'].includes(mode);
+    // Validate required fields only for publishing modes (not local/download/clipboard/podping)
+    const requiresValidation = !['local', 'download', 'clipboard', 'podping'].includes(mode);
     if (requiresValidation) {
       const errors: string[] = [];
 
@@ -466,6 +486,37 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
             setMessage({ type: 'success', text: successMsg });
           }
           break;
+        case 'podping':
+          if (!podpingUrl) {
+            setPodpingStatus({ kind: 'error', message: 'Feed URL is required' });
+            setLoading(false);
+            return;
+          }
+          setPodpingStatus({ kind: 'loading' });
+          try {
+            const body: { url: string; reason: string; medium?: string } = {
+              url: podpingUrl,
+              reason: podpingReason
+            };
+            const medium = isPublisherMode ? publisherFeed?.medium : album.medium;
+            if (medium) body.medium = medium;
+            const response = await fetch('/api/podping', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            if (!response.ok) {
+              const data = await response.json().catch(() => ({ error: response.statusText }));
+              setPodpingStatus({ kind: 'error', message: (data as { error?: string }).error ?? 'Podping failed' });
+              setLoading(false);
+              return;
+            }
+            setPodpingStatus({ kind: 'success' });
+          } catch (err) {
+            setPodpingStatus({ kind: 'error', message: err instanceof Error ? err.message : 'Network error' });
+          }
+          setLoading(false);
+          return;
       }
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Save failed' });
@@ -567,6 +618,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               <option value="download">Download XML</option>
               <option value="clipboard">Copy to Clipboard</option>
               <option value="hosted">Host on MSP</option>
+              <option value="podping">Send Podping</option>
               {isLoggedIn && <option value="nostr">Save RSS feed to Nostr</option>}
               {!isPublisherMode && isLoggedIn && <option value="nostrMusic">Publish to Nostr Music</option>}
               {isLoggedIn && <option value="blossom">Publish RSS feed to a Blossom server</option>}
@@ -1152,6 +1204,57 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               )}
             </div>
           )}
+          {mode === 'podping' && (
+            <div style={{ marginTop: '16px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '12px' }}>
+                Notify podcast apps that this feed was updated, via Podping/Hive. Indexers re-crawl the feed when they see the ping.
+              </p>
+              <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem' }}>
+                  Feed URL
+                </label>
+                <input
+                  type="text"
+                  value={podpingUrl}
+                  onChange={(e) => setPodpingUrl(e.target.value)}
+                  placeholder="https://msp.podtards.com/api/hosted/<id>.xml"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '4px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.875rem',
+                    marginBottom: '12px'
+                  }}
+                />
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem' }}>
+                  Reason
+                </label>
+                <select
+                  value={podpingReason}
+                  onChange={(e) => setPodpingReason(e.target.value as 'update' | 'live' | 'liveEnd')}
+                  className="form-select"
+                  style={{ marginBottom: '12px' }}
+                >
+                  <option value="update">update</option>
+                  <option value="live">live</option>
+                  <option value="liveEnd">liveEnd</option>
+                </select>
+                {podpingStatus.kind === 'success' && (
+                  <p style={{ color: 'var(--success-color, #22c55e)', fontSize: '0.875rem' }}>
+                    Podping sent.
+                  </p>
+                )}
+                {podpingStatus.kind === 'error' && (
+                  <p style={{ color: 'var(--error-color, #ef4444)', fontSize: '0.875rem' }}>
+                    {podpingStatus.message}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {progress && (
             <div style={{ marginTop: '12px', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
@@ -1189,6 +1292,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                 <li><strong>Download XML</strong> - Download the RSS feed as an XML file to your computer.</li>
                 <li><strong>Copy to Clipboard</strong> - Copy the RSS XML to your clipboard for pasting elsewhere.</li>
                 <li><strong>Host on MSP</strong> - Host your feed on MSP servers. Get a permanent URL for your RSS feed to use in any app.{isLoggedIn && ' You can link your Nostr identity to edit from any device without needing the token.'}</li>
+                <li><strong>Send Podping</strong> - Broadcast a feed-update notification via Podping/Hive. Indexers like Podcast Index watch Hive and re-crawl the feed when they see the ping.</li>
                 <li><strong>Save RSS feed to Nostr</strong> - Stores the entire RSS XML inside a Nostr event (kind 30054) on your relays. Personal cross-device backup tied to your Nostr key. Not readable by podcast apps.</li>
                 <li><strong>Publish to Nostr Music</strong> - Publishes each track (kind 36787) and the playlist (kind 34139) as Nostr events for Nostr-native music clients like Wavlake and Fountain. Audio files must already be hosted somewhere - these events just point to them. Not a podcast RSS feed.</li>
                 <li><strong>Publish RSS feed to a Blossom server</strong> - Uploads the RSS file to a Blossom server and registers a Nostr pointer (kind 1063) so MSP can serve a permanent URL. Subscribable in any podcast app.</li>
