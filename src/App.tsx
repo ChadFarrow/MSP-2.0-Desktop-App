@@ -13,6 +13,7 @@ import { ImportModal } from './components/modals/ImportModal';
 import { SaveModal } from './components/modals/SaveModal';
 import { PreviewModal } from './components/modals/PreviewModal';
 import { PodcastIndexModal } from './components/modals/PodcastIndexModal';
+import { PodpingModal } from './components/modals/PodpingModal';
 import { InfoModal } from './components/modals/InfoModal';
 import { NostrConnectModal } from './components/modals/NostrConnectModal';
 import { NewFeedChoiceModal } from './components/modals/NewFeedChoiceModal';
@@ -32,6 +33,7 @@ function AppContent() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showPodcastIndexModal, setShowPodcastIndexModal] = useState(false);
+  const [showPodpingModal, setShowPodpingModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showNostrConnectModal, setShowNostrConnectModal] = useState(false);
   const [showNewFeedChoiceModal, setShowNewFeedChoiceModal] = useState(false);
@@ -302,6 +304,14 @@ function AppContent() {
           </button>
           <button
             className="bottom-toolbar-btn"
+            onClick={() => setShowPodpingModal(true)}
+            title="Send Podping"
+          >
+            <span className="bottom-toolbar-icon">📡</span>
+            <span className="bottom-toolbar-label">Podping</span>
+          </button>
+          <button
+            className="bottom-toolbar-btn"
             onClick={() => setShowPreviewModal(true)}
             title="View Feed"
           >
@@ -345,6 +355,19 @@ function AppContent() {
       {showPodcastIndexModal && (
         <PodcastIndexModal
           onClose={() => setShowPodcastIndexModal(false)}
+          feedGuid={
+            state.feedType === 'publisher' && state.publisherFeed
+              ? state.publisherFeed.podcastGuid
+              : state.feedType === 'video' && state.videoFeed
+                ? state.videoFeed.podcastGuid
+                : state.album.podcastGuid
+          }
+        />
+      )}
+
+      {showPodpingModal && (
+        <PodpingModal
+          onClose={() => setShowPodpingModal(false)}
           feedGuid={
             state.feedType === 'publisher' && state.publisherFeed
               ? state.publisherFeed.podcastGuid
