@@ -127,10 +127,9 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   useEffect(() => {
     if (mode !== 'podping') return;
     if (podpingUrl) return; // don't overwrite user edits
-    if (hostedUrl) {
-      setPodpingUrl(hostedUrl);
-    }
-  }, [mode, hostedUrl, podpingUrl]);
+    const url = hostedUrl ?? stableUrl ?? nsiteUrl ?? '';
+    if (url) setPodpingUrl(url);
+  }, [mode, hostedUrl, stableUrl, nsiteUrl, podpingUrl]);
 
   // Check for existing hosted feed on mount, and apply pending credentials
   useEffect(() => {
