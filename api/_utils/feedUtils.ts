@@ -95,7 +95,7 @@ export async function notifyPodcastIndex(
     console.warn('Failed to send pubnotify:', err instanceof Error ? err.message : err);
   }
 
-  // Broadcast feed update via podping.cloud (no-ops without PODPING_TOKEN)
+  // Broadcast feed update via self-hosted hivepinger (no-ops without PODPING_ENDPOINT_URL + PODPING_BEARER_TOKEN)
   void notifyPodping(feedUrl, { medium: options.medium });
 
   // Then try to get PI ID via add/byfeedurl (for new feeds) or lookup

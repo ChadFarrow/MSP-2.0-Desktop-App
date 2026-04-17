@@ -19,7 +19,8 @@ A `.env` file is required with the following variables:
 - `BLOB_READ_WRITE_TOKEN` - Vercel Blob storage token
 - `MSP_ADMIN_PUBKEYS` - Admin public keys for authentication
 - `VITE_CANONICAL_URL` - Canonical URL for the application
-- `PODPING_TOKEN` - podping.cloud Authorization token (optional; podping notifications are skipped when unset)
+- `PODPING_ENDPOINT_URL` - Full URL to MSP's self-hosted podping-hivepinger Railway service, trailing slash (optional; podping notifications are skipped when unset)
+- `PODPING_BEARER_TOKEN` - Bearer token shared with the Railway service (optional; podping notifications are skipped when unset)
 
 No `.env.example` exists - request credentials from the team.
 
@@ -148,7 +149,7 @@ Vercel serverless functions:
 - `pisearch.ts` - Podcast Index search
 - `pisubmit.ts` - Submit feed to Podcast Index
 - `pubnotify.ts` - Podcast Index pub notification + feed lookup
-- `podping.ts` - Broadcast feed update via podping.cloud (requires `PODPING_TOKEN`)
+- `podping.ts` - Broadcast feed update via self-hosted hivepinger Railway service (requires `PODPING_ENDPOINT_URL` + `PODPING_BEARER_TOKEN`); rate-limited 10/hour per IP
 - `proxy-feed.ts` - CORS proxy for fetching external feeds
 - `hosted/` - MSP feed hosting endpoints (create, update, delete, backup/restore)
 - `feed/[npub]/[guid].ts` - Nostr-stored feed retrieval
@@ -164,10 +165,10 @@ Vercel serverless functions:
 - **Manual PI submission**: `PodcastIndexModal` (standalone bottom toolbar button) and `PublisherFeedReminderSection` (self-hosted URL field) both call `/api/pubnotify` for feeds not hosted on MSP
 - `pubnotify.ts` does pubnotify ping, GUID/URL lookup, then `add/byfeedurl` for new feeds — returns PI page URL for immediate user feedback
 - **Backup retention**: `backupFeed()` helper in `api/hosted/[feedId].ts` creates timestamped backups before PUT, DELETE, and restore operations; keeps only the 10 most recent backups per feed
-- **Podping**: `notifyPodcastIndex()` fire-and-forgets `notifyPodping()` after the PI pubnotify ping. Sends `GET https://podping.cloud/?url=...` with `Authorization: ${PODPING_TOKEN}`. Silently no-ops when `PODPING_TOKEN` is unset, so podping is off until the token is added. `/api/podping` also exposes it for manual pings
+- **Podping**: `notifyPodcastIndex()` fire-and-forgets `notifyPodping()` after the PI pubnotify ping. Sends `GET ${PODPING_ENDPOINT_URL}?url=...` with `Authorization: Bearer ${PODPING_BEARER_TOKEN}`. The endpoint is MSP's self-hosted [podping-hivepinger](https://github.com/brianoflondon/podping-hivepinger) deployment on Railway (repo: `ChadFarrow/msp-podping-service`), fronted by a Caddy sidecar enforcing the bearer token. Silently no-ops when either env var is unset, so podping is off until both are configured. `/api/podping` exposes a manual endpoint behind a 10/hour per-IP rate limit; the "Send Podping" row in the SaveModal is the UI for it.
 
 ### Save Modal Destinations
-The Save modal (`src/components/modals/SaveModal.tsx`) offers eight destinations. Each is a different combination of *where the bytes live* and *who can consume them* — important context when deciding which one to point a user at:
+The Save modal (`src/components/modals/SaveModal.tsx`) offers nine destinations. Each is a different combination of *where the bytes live* and *who can consume them* — important context when deciding which one to point a user at:
 
 | Destination | What gets published | Storage | Subscribable in podcast apps? |
 |---|---|---|---|
@@ -175,12 +176,13 @@ The Save modal (`src/components/modals/SaveModal.tsx`) offers eight destinations
 | Download XML | Generated RSS XML | User's filesystem | No |
 | Copy to Clipboard | Generated RSS XML | Clipboard | No |
 | Host on MSP | Generated RSS XML | Vercel Blob (`feeds/{feedId}.xml`) | Yes — `https://msp.podtards.com/api/hosted/{feedId}` |
+| Send Podping | Feed-update notification | Hive blockchain (via MSP hivepinger) | Indirectly — Podcast Index re-crawls the feed URL |
 | Save RSS feed to Nostr | Full RSS XML embedded in a kind 30054 event | Nostr relays only | No — only MSP reads kind 30054 (cross-device sync) |
 | Publish to Nostr Music | Per-track events (kind 36787) + playlist event (kind 34139) | Nostr relays | No — Nostr-native music clients only (Wavlake, Fountain, etc.). Audio files must already be hosted elsewhere; the events just reference enclosure URLs |
 | Publish RSS feed to a Blossom server | Generated RSS XML | Blossom server (content-addressed) + kind 1063 NIP-94 pointer event on Nostr | Yes — `${origin}/api/feed/{npub}/{podcastGuid}.xml` resolves the pointer and 302s to the latest Blossom URL |
 | Publish RSS feed to nsite (experimental) | Generated RSS XML | Blossom server + NIP-5A site manifest (kind 35128) | Yes — via any nsite gateway URL |
 
-Login-gated options (everything from "Save RSS feed to Nostr" down) are conditionally rendered on `isLoggedIn` — they don't appear in the dropdown for logged-out users. The help popup (ℹ️ next to the modal title) lists all eight with the same wording so help and dropdown stay in sync — keep them aligned when adding/renaming destinations.
+Login-gated options (everything from "Save RSS feed to Nostr" down) are conditionally rendered on `isLoggedIn` — they don't appear in the dropdown for logged-out users. The help popup (ℹ️ next to the modal title) lists all nine with the same wording so help and dropdown stay in sync — keep them aligned when adding/renaming destinations.
 
 ### XML Handling
 - `xmlParser.ts` - Uses fast-xml-parser to parse RSS feeds, preserves unknown elements, detects and strips OP3 prefixes on import
