@@ -279,8 +279,10 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templa
               className="import-help-icon"
               onClick={() => setShowHelp(true)}
               title="Show import type descriptions"
+              role="button"
+              aria-label="Show import type descriptions"
             >
-              ℹ️
+              i
             </span>
           </div>
         }

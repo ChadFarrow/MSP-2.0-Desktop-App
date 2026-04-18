@@ -97,6 +97,8 @@ export interface NostrMusicTrackInfo {
   imageUrl?: string;
   released?: string;
   language?: string;
+  duration?: string;
+  explicit?: true;
   genres: string[];
   zapSplits: NostrZapSplit[];
   content: NostrMusicContent;

@@ -1000,13 +1000,26 @@ body {
 
 .import-help-icon {
   cursor: pointer;
-  font-size: 0.9rem;
-  opacity: 0.7;
-  transition: opacity 0.15s ease;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--accent-primary);
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--accent-primary), 0 2px 8px rgba(139, 92, 246, 0.5);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .import-help-icon:hover {
-  opacity: 1;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px var(--accent-secondary), 0 3px 12px rgba(167, 139, 250, 0.7);
 }
 
 .import-help-modal {

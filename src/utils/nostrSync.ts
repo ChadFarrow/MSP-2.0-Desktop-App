@@ -28,6 +28,9 @@ const MUSIC_TRACK_KIND = 36787;
 // Kind 34139 for Nostr music playlists
 const MUSIC_PLAYLIST_KIND = 34139;
 
+// Kind 5 for NIP-09 deletion requests
+const DELETION_KIND = 5;
+
 // Nostr profile metadata interface
 export interface NostrProfile {
   name?: string;
@@ -523,6 +526,16 @@ function createMusicTrackEvent(
     ['alt', `Music track: ${track.title} by ${album.author || 'Unknown Artist'}`]
   ];
 
+  // Add duration
+  if (track.duration) {
+    tags.push(['duration', String(track.duration)]);
+  }
+
+  // Add explicit flag
+  if (track.explicit) {
+    tags.push(['explicit', 'true']);
+  }
+
   // Add image (track art or album art)
   const imageUrl = track.trackArtUrl || album.imageUrl;
   if (imageUrl) {
@@ -540,7 +553,8 @@ function createMusicTrackEvent(
     tags.push(['language', album.language]);
   }
 
-  // Add genre tags from categories
+  // Add genre tags from categories (music discriminator first, then user genres)
+  tags.push(['t', 'music']);
   for (const category of album.categories) {
     tags.push(['t', category.toLowerCase()]);
   }
@@ -719,6 +733,70 @@ export async function publishNostrMusicTracks(
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, message, publishedCount: 0, playlistPublished: false };
+  }
+}
+
+// Delete (unpublish) Nostr Music events for an album via NIP-09
+export async function deleteNostrMusicTracks(
+  album: Album,
+  relays = DEFAULT_RELAYS
+): Promise<{ success: boolean; message: string }> {
+  if (!hasSigner()) {
+    return { success: false, message: 'Not logged in' };
+  }
+
+  if (!album.tracks || album.tracks.length === 0) {
+    return { success: false, message: 'No tracks to delete' };
+  }
+
+  try {
+    const signer = getSigner();
+    const pubkey = await signer.getPublicKey();
+
+    // Build 'a' tags for all tracks + playlist
+    const tags: string[][] = [];
+
+    for (const track of album.tracks) {
+      if (track.guid) {
+        tags.push(['a', `${MUSIC_TRACK_KIND}:${pubkey}:${track.guid}`]);
+      }
+    }
+
+    // Include playlist deletion if album has 2+ tracks
+    if (album.tracks.length >= 2 && album.podcastGuid) {
+      tags.push(['a', `${MUSIC_PLAYLIST_KIND}:${pubkey}:${album.podcastGuid}`]);
+    }
+
+    if (tags.length === 0) {
+      return { success: false, message: 'No events to delete' };
+    }
+
+    const deletionEvent = {
+      kind: DELETION_KIND,
+      pubkey,
+      created_at: Math.floor(Date.now() / 1000),
+      tags,
+      content: 'Unpublished from MSP 2.0'
+    };
+
+    const signedEvent = await signer.signEvent(deletionEvent);
+    const { successCount } = await publishEventToRelays(signedEvent as NostrEvent, relays);
+
+    if (successCount === 0) {
+      return { success: false, message: 'Failed to send deletion request to any relay' };
+    }
+
+    const trackCount = album.tracks.filter(t => t.guid).length;
+    const hasPlaylist = album.tracks.length >= 2 && album.podcastGuid;
+    const target = hasPlaylist
+      ? `${trackCount} track(s) and playlist`
+      : `${trackCount} track(s)`;
+    const message = `Sent deletion request for ${target} to ${successCount}/${relays.length} relays (relays may take time to honor it)`;
+
+    return { success: true, message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, message };
   }
 }
 
