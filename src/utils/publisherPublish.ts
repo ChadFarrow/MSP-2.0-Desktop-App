@@ -88,10 +88,16 @@ const isCorsOrNetworkError = (errMsg: string): boolean => {
   );
 };
 
-// Notify Podcast Index about a feed update
-async function notifyPodcastIndex(feedUrl: string): Promise<{ status: 'indexed' | 'pending' | 'failed'; pageUrl?: string }> {
+// Notify Podcast Index about a feed update. Medium is forwarded to podping so indexers and
+// the MSP consumer can classify the feed correctly (pp_music_update vs pp_podcast_update).
+async function notifyPodcastIndex(
+  feedUrl: string,
+  medium?: string
+): Promise<{ status: 'indexed' | 'pending' | 'failed'; pageUrl?: string }> {
   try {
-    const res = await apiFetch(`/api/pubnotify?url=${encodeURIComponent(feedUrl)}`);
+    const params = new URLSearchParams({ url: feedUrl });
+    if (medium) params.set('medium', medium);
+    const res = await apiFetch(`/api/pubnotify?${params}`);
     const data = await res.json();
     if (data.success) {
       if (data.podcastIndexUrl) {
@@ -202,7 +208,7 @@ async function hostCatalogFeed(
       saveHostedFeedInfo(item.feedGuid, hostedInfo);
 
       // Notify PI in background
-      notifyPodcastIndex(result.url).catch(err => console.warn('PI notification failed:', err));
+      notifyPodcastIndex(result.url, album.medium).catch(err => console.warn('PI notification failed:', err));
 
       return {
         title: feedTitle,
@@ -320,7 +326,7 @@ async function processCatalogFeed(
           }
 
           // Notify PI in background (don't wait)
-          notifyPodcastIndex(feedUrl).catch(err => console.warn('PI notification failed:', err));
+          notifyPodcastIndex(feedUrl, album.medium).catch(err => console.warn('PI notification failed:', err));
           return {
             title: feedTitle,
             feedGuid: item.feedGuid,
@@ -560,7 +566,7 @@ export async function publishPublisherFeed(
 
   // Step 3: Notify Podcast Index
   onProgress({ step: 'notifying', message: 'Notifying Podcast Index...' });
-  const piResult = await notifyPodcastIndex(feedUrl);
+  const piResult = await notifyPodcastIndex(feedUrl, updatedPublisherFeed.medium);
 
   // Step 4: Update catalog feeds with publisher reference (if requested)
   let catalogUpdateResults: FeedUpdateResult[] | undefined;
