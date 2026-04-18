@@ -18,6 +18,11 @@ const CLIENT_TAG = 'MSP 2.0';
 
 const DEFAULT_GATEWAY = 'nsite.lol';
 
+const NSITE_RELAY = 'wss://relay.nsite.lol';
+
+/** Relays for nsite manifest publishing: standard relays + the nsite-specific relay */
+const NSITE_RELAYS = [...DEFAULT_RELAYS, NSITE_RELAY];
+
 /**
  * Calculate SHA256 hash of content
  */
@@ -52,7 +57,7 @@ function buildNsiteUrl(pubkey: string, siteId: string, path: string, gateway = D
  * Must be 1-13 chars, lowercase alphanumeric and hyphens
  */
 function isValidSiteId(siteId: string): boolean {
-  return /^[a-z0-9-]{1,13}$/.test(siteId);
+  return /^[a-z0-9]([a-z0-9-]{0,11}[a-z0-9])?$/.test(siteId);
 }
 
 /**
@@ -80,7 +85,7 @@ async function createBlossomAuthEvent(
       ['x', hash],
       ['expiration', String(expiration)]
     ],
-    content: `upload ${hash}`
+    content: ''
   };
 }
 
@@ -92,7 +97,8 @@ function createNsiteManifest(
   siteId: string,
   paths: Array<{ path: string; hash: string }>,
   blossomServer: string,
-  title: string
+  title: string,
+  relays: string[]
 ): NostrEvent {
   const tags: string[][] = [
     ['d', siteId],
@@ -100,6 +106,10 @@ function createNsiteManifest(
     ['client', CLIENT_TAG],
     ['server', blossomServer.replace(/\/$/, '')],
   ];
+
+  for (const relay of relays) {
+    tags.push(['relay', relay]);
+  }
 
   for (const { path, hash } of paths) {
     tags.push(['path', path, hash]);
@@ -145,7 +155,7 @@ export async function publishToNsite(
   }
 
   if (!isValidSiteId(siteId)) {
-    return { success: false, message: 'Site ID must be 1-13 lowercase alphanumeric characters or hyphens' };
+    return { success: false, message: 'Site ID must be 1-13 lowercase alphanumeric characters or hyphens, and must not start or end with a hyphen' };
   }
 
   try {
@@ -201,11 +211,12 @@ export async function publishToNsite(
       siteId,
       [{ path: '/feed.xml', hash }],
       blossomServer,
-      title
+      title,
+      NSITE_RELAYS
     );
 
     const signedManifest = await signer.signEvent(manifest);
-    const { successCount } = await publishEventToRelays(signedManifest as NostrEvent, DEFAULT_RELAYS);
+    const { successCount } = await publishEventToRelays(signedManifest as NostrEvent, NSITE_RELAYS);
 
     if (successCount === 0) {
       return {

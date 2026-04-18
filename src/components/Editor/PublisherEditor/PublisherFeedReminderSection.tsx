@@ -118,7 +118,9 @@ export function PublisherFeedReminderSection({ publisherFeed }: PublisherFeedRem
     setPiResult(null);
 
     try {
-      const response = await fetch(`/api/pubnotify?url=${encodeURIComponent(selfHostedUrl.trim())}`);
+      const params = new URLSearchParams({ url: selfHostedUrl.trim() });
+      if (publisherFeed.medium) params.set('medium', publisherFeed.medium);
+      const response = await fetch(`/api/pubnotify?${params}`);
       const data = await response.json();
 
       if (!response.ok) {

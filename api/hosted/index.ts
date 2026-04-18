@@ -9,6 +9,7 @@ import {
   hashToken,
   isValidFeedId
 } from '../_utils/feedUtils.js';
+import { extractPodcastMedium } from '../_utils/xmlUtils.js';
 
 // Generate a secure edit token
 function generateEditToken(): string {
@@ -59,10 +60,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               if (authorMatch) {
                 author = authorMatch[1];
               }
-              // Extract podcast:medium using regex
-              const mediumMatch = xml.match(/<podcast:medium>([^<]+)<\/podcast:medium>/);
-              if (mediumMatch) {
-                medium = mediumMatch[1];
+              const extractedMedium = extractPodcastMedium(xml);
+              if (extractedMedium) {
+                medium = extractedMedium;
               }
             } catch {
               // Ignore errors extracting metadata
@@ -180,8 +180,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Build stable URL
     const stableUrl = `${getBaseUrl(req)}/api/hosted/${feedId}.xml`;
 
+    // Extract podcast:medium from XML for podping broadcast (music/video/publisher)
+    const medium = extractPodcastMedium(xml);
+
     // Notify Podcast Index and get PI ID
-    const podcastIndexId = await notifyPodcastIndex(stableUrl);
+    const podcastIndexId = await notifyPodcastIndex(stableUrl, { medium });
 
     // Store metadata separately (Vercel Blob doesn't support custom metadata)
     await put(`feeds/${feedId}.meta.json`, JSON.stringify({

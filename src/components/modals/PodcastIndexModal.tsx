@@ -5,9 +5,10 @@ import { getHostedFeedInfo, buildHostedUrl } from '../../utils/hostedFeed';
 interface PodcastIndexModalProps {
   onClose: () => void;
   feedGuid: string;
+  medium?: string;
 }
 
-export function PodcastIndexModal({ onClose, feedGuid }: PodcastIndexModalProps) {
+export function PodcastIndexModal({ onClose, feedGuid, medium }: PodcastIndexModalProps) {
   const [podcastIndexUrl, setPodcastIndexUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -34,6 +35,7 @@ export function PodcastIndexModal({ onClose, feedGuid }: PodcastIndexModalProps)
     try {
       const params = new URLSearchParams({ url: podcastIndexUrl.trim() });
       if (feedGuid) params.set('guid', feedGuid);
+      if (medium) params.set('medium', medium);
       const response = await fetch(`/api/pubnotify?${params}`);
       const data = await response.json();
 

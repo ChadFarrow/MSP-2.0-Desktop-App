@@ -378,6 +378,8 @@ const generateCommonChannelElements = (data: BaseChannelData, medium: string, le
 // See https://op3.dev/setup for details
 const applyOp3Prefix = (url: string, podcastGuid?: string): string => {
   if (!url) return url;
+  // Don't double-prefix URLs that already have OP3
+  if (url.startsWith('https://op3.dev/e')) return url;
   const pgParam = podcastGuid ? `,pg=${podcastGuid}` : '';
   // For HTTPS URLs, strip the protocol; for HTTP, keep it
   const urlWithoutProtocol = url.startsWith('https://') ? url.slice(8) : url;
