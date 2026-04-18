@@ -12,6 +12,7 @@ import { NostrLoginButton } from './components/NostrLoginButton';
 import { ImportModal } from './components/modals/ImportModal';
 import { SaveModal } from './components/modals/SaveModal';
 import { PreviewModal } from './components/modals/PreviewModal';
+import { PodcastIndexModal } from './components/modals/PodcastIndexModal';
 import { PodpingModal } from './components/modals/PodpingModal';
 import { InfoModal } from './components/modals/InfoModal';
 import { NostrConnectModal } from './components/modals/NostrConnectModal';
@@ -34,6 +35,7 @@ import {
 import { FeedSidebar } from './components/FeedSidebar';
 import { hasLocalStorage } from './utils/localFeedStorage';
 import mspLogo from './assets/msp-logo.png';
+import piLogo from './assets/podcast-index-logo.svg';
 import './App.css';
 
 // Main App Content (needs access to context)
@@ -43,6 +45,7 @@ function AppContent() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showPodcastIndexModal, setShowPodcastIndexModal] = useState(false);
   const [showPodpingModal, setShowPodpingModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showNostrConnectModal, setShowNostrConnectModal] = useState(false);
@@ -259,36 +262,6 @@ function AppContent() {
                 <div className="dropdown-menu">
                   <button
                     className="dropdown-item"
-                    onClick={() => { handleNew(state.feedType); setShowDropdown(false); }}
-                  >
-                    📂 New {state.feedType === 'publisher' ? 'Publisher' : state.feedType === 'video' ? 'Video Feed' : 'Album'}
-                  </button>
-                  <button
-                    className="dropdown-item"
-                    onClick={() => { setShowImportModal(true); setShowDropdown(false); }}
-                  >
-                    📥 Import
-                  </button>
-                  <button
-                    className="dropdown-item"
-                    onClick={() => { setShowSaveModal(true); setShowDropdown(false); }}
-                  >
-                    💾 Save
-                  </button>
-                  <button
-                    className="dropdown-item"
-                    onClick={() => { setShowPreviewModal(true); setShowDropdown(false); }}
-                  >
-                    👁️ View Feed
-                  </button>
-                  <button
-                    className="dropdown-item"
-                    onClick={() => { setShowPodpingModal(true); setShowDropdown(false); }}
-                  >
-                    📡 Send Podping
-                  </button>
-                  <button
-                    className="dropdown-item"
                     onClick={() => { setShowInfoModal(true); setShowDropdown(false); }}
                   >
                     ℹ️ Info
@@ -404,6 +377,56 @@ function AppContent() {
             {state.feedType === 'publisher' ? <PublisherEditor /> : <Editor key={`${state.feedType}-${state.album?.podcastGuid}-${state.videoFeed?.podcastGuid}`} />}
           </div>
         </div>
+        <div className="bottom-toolbar">
+          <button
+            className="bottom-toolbar-btn"
+            onClick={() => handleNew(state.feedType)}
+            title={`New ${state.feedType === 'publisher' ? 'Publisher' : state.feedType === 'video' ? 'Video Feed' : 'Album'}`}
+          >
+            <span className="bottom-toolbar-icon">📂</span>
+            <span className="bottom-toolbar-label">New</span>
+          </button>
+          <button
+            className="bottom-toolbar-btn"
+            onClick={() => setShowImportModal(true)}
+            title="Import"
+          >
+            <span className="bottom-toolbar-icon">📥</span>
+            <span className="bottom-toolbar-label">Import</span>
+          </button>
+          <button
+            className="bottom-toolbar-btn"
+            onClick={() => setShowSaveModal(true)}
+            title="Save"
+          >
+            <span className="bottom-toolbar-icon">💾</span>
+            <span className="bottom-toolbar-label">Save</span>
+          </button>
+          <button
+            className="bottom-toolbar-btn"
+            onClick={() => setShowPodcastIndexModal(true)}
+            title="Submit to Podcast Index"
+          >
+            <img src={piLogo} alt="Podcast Index" className="bottom-toolbar-icon-img" />
+            <span className="bottom-toolbar-label">Podcast Index</span>
+          </button>
+          <button
+            className="bottom-toolbar-btn"
+            onClick={() => setShowPodpingModal(true)}
+            title="Send Podping"
+          >
+            <span className="bottom-toolbar-icon">📡</span>
+            <span className="bottom-toolbar-label">Podping</span>
+          </button>
+          <button
+            className="bottom-toolbar-btn"
+            onClick={() => setShowPreviewModal(true)}
+            title="View Feed"
+          >
+            <span className="bottom-toolbar-icon">👁️</span>
+            <span className="bottom-toolbar-label">View Feed</span>
+          </button>
+        </div>
       </div>
 
       {showImportModal && (
@@ -438,6 +461,26 @@ function AppContent() {
           album={state.feedType === 'video' && state.videoFeed ? state.videoFeed : state.album}
           publisherFeed={state.publisherFeed}
           feedType={state.feedType}
+        />
+      )}
+
+      {showPodcastIndexModal && (
+        <PodcastIndexModal
+          onClose={() => setShowPodcastIndexModal(false)}
+          feedGuid={
+            state.feedType === 'publisher' && state.publisherFeed
+              ? state.publisherFeed.podcastGuid
+              : state.feedType === 'video' && state.videoFeed
+                ? state.videoFeed.podcastGuid
+                : state.album.podcastGuid
+          }
+          medium={
+            state.feedType === 'publisher'
+              ? undefined
+              : state.feedType === 'video'
+                ? 'video'
+                : 'music'
+          }
         />
       )}
 
