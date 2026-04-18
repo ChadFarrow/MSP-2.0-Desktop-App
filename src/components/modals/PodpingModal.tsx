@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ModalWrapper } from './ModalWrapper';
 import { getHostedFeedInfo, buildHostedUrl } from '../../utils/hostedFeed';
+import { apiFetch } from '../../utils/api';
 
 interface PodpingModalProps {
   onClose: () => void;
@@ -34,7 +35,7 @@ export function PodpingModal({ onClose, feedGuid, medium }: PodpingModalProps) {
     try {
       const body: { url: string; reason: string; medium?: string } = { url, reason: 'update' };
       if (medium) body.medium = medium;
-      const response = await fetch('/api/podping', {
+      const response = await apiFetch('/api/podping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
