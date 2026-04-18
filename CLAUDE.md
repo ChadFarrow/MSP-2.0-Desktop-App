@@ -56,7 +56,12 @@ Push to `master` or PR triggers three parallel GitHub Actions jobs: unit tests, 
 
 Every push to `master` also triggers cross-platform release builds (macOS arm64/x86_64, Ubuntu, Windows) that auto-increment the version, sign artifacts, and publish a GitHub release. Multiple pushes in a day each produce a new release.
 
-A daily sync workflow (`sync-upstream.yml`) fetches changes from the [web repo](https://github.com/ChadFarrow/MSP-2.0) and opens a PR via `peter-evans/create-pull-request`. Runs once daily at 6 AM UTC or on manual dispatch (`gh workflow run sync-upstream.yml`). Only works when the merge is conflict-free — shared files like `CLAUDE.md` and `src/App.tsx` require manual sync.
+A daily sync workflow (`sync-upstream.yml`) fetches changes from the [web repo](https://github.com/ChadFarrow/MSP-2.0) and opens a PR via `peter-evans/create-pull-request`. Runs once daily at 6 AM UTC or on manual dispatch (`gh workflow run sync-upstream.yml`).
+
+**Conflict handling — important:** when an upstream change conflicts with desktop's version, the workflow auto-resolves by **keeping the desktop version** and silently drops the upstream change for that file. The PR description lists the conflicted files, but no porting happens automatically. After every sync merge:
+1. Read the "Merge conflicts were auto-resolved" list in the PR description
+2. For each file, run `git diff <merge-base>..upstream/master -- <file>` (find the merge-base with `git merge-base origin/master upstream/master` *before* merging the sync PR)
+3. Open a follow-up PR porting any features that were dropped (see PRs #13, #14, #15 for examples — Podping integration, bottom toolbar, NIP-71 naddr handler all had to be ported manually after a single sync)
 
 ## Deployment
 
@@ -208,7 +213,7 @@ Vercel serverless functions (the desktop dev server proxies `/api/*` to `msp.pod
 - **Kind 5** — NIP-09 deletion events for the "Unpublish" button (`deleteNostrMusicTracks` in `nostrSync.ts`)
 - **Kind 1063** — NIP-94 file metadata pointer registered after a Blossom upload so the stable URL is discoverable on relays
 - **Kind 24242** — BUD-01 Blossom upload auth events
-- **NIP-71 naddr video resolution** — paste handler in `Editor.tsx`, implementation in `utils/nostrVideoConverter.ts`
+- **NIP-71 naddr video resolution** — paste handler in `components/Editor/TracksSection.tsx` (Video mode only), implementation in `utils/nostrVideoConverter.ts` (`isNaddrString`, `resolveNostrVideo`). Pasting an `naddr1...` into the Video URL field auto-fills URL, MIME type, and duration.
 - Blossom server uploads for file hosting
 
 ### Save Modal Destinations
@@ -263,15 +268,17 @@ gh issue view <number>     # View issue details
 - **Editor (Publisher)**: `PublisherEditor/index.tsx` follows the same thin-composition pattern
 - `FeedSidebar.tsx` - Desktop-only collapsible sidebar for local feed switching
 - `InfoIcon` component accepts `position` prop (`"right"` default, `"left"` for edge fields)
-- App layout: header → `app-body` (flex row: sidebar + `app-content`)
+- App layout: header → `app-body` (flex row: sidebar + `app-content`) → `bottom-toolbar`
 
-### Modal Footer Convention
-All modal footers place action buttons on the left and the Cancel button on the far right, separated by a `<div style={{ flex: 1 }} />` spacer. Footer wrapper divs need `width: '100%'` so the spacer works inside `.modal-footer`.
+### Header & Bottom Toolbar
+The 6 most-common actions live on the **bottom toolbar** (matches the web layout): 📂 New, 📥 Import, 💾 Save, 🔵 Podcast Index, 📡 Podping, 👁️ View Feed. The Podcast Index button uses an `<img>` with `src/assets/podcast-index-logo.svg`; the others use emoji icons. CSS classes `.bottom-toolbar*` are at `src/App.css:906-956` with mobile rules at `:1452-1462`.
+
+The **header dropdown** (☰ button) holds settings/info-style items only — Info, Overview videos, Theme toggle, "Check for Updates" (Tauri-only), Switch Account / Sign In/Out, dev-only Test Data, version footer. Adding a new common action: prefer the toolbar; reserve the dropdown for things you don't want in the user's main eyeline.
 
 ### New Feed Flow
-The "New" button opens `NewFeedChoiceModal` with two paths:
-- **Start Blank** — creates an empty feed (clears data)
-- **Use Template** — opens `ImportModal` in template mode (`templateMode` prop), which imports a feed with a regenerated GUID and no hosted credentials. Template handlers (`handleTemplateImport`, `handleTemplateLoadAlbum`) in `App.tsx` call `crypto.randomUUID()` for the new GUID and clear `pendingHostedStorage`
+The 📂 **New** toolbar button calls `handleNew(state.feedType)`, which opens a `ConfirmModal` warning that current data will be cleared. On confirm, `handleConfirmNew` clears `pendingHostedStorage` and dispatches `SET_PUBLISHER_FEED` / `SET_VIDEO_FEED` / `SET_ALBUM` with the appropriate `createEmpty*` factory.
+
+(The `NewFeedChoiceModal.tsx` file ships from upstream with a "Start Blank" / "Use Template" choice flow, but desktop uses the simpler `ConfirmModal` path and does not import it. If template-import UX is wanted, wire `NewFeedChoiceModal` into `App.tsx` and add the `templateMode` prop on `ImportModal`.)
 
 ### Accessing Nostr State
 Use the `useNostr` hook to access logged-in user info:
