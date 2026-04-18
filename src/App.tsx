@@ -12,6 +12,7 @@ import { NostrLoginButton } from './components/NostrLoginButton';
 import { ImportModal } from './components/modals/ImportModal';
 import { SaveModal } from './components/modals/SaveModal';
 import { PreviewModal } from './components/modals/PreviewModal';
+import { PodpingModal } from './components/modals/PodpingModal';
 import { InfoModal } from './components/modals/InfoModal';
 import { NostrConnectModal } from './components/modals/NostrConnectModal';
 import { ConfirmModal } from './components/modals/ConfirmModal';
@@ -42,6 +43,7 @@ function AppContent() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showPodpingModal, setShowPodpingModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showNostrConnectModal, setShowNostrConnectModal] = useState(false);
   const [showSwitchAccountModal, setShowSwitchAccountModal] = useState(false);
@@ -281,6 +283,12 @@ function AppContent() {
                   </button>
                   <button
                     className="dropdown-item"
+                    onClick={() => { setShowPodpingModal(true); setShowDropdown(false); }}
+                  >
+                    📡 Send Podping
+                  </button>
+                  <button
+                    className="dropdown-item"
                     onClick={() => { setShowInfoModal(true); setShowDropdown(false); }}
                   >
                     ℹ️ Info
@@ -430,6 +438,26 @@ function AppContent() {
           album={state.feedType === 'video' && state.videoFeed ? state.videoFeed : state.album}
           publisherFeed={state.publisherFeed}
           feedType={state.feedType}
+        />
+      )}
+
+      {showPodpingModal && (
+        <PodpingModal
+          onClose={() => setShowPodpingModal(false)}
+          feedGuid={
+            state.feedType === 'publisher' && state.publisherFeed
+              ? state.publisherFeed.podcastGuid
+              : state.feedType === 'video' && state.videoFeed
+                ? state.videoFeed.podcastGuid
+                : state.album.podcastGuid
+          }
+          medium={
+            state.feedType === 'publisher'
+              ? undefined
+              : state.feedType === 'video'
+                ? 'video'
+                : 'music'
+          }
         />
       )}
 

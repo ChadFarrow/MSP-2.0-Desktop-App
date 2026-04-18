@@ -34,9 +34,13 @@ Built with [Tauri](https://tauri.app/) for Windows, macOS, and Linux.
 
 ### Integrations
 - Nostr cloud sync (NIP-07 browser extension on web, native key management on desktop)
+- Nostr Music publishing (kind 36787 track events + kind 34139 playlist) with NIP-09 unpublish
+- NIP-71 naddr video resolution (paste an naddr into a Video URL field to auto-fill)
 - Podcast Index search and feed submission
 - MSP feed hosting with edit tokens
-- Blossom server uploads
+- Blossom server uploads (BUD-01) for file hosting
+- OP3 analytics prefix support for privacy-respecting download stats
+- Podping broadcasts so indexers re-crawl your feed on update
 
 ## Tech Stack
 
@@ -141,6 +145,7 @@ Files use human-readable names based on the feed title (e.g., `My_Album.xml`). Y
 - **MSP Hosted** - Load a feed hosted on MSP servers using its Feed ID
 - **From Nostr** - Load your previously saved albums from Nostr (requires login)
 - **From Nostr Music** - Import tracks from Nostr Music library (requires login)
+- **naddr paste (Video mode)** - Paste a NIP-71 naddr (or a URL containing one) into a Video URL field to auto-resolve URL, MIME type, and duration
 
 ## Save Options
 
@@ -149,9 +154,10 @@ Files use human-readable names based on the feed title (e.g., `My_Album.xml`). Y
 - **Copy to Clipboard** - Copy the RSS XML to your clipboard
 - **Host on MSP** - Host your feed on MSP servers with a permanent URL
 - **Submit to Podcast Index** - Notify Podcast Index about your feed URL
-- **Save to Nostr** - Publish to Nostr relays (requires login)
-- **Publish Nostr Music** - Publish tracks as Nostr Music events (requires login)
-- **Publish to Blossom** - Upload to a Blossom server (requires login)
+- **Send Podping** - Broadcast a feed-update notification via Podping/Hive so indexers (Podcast Index, Fountain, etc.) re-crawl the feed
+- **Save RSS feed to Nostr** - Stores the entire RSS XML inside a Nostr event (kind 30054). Personal sync only — not subscribable by podcast apps (requires login)
+- **Publish to Nostr Music** - Publishes each track (kind 36787) and the playlist (kind 34139) so native Nostr music clients can stream the album (requires login)
+- **Publish RSS feed to a Blossom server** - Uploads the RSS file to a Blossom server (BUD-01) and registers a Nostr pointer (kind 1063) for it, plus a stable MSP URL that always resolves to your latest upload (requires login)
 
 ## Nostr Integration
 
@@ -160,9 +166,13 @@ Files use human-readable names based on the feed title (e.g., `My_Album.xml`). Y
 **Web:** Sign in with a NIP-07 compatible browser extension (Alby, nos2x, etc.).
 
 Features:
-- Save feeds to Nostr relays (kind 30054)
+- Save feeds to Nostr relays (kind 30054) for personal cross-device sync
 - Load feeds from any device with your Nostr key
-- Publish tracks as Nostr Music events (kind 36787)
+- Publish tracks as Nostr Music events (kind 36787) and a playlist (kind 34139)
+- Unpublish previously published tracks via NIP-09 (kind 5) deletion events
+- Register Blossom uploads with a NIP-94 file metadata pointer (kind 1063)
+- Authenticate Blossom uploads with BUD-01 auth events (kind 24242)
+- NIP-71 naddr video resolution — paste an naddr into a Video URL field to auto-fill
 - Link Nostr identity to hosted feeds for token-free editing
 
 Default relays: `relay.damus.io`, `relay.primal.net`, `nos.lol`, `relay.nostr.band`
