@@ -172,14 +172,21 @@ Factory functions: `createEmptyRecipient()` (defaults to `lnaddress`), `createSu
 - Artist Npub is stored via `podcast:txt purpose="npub"` in XML output
 
 ### API Layer (api/)
-Vercel serverless functions:
+Vercel serverless functions (the desktop dev server proxies `/api/*` to `msp.podtards.com`, so the desktop client never runs these locally):
 - `pisearch.ts` - Podcast Index search
 - `pisubmit.ts` - Submit feed to Podcast Index
+- `pubnotify.ts` - Podcast Index pub-notify + add/byfeedurl + optional Podping pass-through
+- `podping.ts` - Self-hosted hivepinger broadcast endpoint (rate-limited, gated on env vars)
 - `proxy-feed.ts` - CORS proxy for fetching external feeds
 - `example-feed.ts` - Reference example feed endpoint
 - `hosted/` - MSP feed hosting endpoints (create, update, delete, backup/restore)
 - `feed/[npub]/[guid].ts` - Nostr-stored feed retrieval
 - `admin/` - Admin authentication (challenge/verify)
+- `_utils/feedUtils.ts` - `notifyPodcastIndex()` and `notifyPodping()` helpers shared across endpoints
+- `_utils/podcastIndex.ts` - Podcast Index auth + request signing
+- `_utils/rateLimiter.ts` - In-memory IP rate limiter for `/api/podping`
+- `_utils/xmlUtils.ts` - `extractPodcastMedium()` for routing music vs podcast podping reasons
+- `_utils/adminAuth.ts` - Admin pubkey verification
 
 ### Feed Hosting & Podcast Index
 - Hosted feeds are stored as Vercel Blobs at `feeds/{feedId}.xml` with metadata in `feeds/{feedId}.meta.json`
@@ -193,10 +200,33 @@ Vercel serverless functions:
 
 ### Nostr Integration
 - NIP-07 browser extension support for signing (web)
-- NIP-46 remote signer support
-- Kind 30054 events for feed storage on relays
-- Kind 36787 for Nostr Music track publishing
+- NIP-46 remote signer support (Amber, etc.)
+- Native key management on desktop (nsec/hex via Tauri secure storage)
+- **Kind 30054** — entire RSS XML stored as a Nostr event for personal cross-device sync (`saveFeedToNostr` / `loadAlbumsFromNostr`, `d`-tag = `podcastGuid`)
+- **Kind 36787** — Nostr Music track publishing (`publishNostrMusicTracks`)
+- **Kind 34139** — Nostr Music playlist event grouping the kind 36787 tracks
+- **Kind 5** — NIP-09 deletion events for the "Unpublish" button (`deleteNostrMusicTracks` in `nostrSync.ts`)
+- **Kind 1063** — NIP-94 file metadata pointer registered after a Blossom upload so the stable URL is discoverable on relays
+- **Kind 24242** — BUD-01 Blossom upload auth events
+- **NIP-71 naddr video resolution** — paste handler in `Editor.tsx`, implementation in `utils/nostrVideoConverter.ts`
 - Blossom server uploads for file hosting
+
+### Save Modal Destinations
+The Save Modal destination dropdown in `SaveModal.tsx` exposes these options. Subscribable means a podcast app can subscribe to the resulting URL and receive updates.
+
+| Destination | Storage | Subscribable | Notes |
+|-------------|---------|--------------|-------|
+| Save to Computer / Local Storage | App data folder (Tauri) or browser localStorage | No | Per-machine only; fronts the desktop sidebar |
+| Download XML | User filesystem | No | One-shot file export |
+| Copy to Clipboard | Clipboard | No | One-shot text copy |
+| Host on MSP | Vercel Blob via `/api/hosted/*` | Yes (`msp.podtards.com/feeds/{id}.xml`) | Triggers `pubnotify` and Podping; can link a Nostr identity for token-free edits |
+| Submit to Podcast Index | n/a (POST `/api/pubnotify`) | n/a | Notifies an already-published URL so PI re-crawls it |
+| Send Podping | n/a (POST `/api/podping`) | n/a | Self-hosted hivepinger broadcast; rate-limited |
+| Save RSS feed to Nostr | Kind 30054 event | No (sync only) | Personal cross-device load; requires login |
+| Publish to Nostr Music | Kind 36787 + 34139 events | Yes (Nostr music clients) | Tracks + playlist; pairs with kind 5 unpublish; requires login |
+| Publish RSS feed to a Blossom server | Blossom + kind 1063 pointer | Yes (`/api/feed/{npub}/{podcastGuid}.xml`) | Stable MSP URL always resolves to latest; requires login |
+
+The Save Modal's help (info icon) panel mirrors these descriptions — keep both in sync when editing.
 
 ## Boundaries
 
