@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ModalWrapper } from './ModalWrapper';
 import { getHostedFeedInfo, buildHostedUrl } from '../../utils/hostedFeed';
+import { apiFetch } from '../../utils/api';
 
 interface PodcastIndexModalProps {
   onClose: () => void;
@@ -36,7 +37,7 @@ export function PodcastIndexModal({ onClose, feedGuid, medium }: PodcastIndexMod
       const params = new URLSearchParams({ url: podcastIndexUrl.trim() });
       if (feedGuid) params.set('guid', feedGuid);
       if (medium) params.set('medium', medium);
-      const response = await fetch(`/api/pubnotify?${params}`);
+      const response = await apiFetch(`/api/pubnotify?${params}`);
       const data = await response.json();
 
       if (!response.ok) {
