@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -13,13 +14,13 @@ function createMockReqRes(
     query,
     body: undefined,
     headers: { 'x-forwarded-for': ip }
-  } as any;
+  } as unknown as VercelRequest;
 
   const res = {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
     setHeader: vi.fn().mockReturnThis()
-  } as any;
+  } as unknown as VercelResponse;
 
   return { req, res };
 }
