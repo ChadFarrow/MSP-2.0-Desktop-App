@@ -1,12 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuthHeaders } from './_utils/podcastIndex.js';
+import { notifyPodping, isPodpingConfigured } from './_utils/feedUtils.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { url, guid } = req.query;
+  const { url, guid, medium } = req.query;
 
   if (!url || typeof url !== 'string') {
     return res.status(400).json({ error: 'Missing url parameter' });
@@ -14,6 +15,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // GUID is optional but preferred for lookup
   const podcastGuid = typeof guid === 'string' ? guid : undefined;
+  // Medium is optional; passed through to podping so indexers classify the feed correctly
+  const podpingMedium = typeof medium === 'string' ? medium : undefined;
 
   try {
     // Validate URL format
@@ -46,6 +49,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(notifyResponse.status).json({
         error: notifyData.description || 'Failed to notify Podcast Index',
         details: notifyData
+      });
+    }
+
+    // Broadcast a podping in parallel so indexers that watch Hive re-crawl too.
+    // Fire-and-forget; Railway/hivepinger handles its own retries.
+    if (isPodpingConfigured()) {
+      notifyPodping(url, { medium: podpingMedium }).then((result) => {
+        if (!result.ok) {
+          console.warn(`Podping broadcast failed for ${url}: ${result.error ?? 'unknown'}`);
+        }
       });
     }
 

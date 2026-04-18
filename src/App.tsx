@@ -362,6 +362,13 @@ function AppContent() {
                 ? state.videoFeed.podcastGuid
                 : state.album.podcastGuid
           }
+          medium={
+            state.feedType === 'publisher' && state.publisherFeed
+              ? state.publisherFeed.medium
+              : state.feedType === 'video' && state.videoFeed
+                ? state.videoFeed.medium
+                : state.album.medium
+          }
         />
       )}
 
