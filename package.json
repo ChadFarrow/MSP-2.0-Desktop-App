@@ -2,6 +2,7 @@
   "name": "msp-2.0",
   "private": true,
   "version": "0.1.03",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
