@@ -1538,14 +1538,15 @@ body {
   }
 
   /* Anchor tooltip to the viewport so it never clips off-screen on narrow
-     devices, regardless of which side the InfoIcon chose. */
+     devices, regardless of which side the InfoIcon chose. Pushed above the
+     .bottom-toolbar (~90px tall with the iOS home-indicator inset). */
   .info-tooltip,
   .info-tooltip-left {
     position: fixed;
     left: 16px;
     right: 16px;
     top: auto;
-    bottom: 16px;
+    bottom: calc(96px + env(safe-area-inset-bottom));
     width: auto;
     max-width: none;
     border: 1px solid var(--accent-primary);
