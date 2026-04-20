@@ -1298,35 +1298,6 @@ body {
     min-height: 44px;
     padding: 10px;
   }
-
-  /* Info icon - larger touch target */
-  .info-icon-wrapper {
-    padding: 12px;
-    margin: -12px;
-    margin-left: -8px;
-  }
-
-  .info-icon {
-    width: 18px;
-    height: 18px;
-    font-size: 11px;
-  }
-
-  /* Tooltip adjustments */
-  .info-tooltip {
-    position: fixed;
-    left: 16px;
-    right: 16px;
-    top: auto;
-    bottom: 16px;
-    width: auto;
-    border: 1px solid var(--accent-primary);
-  }
-
-  .info-tooltip::before,
-  .info-tooltip::after {
-    display: none;
-  }
 }
 
 /* Small phones */
@@ -1549,6 +1520,42 @@ body {
     font-size: 0.7rem;
     color: var(--text-muted);
     font-style: italic;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Info icon - larger touch target */
+  .info-icon-wrapper {
+    padding: 12px;
+    margin: -12px;
+    margin-left: -8px;
+  }
+
+  .info-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+  }
+
+  /* Anchor tooltip to the viewport so it never clips off-screen on narrow
+     devices, regardless of which side the InfoIcon chose. */
+  .info-tooltip,
+  .info-tooltip-left {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    top: auto;
+    bottom: 16px;
+    width: auto;
+    max-width: none;
+    border: 1px solid var(--accent-primary);
+  }
+
+  .info-tooltip::before,
+  .info-tooltip::after,
+  .info-tooltip-left::before,
+  .info-tooltip-left::after {
+    display: none;
   }
 }
 
