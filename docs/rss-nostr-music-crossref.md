@@ -8,7 +8,7 @@ A field-by-field mapping between the two formats MSP 2.0 emits from the same inp
 Canonical MSP source-of-truth for these mappings:
 
 - RSS generator — `src/utils/xmlGenerator.ts` (`generateRssFeed`, `generateTrackXml`, `generateCommonChannelElements`)
-- Nostr generator — `src/utils/nostrSync.ts` (`createMusicTrackEvent` at `:513`, `createMusicPlaylistEvent` at `:583`)
+- Nostr generator — `src/utils/nostrSync.ts` (`createMusicTrackEvent` at `:514`, `createMusicPlaylistEvent` at `:583`)
 
 ## Kinds used
 
@@ -40,7 +40,7 @@ Kind `36787` and `34139` are MSP's current choice while [NIP-0a](https://github.
 | `album.language` | `<language>` (channel) | `["language", <code>]` | Lifted from channel to item. |
 | `album.categories` | `<itunes:category text=…/>` (channel) | `["t", "music"]` + `["t", <cat-lowercased>]` per category | Nostr hashtags are always lowercased. `t=music` is always added as discriminator. |
 | value recipients (track override or album) | `<podcast:value>` + `<podcast:valueRecipient>` (item-level if override, else channel) | `["zap", <lnaddr-or-hex>, (<relay>,) <split>]` | Lightning address → `[zap, addr, split]`. Hex pubkey → `[zap, hex, relay, split]`. Node addresses that are neither are silently dropped. `customKey`/`customValue` are not serialized to Nostr. |
-| `track.description` + `track.persons` | `<description>` + `<podcast:person group=… role=…>` | `content` field (plain text) | Description goes first, then a `Credits:` section with `Name: role1, role2` per line. Persons' `href` and `img` are not serialized to Nostr. |
+| `track.description` + `track.persons` | `<description>` + `<podcast:person group=… role=…>` (persons emitted at item level only when `track.overridePersons` is true; otherwise persons live on `<channel>`) | `content` field (plain text) | Description goes first, then a `Credits:` section with `Name: role1, role2` per line. Persons' `href` and `img` are not serialized to Nostr. |
 | — | — | `["client", "MSP 2.0"]` | Added by MSP; useful for consumers to filter/attribute. |
 | — | — | `["alt", "Music track: …"]` | NIP-31 fallback text for non-music clients. |
 | `track.transcriptUrl` / `transcriptType` | `<podcast:transcript url=… type=…/>` | *(not serialized)* | RSS-only. |
@@ -103,7 +103,7 @@ Nostr kind 36787:
 | `album.description` | `<description>` | `["description", <text>]` + also duplicated into `content` | RSS has only one description slot. |
 | `album.imageUrl` | `<image><url>` + `<itunes:image href>` | `["image", <url>]` | |
 | `album.categories` | `<itunes:category text=…/>` (repeatable) | `["t", <cat-lowercased>]` per category | Same lowercase rule as tracks. `t=music` is **not** auto-added at playlist level (it is on tracks). |
-| track list | `<item>` children (ordered) | `["a", "36787:<pubkey>:<track-d-tag>"]` per track (ordered) | On Nostr, tracks are referenced by kind:pubkey:d-tag triples. The d-tag is the RSS `<guid>`. |
+| track list | `<item>` children (ordered) | `["a", "36787:<pubkey>:<track-d-tag>"]` per track (ordered) | On Nostr, tracks are referenced by kind:pubkey:d-tag triples. The d-tag is the RSS `<guid>`. `<pubkey>` is the Nostr signer's hex pubkey (the playlist event's own `pubkey` — i.e. whoever published), **not** `album.artistNpub`. |
 | `album.value.recipients` | `<podcast:value>` + `<podcast:valueRecipient>` | `["zap", …]` tags (same shape as tracks) | Channel-level recipients. |
 | — | — | `["client", "MSP 2.0"]` | |
 | — | — | `["alt", "Playlist: … by …"]` | |
@@ -161,7 +161,7 @@ Nostr kind 36787:
 
 1. Group kind 36787 events by their `album` tag (or by a shared kind 34139 playlist). Use the playlist's `d` tag as `<podcast:guid>`.
 2. Channel: `album` → `<title>`, `artist` → `<itunes:author>`, `language` → `<language>`, `image` → `<itunes:image>`, playlist `description` → `<description>`, each `t` (except `music`) → `<itunes:category>`.
-3. Item per track: `title` → `<title>`, `url` → `<enclosure url>` (type defaults to `audio/mpeg`, length unknown unless you HEAD-request the URL), `duration` → `<itunes:duration>`, `released` (YYYY-MM-DD) → `<pubDate>` (RFC-822, midnight UTC), `d` → `<guid isPermaLink="false">`, `image` → `<itunes:image href>`, `explicit=true` → `<itunes:explicit>true`.
+3. Item per track: `title` → `<title>`, `url` → `<enclosure url>` (Nostr carries no MIME type or byte length — supply `type="audio/mpeg"` as a sensible default and either HEAD-request the URL for `length` or omit/zero it; note MSP's generator does not substitute a default for missing `enclosureType`, so be explicit), `duration` → `<itunes:duration>`, `released` (YYYY-MM-DD) → `<pubDate>` (RFC-822, midnight UTC), `d` → `<guid isPermaLink="false">`, `image` → `<itunes:image href>`, `explicit=true` → `<itunes:explicit>true`.
 4. Map `zap` tags back to `<podcast:valueRecipient>`. You won't recover `customKey`/`customValue`.
 5. Split the first paragraph of `content` before `Credits:` back into `<description>`; parse the `Credits:` lines into `<podcast:person>` entries (group/role/href/img not recoverable without extra conventions).
 6. Fill `<podcast:medium>music</podcast:medium>` and set `<podcast:season>1</podcast:season>` + `<podcast:episode>{track_number}</podcast:episode>`.
