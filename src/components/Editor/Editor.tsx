@@ -477,6 +477,19 @@ export function Editor() {
                           })}
                         />
                       </div>
+                      <div className="form-group">
+                        <label className="form-label">Nostr npub<InfoIcon text={FIELD_INFO.personNpub} /></label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="npub1..."
+                          value={person.npub || ''}
+                          onChange={e => dispatch({
+                            type: 'UPDATE_PERSON',
+                            payload: { index: personIndex, person: { ...person, npub: e.target.value } }
+                          })}
+                        />
+                      </div>
                     </div>
 
                     {/* Two-column layout: Roles (left) + Thumbnail Preview (right) */}
@@ -1153,6 +1166,19 @@ export function Editor() {
                                     onChange={e => dispatch({
                                       type: 'UPDATE_TRACK_PERSON',
                                       payload: { trackIndex: index, personIndex, person: { ...person, img: e.target.value } }
+                                    })}
+                                  />
+                                </div>
+                                <div className="form-group">
+                                  <label className="form-label">Nostr npub<InfoIcon text={FIELD_INFO.personNpub} /></label>
+                                  <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="npub1..."
+                                    value={person.npub || ''}
+                                    onChange={e => dispatch({
+                                      type: 'UPDATE_TRACK_PERSON',
+                                      payload: { trackIndex: index, personIndex, person: { ...person, npub: e.target.value } }
                                     })}
                                   />
                                 </div>

@@ -246,6 +246,7 @@ interface ParsedPersonTag {
   name: string;
   href?: string;
   img?: string;
+  npub?: string;
   group: PersonGroup;
   role: string;
 }
@@ -258,6 +259,7 @@ function parsePersonTag(node: unknown): ParsedPersonTag | null {
     name: getText(node),
     href: getAttr(node, 'href') || undefined,
     img: getAttr(node, 'img') || undefined,
+    npub: getAttr(node, 'npub') || undefined,
     group: (getAttr(node, 'group') || 'music') as PersonGroup,
     role: getAttr(node, 'role') || 'band'
   };
@@ -268,8 +270,8 @@ function mergePersonTags(tags: ParsedPersonTag[]): Person[] {
   const personMap = new Map<string, Person>();
 
   for (const tag of tags) {
-    // Create a key based on name + href + img to group same person
-    const key = `${tag.name}|${tag.href || ''}|${tag.img || ''}`;
+    // Create a key based on name + href + img + npub to group same person
+    const key = `${tag.name}|${tag.href || ''}|${tag.img || ''}|${tag.npub || ''}`;
 
     if (personMap.has(key)) {
       // Add role to existing person
@@ -286,6 +288,7 @@ function mergePersonTags(tags: ParsedPersonTag[]): Person[] {
         name: tag.name,
         href: tag.href,
         img: tag.img,
+        npub: tag.npub,
         roles: [{ group: tag.group, role: tag.role }]
       });
     }

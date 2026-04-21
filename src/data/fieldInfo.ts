@@ -25,6 +25,7 @@ export const FIELD_INFO = {
   personName: "The person's name as it should appear in credits.",
   personHref: "Link to the person's website or social profile.",
   personImg: "Link to the person's profile picture.",
+  personNpub: "Nostr public key (npub) for this person. Apps can use it to link to their Nostr profile.",
   personGroup: "Category: music (performers), writing (songwriters), production (producers/engineers).",
   personRole: "Roles from the Podcasting 2.0 taxonomy. The first role is Primary and shown by apps that only display one role. Add multiple roles per person as needed.",
 

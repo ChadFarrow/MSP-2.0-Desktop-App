@@ -77,3 +77,64 @@ describe('OP3 prefix detection and stripping', () => {
     expect(album.tracks[0].enclosureUrl).toBe('https://example.com/track1.mp3');
   });
 });
+
+// Helper to build RSS XML with raw channel-level podcast:person tags
+function buildRssWithPersonTags(personTags: string): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+  <channel>
+    <title>Test Feed</title>
+    <itunes:author>Test Artist</itunes:author>
+    <description>A test feed</description>
+    <language>en</language>
+    <podcast:medium>music</podcast:medium>
+    ${personTags}
+    <item>
+      <title>Track 1</title>
+      <guid isPermaLink="false">track-guid-1</guid>
+      <enclosure url="https://example.com/track1.mp3" length="1234" type="audio/mpeg"/>
+      <itunes:duration>03:45</itunes:duration>
+    </item>
+  </channel>
+</rss>`;
+}
+
+describe('Person tag merging with npub', () => {
+  const npubA = 'npub1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const npubB = 'npub1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+
+  it('keeps same-name persons with different npubs as distinct entries', () => {
+    const tags = `
+      <podcast:person href="https://example.com" img="https://example.com/p.jpg" npub="${npubA}" group="music" role="vocalist">Alex</podcast:person>
+      <podcast:person href="https://example.com" img="https://example.com/p.jpg" npub="${npubB}" group="music" role="vocalist">Alex</podcast:person>
+    `;
+    const album = parseRssFeed(buildRssWithPersonTags(tags));
+
+    expect(album.persons).toHaveLength(2);
+    const npubs = album.persons.map(p => p.npub).sort();
+    expect(npubs).toEqual([npubA, npubB].sort());
+  });
+
+  it('merges same-name + same-npub tags with different roles into one person', () => {
+    const tags = `
+      <podcast:person npub="${npubA}" group="music" role="vocalist">Alex</podcast:person>
+      <podcast:person npub="${npubA}" group="music" role="guitarist">Alex</podcast:person>
+    `;
+    const album = parseRssFeed(buildRssWithPersonTags(tags));
+
+    expect(album.persons).toHaveLength(1);
+    expect(album.persons[0].npub).toBe(npubA);
+    expect(album.persons[0].roles).toHaveLength(2);
+    expect(album.persons[0].roles.map(r => r.role).sort()).toEqual(['guitarist', 'vocalist']);
+  });
+
+  it('leaves npub undefined when attribute is absent', () => {
+    const tags = `
+      <podcast:person group="music" role="vocalist">Alex</podcast:person>
+    `;
+    const album = parseRssFeed(buildRssWithPersonTags(tags));
+
+    expect(album.persons).toHaveLength(1);
+    expect(album.persons[0].npub).toBeUndefined();
+  });
+});
