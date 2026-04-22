@@ -29,6 +29,7 @@ export interface Person {
   name: string;
   href?: string;
   img?: string;
+  npub?: string;
   roles: PersonRole[];
 }
 
@@ -378,6 +379,7 @@ export const createEmptyPerson = (): Person => ({
   name: '',
   href: '',
   img: '',
+  npub: '',
   roles: [createEmptyPersonRole()]
 });
 
