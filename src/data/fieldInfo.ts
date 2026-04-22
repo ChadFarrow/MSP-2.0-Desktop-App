@@ -25,6 +25,7 @@ export const FIELD_INFO = {
   personName: "The person's name as it should appear in credits.",
   personHref: "Link to the person's website or social profile.",
   personImg: "Link to the person's profile picture.",
+  personNpub: "Nostr public key (npub) for this person. Apps can use it to link to their Nostr profile.",
   personGroup: "Category: music (performers), writing (songwriters), production (producers/engineers).",
   personRole: "Roles from the Podcasting 2.0 taxonomy. The first role is Primary and shown by apps that only display one role. Add multiple roles per person as needed.",
 
@@ -54,7 +55,7 @@ export const FIELD_INFO = {
   trackPubDate: "Publication date/time for this track. Used for sorting and display in podcast apps.",
   trackSeason: "Season number for grouping tracks (e.g., 1 for first album). Optional.",
   trackEpisode: "Episode number for this track. Defaults to track order if not set.",
-  enclosureUrl: "Direct link to the MP3 file. Ensure CORS policy allows access.",
+  enclosureUrl: "Direct link to the audio file. MP3 is preferred — smaller file size saves bandwidth for listeners. Other formats (flac, wav, m4a, aac, ogg, opus, aiff) are also supported. Ensure CORS policy allows access.",
   enclosureLength: "File size in MB. Important for podcast apps to show download size.",
   trackArtUrl: "Optional track-specific artwork. If empty, album art is used.",
   transcriptUrl: "Link to an SRT file with time-coded lyrics for display during playback.",

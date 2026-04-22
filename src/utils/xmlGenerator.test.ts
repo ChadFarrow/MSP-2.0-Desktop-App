@@ -187,3 +187,72 @@ describe('OP3 round-trip', () => {
     expect(parsed.tracks[0].enclosureUrl).not.toContain('op3.dev');
   });
 });
+
+describe('Person npub attribute', () => {
+  const sampleNpub = 'npub1xtscya34g58tk0z605fvr788k263gsu6cy9x0mhnm87echrgufzsevkk5s';
+
+  it('emits npub attribute on podcast:person when set', () => {
+    const album = createEmptyAlbum();
+    album.title = 'Test Album';
+    album.author = 'Test Artist';
+    album.description = 'Test description';
+    album.persons = [
+      {
+        name: 'Alice',
+        href: 'https://example.com/alice',
+        img: 'https://example.com/alice.jpg',
+        npub: sampleNpub,
+        roles: [{ group: 'music', role: 'vocalist' }]
+      }
+    ];
+
+    const xml = generateRssFeed(album);
+
+    expect(xml).toContain(`npub="${sampleNpub}"`);
+    expect(xml).toContain('<podcast:person');
+    expect(xml).toContain('>Alice</podcast:person>');
+  });
+
+  it('omits npub attribute when not set', () => {
+    const album = createEmptyAlbum();
+    album.title = 'Test Album';
+    album.author = 'Test Artist';
+    album.description = 'Test description';
+    album.persons = [
+      {
+        name: 'Bob',
+        href: 'https://example.com/bob',
+        roles: [{ group: 'music', role: 'guitarist' }]
+      }
+    ];
+
+    const xml = generateRssFeed(album);
+
+    expect(xml).toContain('>Bob</podcast:person>');
+    expect(xml).not.toContain('npub=');
+  });
+
+  it('roundtrip preserves npub through generate → parse', () => {
+    const album = createEmptyAlbum();
+    album.title = 'Roundtrip Album';
+    album.author = 'Test Artist';
+    album.description = 'Test description';
+    album.persons = [
+      {
+        name: 'Carol',
+        href: 'https://example.com/carol',
+        img: '',
+        npub: sampleNpub,
+        roles: [{ group: 'music', role: 'drummer' }]
+      }
+    ];
+
+    const xml = generateRssFeed(album);
+    const parsed = parseRssFeed(xml);
+
+    expect(parsed.persons).toHaveLength(1);
+    expect(parsed.persons[0].name).toBe('Carol');
+    expect(parsed.persons[0].npub).toBe(sampleNpub);
+    expect(parsed.persons[0].roles).toEqual([{ group: 'music', role: 'drummer' }]);
+  });
+});

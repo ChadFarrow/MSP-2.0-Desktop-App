@@ -276,9 +276,14 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
         if (!publisherFeed.podcastGuid?.trim()) errors.push('Publisher GUID');
       } else {
         // Album validation
+        // Nostr Music (kind 36787 / 34139) doesn't carry description, file size,
+        // or require numeric duration — skip those so imported Nostr Music
+        // albums can be re-published without adding fields the events don't use.
+        const isNostrMusicMode = mode === 'nostrMusic';
+
         if (!album.author?.trim()) errors.push('Artist/Band');
         if (!album.title?.trim()) errors.push('Album Title');
-        if (!album.description?.trim()) errors.push('Description');
+        if (!isNostrMusicMode && !album.description?.trim()) errors.push('Description');
         if (!album.imageUrl?.trim()) errors.push('Album Art URL');
         if (!album.language?.trim()) errors.push('Language');
         if (!album.podcastGuid?.trim()) errors.push('Podcast GUID');
@@ -287,9 +292,9 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
         const urlLabel = isVideoMode ? 'Video URL' : 'MP3 URL';
         album.tracks.forEach((track, i) => {
           if (!track.title?.trim()) errors.push(`${itemLabel} ${i + 1} Title`);
-          if (!track.duration?.trim()) errors.push(`${itemLabel} ${i + 1} Duration`);
+          if (!isNostrMusicMode && !track.duration?.trim()) errors.push(`${itemLabel} ${i + 1} Duration`);
           if (!track.enclosureUrl?.trim()) errors.push(`${itemLabel} ${i + 1} ${urlLabel}`);
-          if (!track.enclosureLength?.trim()) errors.push(`${itemLabel} ${i + 1} File Size`);
+          if (!isNostrMusicMode && !track.enclosureLength?.trim()) errors.push(`${itemLabel} ${i + 1} File Size`);
         });
       }
 

@@ -495,11 +495,11 @@ function AppContent() {
                 : state.album.podcastGuid
           }
           medium={
-            state.feedType === 'publisher'
-              ? undefined
-              : state.feedType === 'video'
-                ? 'video'
-                : 'music'
+            state.feedType === 'publisher' && state.publisherFeed
+              ? state.publisherFeed.medium
+              : state.feedType === 'video' && state.videoFeed
+                ? state.videoFeed.medium
+                : state.album.medium
           }
         />
       )}
