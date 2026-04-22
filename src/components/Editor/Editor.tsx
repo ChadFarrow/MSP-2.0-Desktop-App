@@ -5,7 +5,7 @@ import { LANGUAGES, PERSON_GROUPS, PERSON_ROLES, createEmptyPersonRole, createEm
 import type { PersonGroup } from '../../types/feed';
 import { FIELD_INFO } from '../../data/fieldInfo';
 import { detectAddressType } from '../../utils/addressUtils';
-import { getMediaDuration, secondsToHHMMSS, formatDuration } from '../../utils/audioUtils';
+import { getMediaDuration, secondsToHHMMSS, formatDuration, getAudioMimeType, isKnownAudioFormat } from '../../utils/audioUtils';
 import { getVideoMimeType } from '../../utils/videoUtils';
 import { isNaddrString, resolveNostrVideo } from '../../utils/nostrVideoConverter';
 import { InfoIcon } from '../InfoIcon';
@@ -803,11 +803,11 @@ export function Editor() {
                             type: 'UPDATE_TRACK',
                             payload: { index, track: { enclosureUrl: url } }
                           });
-                          // Auto-detect MIME type for video feeds
-                          if (isVideo && url) {
+                          if (url) {
+                            const mimeType = isVideo ? getVideoMimeType(url) : getAudioMimeType(url);
                             dispatch({
                               type: 'UPDATE_TRACK',
-                              payload: { index, track: { enclosureType: getVideoMimeType(url) } }
+                              payload: { index, track: { enclosureType: mimeType } }
                             });
                           }
                         }}
@@ -851,13 +851,11 @@ export function Editor() {
                               type: 'UPDATE_TRACK',
                               payload: { index, track: { enclosureUrl: url } }
                             });
-                            // Auto-detect MIME type for video feeds
-                            if (isVideo) {
-                              dispatch({
-                                type: 'UPDATE_TRACK',
-                                payload: { index, track: { enclosureType: getVideoMimeType(url) } }
-                              });
-                            }
+                            const mimeType = isVideo ? getVideoMimeType(url) : getAudioMimeType(url);
+                            dispatch({
+                              type: 'UPDATE_TRACK',
+                              payload: { index, track: { enclosureType: mimeType } }
+                            });
                             // Fetch duration using unified Media API (works for both audio and video)
                             if (isNewUrl || !track.duration) {
                               const duration = await getMediaDuration(url);
@@ -913,6 +911,11 @@ export function Editor() {
                       {isVideo && !resolvingNaddr[index] && !track.enclosureUrl && (
                         <div style={{ color: 'var(--text-secondary)', fontSize: '0.8em', marginTop: '4px', opacity: 0.7 }}>
                           Tip: Paste a Nostr naddr to auto-fill video details
+                        </div>
+                      )}
+                      {!isVideo && track.enclosureUrl && !isKnownAudioFormat(track.enclosureUrl) && (
+                        <div style={{ color: 'var(--warning, #b8860b)', fontSize: '0.85em', marginTop: '4px' }}>
+                          URL doesn't end with a recognized audio extension (mp3, flac, wav, m4a, aac, ogg, opus, aiff). Podcast apps may not play it.
                         </div>
                       )}
                       {track.enclosureUrl && (
