@@ -159,6 +159,7 @@ Vercel serverless functions:
 - `_utils/rateLimiter.ts` - In-memory fixed-window IP rate limiter used by `/api/podping`
 - `_utils/xmlUtils.ts` - RSS XML helpers (`extractPodcastMedium()` — used by hosted POST/PUT before podping broadcast)
 - `_utils/adminAuth.ts` - Nostr NIP-98 auth verification, `NostrEvent` type
+- `_utils/urlValidation.ts` - `getFeedUrlError()` — flags spaces, apostrophes (PI encodes `'` as `%27` and creates duplicate feed entries), special chars, non-ASCII. Mirror of `src/utils/urlValidation.ts` (Vercel functions can't import from `src/`, so the rule table is intentionally duplicated — keep in sync). Enforced on every PI/podping submission path: inline in `/api/pubnotify`, `/api/pisubmit`, `/api/podping` (backend guard); on the frontend before submit in `PodcastIndexModal`, `PodpingModal`, `SaveModal` podping mode, `Editor` publisher-URL field, `PublisherFeedReminderSection`, `CatalogFeedsSection`. Any new manual feed-URL input that submits to PI/podping should add a `getFeedUrlError()` check before enabling its submit button.
 
 ### Feed Hosting & Podcast Index
 - Hosted feeds are stored as Vercel Blobs at `feeds/{feedId}.xml` with metadata in `feeds/{feedId}.meta.json`
@@ -236,6 +237,15 @@ if (nostrState.isLoggedIn && nostrState.user?.npub) {
   // User is logged in, can access nostrState.user.npub
 }
 ```
+
+### Nostr signing — always use the timeout wrappers + pre-flight
+Bare `signer.signEvent()` and `signer.getPublicKey()` calls hang the UI when a NIP-46 remote signer is unreachable (phone asleep, Amber backgrounded, relay dropped). Never call them directly. Use the wrappers in `src/utils/nostrSigner.ts`:
+- `signEventWithTimeout(event, timeoutMs?)` — 60 s NIP-46 / 30 s NIP-07 default
+- `getPublicKeyWithTimeout(timeoutMs?)` — same defaults
+
+Both reject with a user-friendly "open your signer app and approve" message on timeout. Note: NIP-46 has no cancellation primitive, so the remote request continues on the signer's side — we just stop waiting on the UI.
+
+Before any user-triggered handler that ends up signing (Save modes that touch Nostr, "Load from Nostr", "Browse My MSP Feeds", "Host on MSP" with Nostr linked, "Link Nostr Identity"), call `checkSignerConnection()` as a pre-flight and bail with `health.error` if `connected` is false — this catches a dead signer in ≤5 s instead of waiting the full per-call timeout. `SaveModal.tsx` `handleSave` is the canonical reference. The pre-flight is best-effort, not a substitute for the per-call timeouts (state can degrade between the check and the actual call).
 
 ### Community Support Recipients
 MSP 2.0 and Podcastindex.org are auto-added as value recipients with small splits. Two different behaviors by context:
