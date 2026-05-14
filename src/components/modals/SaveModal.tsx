@@ -23,6 +23,7 @@ import {
 import { albumStorage, videoStorage, publisherStorage, pendingHostedStorage } from '../../utils/storage';
 import { useNostr } from '../../store/nostrStore';
 import { checkSignerConnection } from '../../utils/nostrSigner';
+import { getFeedUrlError } from '../../utils/urlValidation';
 import { ModalWrapper } from './ModalWrapper';
 
 const DEFAULT_BLOSSOM_SERVER = 'https://blossom.primal.net/';
@@ -108,11 +109,14 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
     return 'Save';
   };
 
+  const podpingUrlError = getFeedUrlError(podpingUrl.trim());
+
   // Helper to determine if button should be disabled
   const isButtonDisabled = () => {
     if (loading) return true;
     if (mode === 'hosted' && !hostedInfo && !legacyHostedInfo && !tokenAcknowledged) return true;
     if (mode === 'podping' && podpingStatus.kind === 'loading') return true;
+    if (mode === 'podping' && !!podpingUrlError) return true;
     return false;
   };
 
@@ -507,6 +511,11 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
         case 'podping':
           if (!podpingUrl) {
             setPodpingStatus({ kind: 'error', message: 'Feed URL is required' });
+            setLoading(false);
+            return;
+          }
+          if (podpingUrlError) {
+            setPodpingStatus({ kind: 'error', message: podpingUrlError });
             setLoading(false);
             return;
           }
@@ -1239,13 +1248,18 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                   width: '100%',
                   padding: '8px 12px',
                   borderRadius: '4px',
-                  border: '1px solid var(--border-color)',
+                  border: `1px solid ${podpingUrlError ? 'var(--error, #ef4444)' : 'var(--border-color)'}`,
                   backgroundColor: 'var(--bg-secondary)',
                   color: 'var(--text-primary)',
                   fontSize: '0.875rem',
                   marginBottom: '8px'
                 }}
               />
+              {podpingUrlError && (
+                <p style={{ color: 'var(--error, #ef4444)', fontSize: '0.875rem', margin: '0 0 8px 0' }}>
+                  {podpingUrlError}
+                </p>
+              )}
               {podpingStatus.kind === 'success' && (
                 <p style={{ color: 'var(--success-color, #22c55e)', fontSize: '0.875rem', margin: 0 }}>
                   Podping sent.

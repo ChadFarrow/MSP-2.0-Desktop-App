@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuthHeaders } from './_utils/podcastIndex.js';
+import { getFeedUrlError } from './_utils/urlValidation.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -10,6 +11,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!url || typeof url !== 'string') {
     return res.status(400).json({ error: 'Missing url parameter' });
+  }
+
+  try {
+    new URL(url);
+  } catch {
+    return res.status(400).json({ error: 'Invalid URL format' });
+  }
+
+  const urlError = getFeedUrlError(url);
+  if (urlError) {
+    return res.status(400).json({ error: urlError });
   }
 
   const authHeaders = getAuthHeaders();

@@ -4,6 +4,7 @@ import { createEmptyRemoteItem } from '../../../types/feed';
 import type { FeedAction } from '../../../store/feedStore';
 import { useNostr } from '../../../store/nostrStore';
 import { createAdminAuthHeader } from '../../../utils/adminAuth';
+import { getFeedUrlError } from '../../../utils/urlValidation';
 import { InfoIcon } from '../../InfoIcon';
 import { Section } from '../../Section';
 
@@ -56,6 +57,7 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
   const [submitUrl, setSubmitUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
+  const submitUrlError = getFeedUrlError(submitUrl.trim());
 
   // Refresh feed info from Podcast Index by GUID
   const handleRefreshArtwork = async (index: number) => {
@@ -357,16 +359,21 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
                 placeholder="https://example.com/feed.xml"
                 value={submitUrl}
                 onChange={e => setSubmitUrl(e.target.value)}
-                style={{ flex: 1 }}
+                style={{ flex: 1, borderColor: submitUrlError ? 'var(--error, #ef4444)' : undefined }}
               />
               <button
                 className="btn btn-secondary"
                 onClick={handleSubmitToPI}
-                disabled={isSubmitting || !submitUrl.trim()}
+                disabled={isSubmitting || !submitUrl.trim() || !!submitUrlError}
               >
                 {isSubmitting ? 'Submitting...' : 'Submit to Podcast Index'}
               </button>
             </div>
+            {submitUrlError && (
+              <p style={{ color: 'var(--error, #ef4444)', fontSize: '12px', marginBottom: '8px' }}>
+                {submitUrlError}
+              </p>
+            )}
             {submitResult && (
               <p style={{
                 color: submitResult.success ? 'var(--success-color, #22c55e)' : 'var(--danger-color, #ef4444)',

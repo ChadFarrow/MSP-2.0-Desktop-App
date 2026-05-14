@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ModalWrapper } from './ModalWrapper';
 import { getHostedFeedInfo, buildHostedUrl } from '../../utils/hostedFeed';
+import { getFeedUrlError } from '../../utils/urlValidation';
 
 interface PodpingModalProps {
   onClose: () => void;
@@ -51,6 +52,8 @@ export function PodpingModal({ onClose, feedGuid, medium }: PodpingModalProps) {
     }
   };
 
+  const urlError = getFeedUrlError(podpingUrl.trim());
+
   return (
     <ModalWrapper
       isOpen={true}
@@ -61,7 +64,7 @@ export function PodpingModal({ onClose, feedGuid, medium }: PodpingModalProps) {
           <button
             className="btn btn-primary"
             onClick={handleSubmit}
-            disabled={submitting || !podpingUrl.trim()}
+            disabled={submitting || !podpingUrl.trim() || !!urlError}
           >
             {submitting ? 'Sending…' : 'Send Podping'}
           </button>
@@ -86,13 +89,18 @@ export function PodpingModal({ onClose, feedGuid, medium }: PodpingModalProps) {
             width: '100%',
             padding: '8px 12px',
             borderRadius: '4px',
-            border: '1px solid var(--border-color)',
+            border: `1px solid ${urlError ? 'var(--error, #ef4444)' : 'var(--border-color)'}`,
             backgroundColor: 'var(--bg-secondary)',
             color: 'var(--text-primary)',
             fontSize: '0.875rem',
             fontFamily: 'monospace'
           }}
         />
+        {urlError && (
+          <div style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--error, #ef4444)' }}>
+            {urlError}
+          </div>
+        )}
       </div>
       {message && (
         <div style={{

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuthHeaders } from './_utils/podcastIndex.js';
 import { notifyPodping, isPodpingConfigured } from './_utils/feedUtils.js';
+import { getFeedUrlError } from './_utils/urlValidation.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -26,17 +27,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Reject URLs with characters that cause Podcast Index indexing issues or duplicates
-  if (/ /.test(url)) {
-    return res.status(400).json({ error: 'URL contains spaces. Please percent-encode spaces as %20 before submitting.' });
-  }
-  if (/'/.test(url)) {
-    return res.status(400).json({ error: "URL contains apostrophes ('). Podcast Index may encode them as %27 and create a duplicate entry. Rename the file to remove apostrophes before submitting." });
-  }
-  if (/[<>"{}|\\^`]/.test(url)) {
-    return res.status(400).json({ error: 'URL contains special characters (<, >, ", {, }, |, \\, ^, `) that require percent-encoding. Please fix the URL before submitting.' });
-  }
-  if (Array.from(url).some(c => c.charCodeAt(0) > 127)) {
-    return res.status(400).json({ error: 'URL contains non-ASCII characters that require percent-encoding. Please fix the URL before submitting.' });
+  const urlError = getFeedUrlError(url);
+  if (urlError) {
+    return res.status(400).json({ error: urlError });
   }
 
   try {

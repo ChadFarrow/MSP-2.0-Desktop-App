@@ -8,6 +8,7 @@ import { detectAddressType } from '../../utils/addressUtils';
 import { getMediaDuration, secondsToHHMMSS, formatDuration, getAudioMimeType, isKnownAudioFormat } from '../../utils/audioUtils';
 import { getVideoMimeType } from '../../utils/videoUtils';
 import { isNaddrString, resolveNostrVideo } from '../../utils/nostrVideoConverter';
+import { getFeedUrlError } from '../../utils/urlValidation';
 import { InfoIcon } from '../InfoIcon';
 import { Section } from '../Section';
 import { Toggle } from '../Toggle';
@@ -132,6 +133,7 @@ export function Editor() {
   // Submit to Podcast Index state
   const [piSubmitting, setPiSubmitting] = useState(false);
   const [piSubmitResult, setPiSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
+  const publisherFeedUrlError = getFeedUrlError((album.publisher?.feedUrl || '').trim());
 
   // Auto-lookup publisher feed in Podcast Index when URL changes
   const lookupPublisherFeed = useCallback(async (feedUrl: string) => {
@@ -688,7 +690,13 @@ export function Editor() {
                     }
                   }
                 })}
+                style={publisherFeedUrlError ? { borderColor: 'var(--error, #ef4444)' } : undefined}
               />
+              {publisherFeedUrlError && (
+                <p style={{ color: 'var(--error, #ef4444)', fontSize: '12px', marginTop: '6px', marginBottom: 0 }}>
+                  {publisherFeedUrlError}
+                </p>
+              )}
               {publisherLookup.loading && (
                 <p style={{ color: 'var(--text-tertiary)', marginTop: '8px', fontSize: '12px' }}>
                   Looking up feed in Podcast Index...
@@ -704,7 +712,7 @@ export function Editor() {
                       <button
                         className="btn btn-secondary"
                         onClick={handleSubmitToPI}
-                        disabled={piSubmitting}
+                        disabled={piSubmitting || !!publisherFeedUrlError}
                         style={{ fontSize: '12px', padding: '6px 12px' }}
                       >
                         {piSubmitting ? 'Submitting...' : 'Submit to Podcast Index'}

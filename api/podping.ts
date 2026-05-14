@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { notifyPodping, isPodpingConfigured } from './_utils/feedUtils.js';
 import { checkRateLimit } from './_utils/rateLimiter.js';
+import { getFeedUrlError } from './_utils/urlValidation.js';
 
 const RATE_LIMIT = { limit: 10, windowMs: 3600_000 };
 
@@ -35,6 +36,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     new URL(url);
   } catch {
     return res.status(400).json({ error: 'Invalid URL format' });
+  }
+
+  const urlError = getFeedUrlError(url);
+  if (urlError) {
+    return res.status(400).json({ error: urlError });
   }
 
   const ip = getClientIp(req);
