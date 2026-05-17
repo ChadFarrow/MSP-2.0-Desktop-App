@@ -20,4 +20,12 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // Stores legitimately co-export a Provider component and its useX() hook;
+    // fast refresh doesn't apply to context stores the way it does to UI files.
+    files: ['src/store/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])
