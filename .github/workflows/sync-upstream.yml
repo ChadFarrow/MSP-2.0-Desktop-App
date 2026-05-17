@@ -89,6 +89,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.check.outputs.new_commits != '0'
+        id: create_pr
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.SYNC_PAT }}
@@ -97,3 +98,18 @@ jobs:
           branch: sync-upstream
           delete-branch: true
           labels: automated
+
+      - name: Enable auto-merge on the sync PR
+        # Only auto-merge clean syncs. If the merge had conflicts that were
+        # auto-resolved by keeping desktop's version, a human should review
+        # whether upstream changes need manual reconciliation.
+        if: |
+          steps.check.outputs.new_commits != '0'
+          && steps.merge.outputs.conflicts != 'true'
+          && steps.create_pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PAT }}
+          PR_NUMBER: ${{ steps.create_pr.outputs.pull-request-number }}
+        run: |
+          echo "Enabling auto-merge on PR #$PR_NUMBER"
+          gh pr merge "$PR_NUMBER" --auto --merge --repo "$GITHUB_REPOSITORY"
