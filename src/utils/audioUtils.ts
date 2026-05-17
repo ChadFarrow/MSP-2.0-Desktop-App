@@ -1,6 +1,43 @@
 // Audio and duration utilities
 import { getVideoDuration, isVideoUrl } from './videoUtils';
 
+const AUDIO_MIME_BY_EXTENSION: ReadonlyArray<readonly [string, string]> = [
+  ['.mp3', 'audio/mpeg'],
+  ['.m4a', 'audio/x-m4a'],
+  ['.m4b', 'audio/mp4'],
+  ['.aac', 'audio/aac'],
+  ['.flac', 'audio/flac'],
+  ['.wav', 'audio/wav'],
+  ['.opus', 'audio/opus'],
+  ['.oga', 'audio/ogg'],
+  ['.ogg', 'audio/ogg'],
+  ['.aiff', 'audio/aiff'],
+  ['.aif', 'audio/aiff'],
+  ['.wma', 'audio/x-ms-wma'],
+];
+
+function matchAudioExtension(url: string): string | null {
+  const lower = url.toLowerCase().split('?')[0].split('#')[0];
+  for (const [ext, mime] of AUDIO_MIME_BY_EXTENSION) {
+    if (lower.endsWith(ext)) return mime;
+  }
+  return null;
+}
+
+/**
+ * Detect audio MIME type from URL extension. Falls back to audio/mpeg.
+ */
+export function getAudioMimeType(url: string): string {
+  return matchAudioExtension(url) ?? 'audio/mpeg';
+}
+
+/**
+ * True when the URL ends with a recognized audio extension (mp3, flac, wav, m4a, aac, ogg, opus, aiff, wma).
+ */
+export function isKnownAudioFormat(url: string): boolean {
+  return matchAudioExtension(url) !== null;
+}
+
 /**
  * Get MP3 duration from URL using Audio API (works without CORS)
  */

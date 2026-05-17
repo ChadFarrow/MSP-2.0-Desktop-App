@@ -10,6 +10,14 @@ export const DEFAULT_RELAYS = [
   // 'wss://relay.nostr.band' // Temporarily disabled - unreachable
 ];
 
+// Relays for Nostr Music publishing (kinds 36787/34139) and their NIP-09 deletions.
+// drops.basspistol.org is a public relay that only accepts music kinds, so it
+// lives here rather than in DEFAULT_RELAYS (which carries kind 0/30054/1063/etc).
+export const MUSIC_RELAYS = [
+  ...DEFAULT_RELAYS,
+  'wss://drops.basspistol.org',
+];
+
 /**
  * Connect to a relay with timeout (single attempt)
  */

@@ -175,6 +175,7 @@ const generatePersonXml = (person: Person, level: number): string => {
     const attrs: string[] = [];
     if (person.href) attrs.push(`href="${escapeXml(person.href)}"`);
     if (person.img) attrs.push(`img="${escapeXml(person.img)}"`);
+    if (person.npub) attrs.push(`npub="${escapeXml(person.npub)}"`);
     attrs.push(`group="${escapeXml(role.group)}"`);
     attrs.push(`role="${escapeXml(role.role)}"`);
     return `${indent(level)}<podcast:person ${attrs.join(' ')}>${escapeXml(person.name)}</podcast:person>`;
