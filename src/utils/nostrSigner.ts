@@ -298,6 +298,88 @@ export function getSigner(): NostrSigner {
   return currentSigner;
 }
 
+// Sign an event with a timeout so a non-responsive remote signer doesn't hang the UI indefinitely.
+// Default: 60 s for NIP-46 (user may need to unlock phone + tap), 30 s for NIP-07 (local extension popup).
+export async function signEventWithTimeout(
+  event: EventTemplate,
+  timeoutMs?: number
+): Promise<VerifiedEvent> {
+  const method = currentMethod;
+  const effectiveTimeout = timeoutMs ?? (method === 'nip46' ? 60_000 : 30_000);
+
+  return Promise.race([
+    getSigner().signEvent(event),
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(
+          'Signer request timed out. If you use a remote signer app (like Amber or nsecBunker), please open it and approve the pending request, then try again.'
+        )),
+        effectiveTimeout
+      )
+    ),
+  ]);
+}
+
+// Same shape as signEventWithTimeout for the getPublicKey round-trip — NIP-46 sends a
+// request to the remote signer app, which can hang if the phone is asleep.
+export async function getPublicKeyWithTimeout(timeoutMs?: number): Promise<string> {
+  const method = currentMethod;
+  const effectiveTimeout = timeoutMs ?? (method === 'nip46' ? 60_000 : 30_000);
+
+  return Promise.race([
+    getSigner().getPublicKey(),
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(
+          'Signer request timed out. If you use a remote signer app (like Amber or nsecBunker), please open it and approve the pending request, then try again.'
+        )),
+        effectiveTimeout
+      )
+    ),
+  ]);
+}
+
+// Check whether the signer is reachable before starting a Nostr operation.
+// Returns { connected: true } quickly or { connected: false, error } without throwing.
+export async function checkSignerConnection(timeoutMs?: number): Promise<{ connected: boolean; error?: string }> {
+  if (!hasSigner()) {
+    return { connected: false, error: 'Not logged in to Nostr. Please log in and try again.' };
+  }
+
+  const method = currentMethod;
+
+  try {
+    if (method === 'nip46') {
+      const pubkey = await reconnectNip46(timeoutMs ?? 5_000);
+      if (!pubkey) {
+        return {
+          connected: false,
+          error: 'Could not reach your remote signer. Make sure the signer app is open and connected, then try again.'
+        };
+      }
+      return { connected: true };
+    } else {
+      // NIP-07: race getPublicKey against a short timeout
+      await Promise.race([
+        getSigner().getPublicKey(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), timeoutMs ?? 3_000)
+        ),
+      ]);
+      return { connected: true };
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    if (msg === 'timeout') {
+      return {
+        connected: false,
+        error: 'Could not reach your browser extension. Make sure it is unlocked and try again.'
+      };
+    }
+    return { connected: false, error: msg };
+  }
+}
+
 // Check if a signer is active
 export function hasSigner(): boolean {
   return currentSigner !== null;

@@ -5,15 +5,16 @@ import { parseRssFeed } from './xmlParser';
 import { formatReleasedDate } from './dateUtils';
 import {
   DEFAULT_RELAYS,
+  MUSIC_RELAYS,
   connectRelay,
   collectEvents,
   publishEventToRelays
 } from './nostrRelay';
-import { getSigner, hasSigner } from './nostrSigner';
+import { hasSigner, signEventWithTimeout, getPublicKeyWithTimeout } from './nostrSigner';
 import { parseNostrMusicEvent } from './nostrMusicConverter';
 
 // Re-export for backward compatibility
-export { DEFAULT_RELAYS };
+export { DEFAULT_RELAYS, MUSIC_RELAYS };
 
 // Re-export Blossom functions from dedicated module
 export { uploadToBlossom } from './blossom';
@@ -115,9 +116,8 @@ export async function saveAlbumToNostr(
   }
 
   try {
-    const signer = getSigner();
     // Get public key
-    const pubkey = await signer.getPublicKey();
+    const pubkey = await getPublicKeyWithTimeout();
 
     // Only update lastBuildDate if there are actual changes
     const updatedAlbum = hasChanges
@@ -129,7 +129,7 @@ export async function saveAlbumToNostr(
 
     // Create and sign the event
     const unsignedEvent = createFeedEvent(rssXml, album.podcastGuid, album.title, pubkey);
-    const signedEvent = await signer.signEvent(unsignedEvent);
+    const signedEvent = await signEventWithTimeout(unsignedEvent);
 
     // Publish to relays
     const { successCount } = await publishEventToRelays(signedEvent as NostrEvent, relays);
@@ -160,8 +160,7 @@ export async function saveFeedToNostr(
   }
 
   try {
-    const signer = getSigner();
-    const pubkey = await signer.getPublicKey();
+    const pubkey = await getPublicKeyWithTimeout();
 
     // Generate RSS XML based on feed type
     let rssXml: string;
@@ -188,7 +187,7 @@ export async function saveFeedToNostr(
 
     // Create and sign the event
     const unsignedEvent = createFeedEvent(rssXml, feedGuid, feedTitle, pubkey);
-    const signedEvent = await signer.signEvent(unsignedEvent);
+    const signedEvent = await signEventWithTimeout(unsignedEvent);
 
     // Publish to relays
     const { successCount } = await publishEventToRelays(signedEvent as NostrEvent, relays);
@@ -216,8 +215,7 @@ export async function loadAlbumsFromNostr(
   }
 
   try {
-    const signer = getSigner();
-    const pubkey = await signer.getPublicKey();
+    const pubkey = await getPublicKeyWithTimeout();
     const allEvents: NostrEvent[] = [];
 
     // Query each relay
@@ -295,8 +293,7 @@ export async function loadAlbumByDTag(
   }
 
   try {
-    const signer = getSigner();
-    const pubkey = await signer.getPublicKey();
+    const pubkey = await getPublicKeyWithTimeout();
     let latestEvent: NostrEvent | null = null;
 
     // Query each relay
@@ -381,15 +378,14 @@ export function groupTracksByAlbum(tracks: NostrMusicTrackInfo[]): NostrMusicAlb
 
 // Fetch music track events (kind 36787) for logged-in user
 export async function fetchNostrMusicTracks(
-  relays = DEFAULT_RELAYS
+  relays = MUSIC_RELAYS
 ): Promise<{ success: boolean; tracks: NostrMusicTrackInfo[]; message: string }> {
   if (!hasSigner()) {
     return { success: false, tracks: [], message: 'Not logged in' };
   }
 
   try {
-    const signer = getSigner();
-    const pubkey = await signer.getPublicKey();
+    const pubkey = await getPublicKeyWithTimeout();
     const allEvents: NostrEvent[] = [];
 
     // Query each relay
@@ -646,7 +642,7 @@ export interface PublishProgress {
 // Publish album tracks as Nostr Music events (kind 36787) + playlist (kind 34139)
 export async function publishNostrMusicTracks(
   album: Album,
-  relays = DEFAULT_RELAYS,
+  relays = MUSIC_RELAYS,
   onProgress?: (progress: PublishProgress) => void
 ): Promise<{ success: boolean; message: string; publishedCount: number; playlistPublished: boolean }> {
   if (!hasSigner()) {
@@ -658,8 +654,7 @@ export async function publishNostrMusicTracks(
   }
 
   try {
-    const signer = getSigner();
-    const pubkey = await signer.getPublicKey();
+    const pubkey = await getPublicKeyWithTimeout();
     let publishedCount = 0;
     const total = album.tracks.length;
     const publishedTracks: PublishedTrackRef[] = [];
@@ -680,7 +675,7 @@ export async function publishNostrMusicTracks(
 
       // Create and sign the event
       const unsignedEvent = createMusicTrackEvent(track, album, pubkey);
-      const signedEvent = await signer.signEvent(unsignedEvent);
+      const signedEvent = await signEventWithTimeout(unsignedEvent);
 
       // Publish to all relays
       const { successCount } = await publishEventToRelays(signedEvent as NostrEvent, relays);
@@ -706,7 +701,7 @@ export async function publishNostrMusicTracks(
       }
 
       const playlistEvent = createMusicPlaylistEvent(album, publishedTracks, pubkey);
-      const signedPlaylist = await signer.signEvent(playlistEvent);
+      const signedPlaylist = await signEventWithTimeout(playlistEvent);
       const { successCount: playlistSuccessCount } = await publishEventToRelays(signedPlaylist as NostrEvent, relays);
 
       if (playlistSuccessCount > 0) {
@@ -739,7 +734,7 @@ export async function publishNostrMusicTracks(
 // Delete (unpublish) Nostr Music events for an album via NIP-09
 export async function deleteNostrMusicTracks(
   album: Album,
-  relays = DEFAULT_RELAYS
+  relays = MUSIC_RELAYS
 ): Promise<{ success: boolean; message: string }> {
   if (!hasSigner()) {
     return { success: false, message: 'Not logged in' };
@@ -750,8 +745,7 @@ export async function deleteNostrMusicTracks(
   }
 
   try {
-    const signer = getSigner();
-    const pubkey = await signer.getPublicKey();
+    const pubkey = await getPublicKeyWithTimeout();
 
     // Build 'a' tags for all tracks + playlist
     const tags: string[][] = [];
@@ -779,7 +773,7 @@ export async function deleteNostrMusicTracks(
       content: 'Unpublished from MSP 2.0'
     };
 
-    const signedEvent = await signer.signEvent(deletionEvent);
+    const signedEvent = await signEventWithTimeout(deletionEvent);
     const { successCount } = await publishEventToRelays(signedEvent as NostrEvent, relays);
 
     if (successCount === 0) {

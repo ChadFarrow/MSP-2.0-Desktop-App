@@ -4,7 +4,7 @@ import type { NostrEvent } from '../types/nostr';
 import { generateRssFeed, generatePublisherRssFeed } from './xmlGenerator';
 import { hexToNpub } from './nostr';
 import { DEFAULT_RELAYS, publishEventToRelays } from './nostrRelay';
-import { getSigner, hasSigner } from './nostrSigner';
+import { hasSigner, signEventWithTimeout, getPublicKeyWithTimeout } from './nostrSigner';
 
 // Blossom auth event kind
 const BLOSSOM_AUTH_KIND = 24242;
@@ -91,10 +91,9 @@ async function publishFileMetadata(
   }
 
   try {
-    const signer = getSigner();
-    const pubkey = await signer.getPublicKey();
+    const pubkey = await getPublicKeyWithTimeout();
     const unsignedEvent = createFileMetadataEvent(blossomUrl, hash, fileSize, album, pubkey);
-    const signedEvent = await signer.signEvent(unsignedEvent);
+    const signedEvent = await signEventWithTimeout(unsignedEvent);
 
     const { successCount } = await publishEventToRelays(signedEvent as NostrEvent, relays);
 
@@ -119,8 +118,7 @@ export async function uploadToBlossom(
   }
 
   try {
-    const signer = getSigner();
-    const pubkey = await signer.getPublicKey();
+    const pubkey = await getPublicKeyWithTimeout();
 
     // Generate RSS XML with updated lastBuildDate
     const rssXml = generateRssFeed({ ...album, lastBuildDate: new Date().toUTCString() });
@@ -130,7 +128,7 @@ export async function uploadToBlossom(
 
     // Create and sign auth event
     const authEvent = await createBlossomAuthEvent(hash, pubkey, 'upload');
-    const signedAuthEvent = await signer.signEvent(authEvent);
+    const signedAuthEvent = await signEventWithTimeout(authEvent);
 
     // Base64 encode the signed event for Authorization header
     const authHeader = 'Nostr ' + btoa(JSON.stringify(signedAuthEvent));
@@ -202,8 +200,7 @@ export async function uploadFeedToBlossom(
   }
 
   try {
-    const signer = getSigner();
-    const pubkey = await signer.getPublicKey();
+    const pubkey = await getPublicKeyWithTimeout();
 
     // Generate RSS XML based on feed type
     // Update lastBuildDate to current time per RSS 2.0 spec
@@ -226,7 +223,7 @@ export async function uploadFeedToBlossom(
 
     // Create and sign auth event
     const authEvent = await createBlossomAuthEvent(hash, pubkey, 'upload');
-    const signedAuthEvent = await signer.signEvent(authEvent);
+    const signedAuthEvent = await signEventWithTimeout(authEvent);
 
     // Base64 encode the signed event for Authorization header
     const authHeader = 'Nostr ' + btoa(JSON.stringify(signedAuthEvent));

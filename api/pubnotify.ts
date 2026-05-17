@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuthHeaders } from './_utils/podcastIndex.js';
 import { notifyPodping, isPodpingConfigured } from './_utils/feedUtils.js';
+import { getFeedUrlError } from './_utils/urlValidation.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -23,6 +24,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     new URL(url);
   } catch {
     return res.status(400).json({ error: 'Invalid URL format' });
+  }
+
+  // Reject URLs with characters that cause Podcast Index indexing issues or duplicates
+  const urlError = getFeedUrlError(url);
+  if (urlError) {
+    return res.status(400).json({ error: urlError });
   }
 
   try {

@@ -6,7 +6,7 @@ import type { Album, PublisherFeed } from '../types/feed';
 import type { NostrEvent } from '../types/nostr';
 import { generateRssFeed, generatePublisherRssFeed } from './xmlGenerator';
 import { DEFAULT_RELAYS, publishEventToRelays } from './nostrRelay';
-import { getSigner, hasSigner } from './nostrSigner';
+import { hasSigner, signEventWithTimeout, getPublicKeyWithTimeout } from './nostrSigner';
 
 // NIP-5A event kinds
 const NSITE_NAMED_KIND = 35128;
@@ -159,8 +159,7 @@ export async function publishToNsite(
   }
 
   try {
-    const signer = getSigner();
-    const pubkey = await signer.getPublicKey();
+    const pubkey = await getPublicKeyWithTimeout();
 
     // 1. Generate RSS XML
     onProgress?.('Generating RSS feed...');
@@ -183,7 +182,7 @@ export async function publishToNsite(
     const hash = await sha256Hash(rssXml);
 
     const authEvent = await createBlossomAuthEvent(hash, pubkey);
-    const signedAuth = await signer.signEvent(authEvent);
+    const signedAuth = await signEventWithTimeout(authEvent);
     const authHeader = 'Nostr ' + btoa(JSON.stringify(signedAuth));
 
     const serverUrl = blossomServer.replace(/\/$/, '');
@@ -215,7 +214,7 @@ export async function publishToNsite(
       NSITE_RELAYS
     );
 
-    const signedManifest = await signer.signEvent(manifest);
+    const signedManifest = await signEventWithTimeout(manifest);
     const { successCount } = await publishEventToRelays(signedManifest as NostrEvent, NSITE_RELAYS);
 
     if (successCount === 0) {

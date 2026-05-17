@@ -1,14 +1,29 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface InfoIconProps {
   text: string;
 }
 
+const MOBILE_QUERY = '(max-width: 768px)';
+
 export function InfoIcon({ text }: InfoIconProps) {
   const [show, setShow] = useState(false);
   const [pinned, setPinned] = useState(false);
   const [side, setSide] = useState<'left' | 'right'>('right');
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' && window.matchMedia(MOBILE_QUERY).matches
+  );
   const wrapperRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia(MOBILE_QUERY);
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
 
   // Auto-detect tooltip side when shown
   useEffect(() => {
@@ -22,10 +37,13 @@ export function InfoIcon({ text }: InfoIconProps) {
     if (!pinned) return;
 
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setPinned(false);
-        setShow(false);
-      }
+      const target = e.target as Node;
+      if (wrapperRef.current && wrapperRef.current.contains(target)) return;
+      // Also ignore clicks on the portaled tooltip itself — it handles its own close.
+      const tooltipEl = document.querySelector('.info-tooltip');
+      if (tooltipEl && tooltipEl.contains(target)) return;
+      setPinned(false);
+      setShow(false);
     };
 
     // Small delay to avoid the same click that opened it
@@ -74,6 +92,17 @@ export function InfoIcon({ text }: InfoIconProps) {
     setShow(false);
   };
 
+  const tooltip = show ? (
+    <div
+      className={`info-tooltip${side === 'left' ? ' info-tooltip-left' : ''}`}
+      onClick={handleClose}
+      onTouchEnd={handleClose}
+    >
+      {text}
+      <span className="info-tooltip-close">tap to close</span>
+    </div>
+  ) : null;
+
   return (
     <span className="info-icon-wrapper" ref={wrapperRef}>
       <span
@@ -85,12 +114,10 @@ export function InfoIcon({ text }: InfoIconProps) {
       >
         i
       </span>
-      {show && (
-        <div className={`info-tooltip${side === 'left' ? ' info-tooltip-left' : ''}`} onClick={handleClose} onTouchEnd={handleClose}>
-          {text}
-          <span className="info-tooltip-close">tap to close</span>
-        </div>
-      )}
+      {/* On mobile the tooltip uses position: fixed to pin to the viewport.
+          Ancestors that establish a containing block (e.g. .section's
+          backdrop-filter) would otherwise trap it, so portal it to <body>. */}
+      {isMobile ? tooltip && createPortal(tooltip, document.body) : tooltip}
     </span>
   );
 }

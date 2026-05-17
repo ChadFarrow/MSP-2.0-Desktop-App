@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { PublisherFeed } from '../../../types/feed';
+import { getFeedUrlError } from '../../../utils/urlValidation';
 import { Section } from '../../Section';
 import { generatePublisherRssFeed, downloadXml } from '../../../utils/xmlGenerator';
 import {
@@ -10,7 +11,7 @@ import {
   saveHostedFeedInfo,
   getHostedFeedInfo
 } from '../../../utils/hostedFeed';
-import { hasSigner } from '../../../utils/nostrSigner';
+import { hasSigner, checkSignerConnection } from '../../../utils/nostrSigner';
 import { useNostr } from '../../../store/nostrStore';
 import { apiFetch } from '../../../utils/api';
 
@@ -29,6 +30,7 @@ export function PublisherFeedReminderSection({ publisherFeed }: PublisherFeedRem
   const podcastGuid = publisherFeed.podcastGuid;
   const existingInfo = podcastGuid ? getHostedFeedInfo(podcastGuid) : null;
   const isAlreadyHosted = !!existingInfo;
+  const selfHostedUrlError = getFeedUrlError(selfHostedUrl.trim());
 
   const handleHostOnMSP = async () => {
     if (!podcastGuid) {
@@ -44,6 +46,15 @@ export function PublisherFeedReminderSection({ publisherFeed }: PublisherFeedRem
       const title = publisherFeed.title || 'Publisher Feed';
       const editToken = generateEditToken();
       const shouldLinkNostr = nostrState.isLoggedIn && nostrState.user?.pubkey && hasSigner();
+
+      if (shouldLinkNostr) {
+        const health = await checkSignerConnection();
+        if (!health.connected) {
+          setResult({ success: false, message: health.error ?? 'Nostr signer is not connected.' });
+          setIsHosting(false);
+          return;
+        }
+      }
 
       let response;
       if (shouldLinkNostr) {
@@ -190,7 +201,7 @@ export function PublisherFeedReminderSection({ publisherFeed }: PublisherFeedRem
                 flex: 1,
                 padding: '8px 12px',
                 borderRadius: '4px',
-                border: '1px solid var(--border-color)',
+                border: `1px solid ${selfHostedUrlError ? 'var(--error, #ef4444)' : 'var(--border-color)'}`,
                 backgroundColor: 'var(--bg-secondary)',
                 color: 'var(--text-primary)',
                 fontSize: '13px',
@@ -200,11 +211,16 @@ export function PublisherFeedReminderSection({ publisherFeed }: PublisherFeedRem
             <button
               className="btn btn-secondary"
               onClick={handleSubmitToPodcastIndex}
-              disabled={isSubmitting || !selfHostedUrl.trim()}
+              disabled={isSubmitting || !selfHostedUrl.trim() || !!selfHostedUrlError}
             >
               {isSubmitting ? 'Submitting...' : 'Submit to PI'}
             </button>
           </div>
+          {selfHostedUrlError && (
+            <p style={{ color: 'var(--error, #ef4444)', fontSize: '13px', marginTop: '6px', marginBottom: 0 }}>
+              {selfHostedUrlError}
+            </p>
+          )}
           {piResult && (
             <p style={{
               color: piResult.success ? 'var(--success-color, #22c55e)' : 'var(--danger-color, #ef4444)',
