@@ -156,6 +156,7 @@ export interface HostedFeedInfo {
   lastUpdated: number;
   ownerPubkey?: string;  // Nostr pubkey if linked
   linkedAt?: number;     // When Nostr was linked
+  isDraft?: boolean;     // True when hosted without PI/podping notification
 }
 
 // Hosted feed storage operations

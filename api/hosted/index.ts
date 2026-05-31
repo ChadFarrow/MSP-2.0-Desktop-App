@@ -109,7 +109,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { xml, title, podcastGuid, editToken: clientToken } = req.body;
+    const { xml, title, podcastGuid, editToken: clientToken, isDraft } = req.body;
 
     // Validate input
     if (!xml || typeof xml !== 'string') {
@@ -183,8 +183,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Extract podcast:medium from XML for podping broadcast (music/video/publisher)
     const medium = extractPodcastMedium(xml);
 
-    // Notify Podcast Index and get PI ID
-    const podcastIndexId = await notifyPodcastIndex(stableUrl, { medium });
+    // Only notify Podcast Index if not a draft
+    const podcastIndexId = (isDraft === true) ? undefined : await notifyPodcastIndex(stableUrl, { medium });
 
     // Store metadata separately (Vercel Blob doesn't support custom metadata)
     await put(`feeds/${feedId}.meta.json`, JSON.stringify({
@@ -193,7 +193,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       title: (typeof title === 'string' ? title : 'Untitled Feed').slice(0, 200),
       ownerPubkey,
       linkedAt,
-      podcastIndexId
+      podcastIndexId,
+      ...(isDraft === true && { isDraft: true })
     }), {
       access: 'public',
       contentType: 'application/json',
@@ -206,7 +207,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       editToken, // Only returned once at creation!
       url: stableUrl,
       blobUrl: blob.url,
-      podcastIndexId
+      podcastIndexId,
+      isDraft: isDraft === true
     });
   } catch (error) {
     console.error('Error creating hosted feed:', error);

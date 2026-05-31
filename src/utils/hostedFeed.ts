@@ -33,6 +33,7 @@ interface CreateFeedResponse {
   url: string;
   blobUrl: string;
   podcastIndexId?: number;
+  isDraft?: boolean;
 }
 
 /**
@@ -53,12 +54,13 @@ export async function createHostedFeed(
   xml: string,
   title: string,
   podcastGuid: string,
-  editToken?: string
+  editToken?: string,
+  isDraft?: boolean
 ): Promise<CreateFeedResponse> {
   const response = await fetch('/api/hosted', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ xml, title, podcastGuid, editToken })
+    body: JSON.stringify({ xml, title, podcastGuid, editToken, isDraft })
   });
 
   if (!response.ok) {
@@ -72,6 +74,7 @@ export async function createHostedFeed(
 interface UpdateFeedResponse {
   success: boolean;
   podcastIndexId?: number;
+  isDraft?: boolean;
 }
 
 /**
@@ -81,7 +84,8 @@ export async function updateHostedFeed(
   feedId: string,
   editToken: string,
   xml: string,
-  title: string
+  title: string,
+  isDraft?: boolean
 ): Promise<UpdateFeedResponse> {
   const response = await fetch(`/api/hosted/${feedId}`, {
     method: 'PUT',
@@ -89,7 +93,7 @@ export async function updateHostedFeed(
       'Content-Type': 'application/json',
       'X-Edit-Token': editToken
     },
-    body: JSON.stringify({ xml, title })
+    body: JSON.stringify({ xml, title, isDraft })
   });
 
   if (!response.ok) {
@@ -195,7 +199,8 @@ export async function createHostedFeedWithNostr(
   xml: string,
   title: string,
   podcastGuid: string,
-  editToken?: string
+  editToken?: string,
+  isDraft?: boolean
 ): Promise<CreateFeedResponse> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
@@ -208,7 +213,7 @@ export async function createHostedFeedWithNostr(
   const response = await fetch('/api/hosted', {
     method: 'POST',
     headers,
-    body: JSON.stringify({ xml, title, podcastGuid, editToken })
+    body: JSON.stringify({ xml, title, podcastGuid, editToken, isDraft })
   });
 
   if (!response.ok) {
@@ -225,7 +230,8 @@ export async function createHostedFeedWithNostr(
 export async function updateHostedFeedWithNostr(
   feedId: string,
   xml: string,
-  title: string
+  title: string,
+  isDraft?: boolean
 ): Promise<UpdateFeedResponse> {
   if (!hasSigner()) {
     throw new Error('Not logged in with Nostr');
@@ -240,7 +246,7 @@ export async function updateHostedFeedWithNostr(
       'Content-Type': 'application/json',
       'Authorization': authHeader
     },
-    body: JSON.stringify({ xml, title })
+    body: JSON.stringify({ xml, title, isDraft })
   });
 
   if (!response.ok) {
