@@ -311,10 +311,14 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
       }
     }
 
-    // Pre-flight: verify signer is reachable before any Nostr operation
+    // Pre-flight: verify signer is reachable before any Nostr operation.
+    // For NIP-46 remote signers (Primal, Amber) this may require the user to approve
+    // in their signer app — show a hint so they know to switch apps.
     const nostrSignModes = ['nostr', 'nostrMusic', 'blossom', 'nsite'] as const;
     if ((nostrSignModes as readonly string[]).includes(mode)) {
+      setMessage({ type: 'success', text: 'Connecting to signer — if using a remote signer (Primal, Amber), open the app and approve now.' });
       const health = await checkSignerConnection();
+      setMessage(null);
       if (!health.connected) {
         setMessage({ type: 'error', text: health.error ?? 'Nostr signer is not connected.' });
         setLoading(false);

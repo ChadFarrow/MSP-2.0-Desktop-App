@@ -265,12 +265,9 @@ export async function reconnectNip46(timeoutMs: number = 10000): Promise<string 
   } catch (e) {
     console.error('Failed to reconnect NIP-46:', e);
     pool.close(NIP46_RELAYS);
-    // Don't clear credentials on timeout - user can try again manually
-    if (e instanceof Error && e.message === 'Connection timeout') {
-      return null;
-    }
-    clearBunkerPointer();
-    clearClientSecretKey();
+    // Never clear stored credentials automatically — connection failures are transient
+    // (network outage, relay down, signer app in background). The user explicitly logs
+    // out to clear credentials. Silently wiping them causes data loss.
     return null;
   }
 }
@@ -326,43 +323,48 @@ export async function getPublicKeyWithTimeout(timeoutMs?: number): Promise<strin
 
 // Check whether the signer is reachable before starting a Nostr operation.
 // Returns { connected: true } quickly or { connected: false, error } without throwing.
+//
+// NIP-46 strategy: if a signer is already initialised, trust it — SimplePool maintains
+// relay connections automatically, so we avoid a redundant reconnect that would close
+// the working connection and send a new "connect" request requiring Primal approval.
+// Only reconnect when currentSigner is null (e.g. first use after a page-load timeout).
 export async function checkSignerConnection(timeoutMs?: number): Promise<{ connected: boolean; error?: string }> {
   const method = currentMethod ?? loadConnectionMethod();
 
-  if (!hasSigner()) {
-    // If credentials are stored but the signer isn't initialized (e.g. reconnect timed out
-    // on page load), try to reconnect now so the user doesn't have to log in again.
-    if (method === 'nip46' && loadBunkerPointer()) {
-      const pubkey = await reconnectNip46(timeoutMs ?? 10_000);
-      if (pubkey) return { connected: true };
-      return {
-        connected: false,
-        error: 'Could not reach your remote signer. Open your signer app (Primal, Amber, nsecBunker) and try again.'
-      };
+  if (method === 'nip46') {
+    if (hasSigner()) {
+      // Active signer — pool manages relay reconnects automatically.
+      return { connected: true };
     }
+
+    // Signer is gone (page-load reconnect timed out, or first use after restore).
+    // If credentials are stored, reconnect now. Give enough time for the user to
+    // open their iOS signer app and approve.
+    if (!loadBunkerPointer()) {
+      return { connected: false, error: 'Not logged in to Nostr. Please log in and try again.' };
+    }
+
+    const pubkey = await reconnectNip46(timeoutMs ?? 30_000);
+    if (pubkey) return { connected: true };
+    return {
+      connected: false,
+      error: 'Could not reach your remote signer. Open your signer app (Primal, Amber, nsecBunker), approve the connection request, then try again.'
+    };
+  }
+
+  // NIP-07 (browser extension)
+  if (!hasSigner()) {
     return { connected: false, error: 'Not logged in to Nostr. Please log in and try again.' };
   }
 
   try {
-    if (method === 'nip46') {
-      const pubkey = await reconnectNip46(timeoutMs ?? 10_000);
-      if (!pubkey) {
-        return {
-          connected: false,
-          error: 'Could not reach your remote signer. Open your signer app (Primal, Amber, nsecBunker) and try again.'
-        };
-      }
-      return { connected: true };
-    } else {
-      // NIP-07: race getPublicKey against a short timeout
-      await Promise.race([
-        getSigner().getPublicKey(),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), timeoutMs ?? 3_000)
-        ),
-      ]);
-      return { connected: true };
-    }
+    await Promise.race([
+      getSigner().getPublicKey(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), timeoutMs ?? 3_000)
+      ),
+    ]);
+    return { connected: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     if (msg === 'timeout') {
