@@ -9,6 +9,7 @@ import { parseRssFeed, isPublisherFeed, isVideoFeed, parsePublisherRssFeed } fro
 import { createEmptyAlbum, createEmptyPublisherFeed, createEmptyVideoAlbum } from './types/feed';
 import { pendingHostedStorage } from './utils/storage';
 import { generateTestAlbum } from './utils/testData';
+import { regenerateAlbumGuids } from './utils/regenerateGuids';
 import { NostrLoginButton } from './components/NostrLoginButton';
 import { ImportModal } from './components/modals/ImportModal';
 import { SaveModal } from './components/modals/SaveModal';
@@ -53,7 +54,9 @@ function AppContent() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleImport = (xml: string, sourceUrl?: string) => {
+  // regenerateGuids: used by the template/"duplicate this feed" flow so a new feed
+  // gets fresh feed + per-track GUIDs instead of inheriting the source's identities.
+  const handleImport = (xml: string, sourceUrl?: string, regenerateGuids = false) => {
     try {
       // Check if this is a publisher feed
       if (isPublisherFeed(xml)) {
@@ -62,6 +65,11 @@ function AppContent() {
         if (sourceUrl) {
           publisherFeed.sourceUrl = sourceUrl;
         }
+        // Only the feed GUID is renewed for templates — remoteItems reference real
+        // external feeds and must keep their feedGuids.
+        if (regenerateGuids) {
+          publisherFeed.podcastGuid = crypto.randomUUID();
+        }
         dispatch({ type: 'SET_PUBLISHER_FEED', payload: publisherFeed });
         return;
       }
@@ -69,7 +77,7 @@ function AppContent() {
       // Check if this is a video feed
       if (isVideoFeed(xml)) {
         const videoFeed = parseRssFeed(xml);
-        dispatch({ type: 'SET_VIDEO_FEED', payload: videoFeed });
+        dispatch({ type: 'SET_VIDEO_FEED', payload: regenerateGuids ? regenerateAlbumGuids(videoFeed) : videoFeed });
         return;
       }
 
@@ -88,7 +96,7 @@ function AppContent() {
         album.medium = 'music';
       }
 
-      dispatch({ type: 'SET_ALBUM', payload: album });
+      dispatch({ type: 'SET_ALBUM', payload: regenerateGuids ? regenerateAlbumGuids(album) : album });
     } catch (err) {
       alert('Failed to parse feed: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
@@ -126,23 +134,15 @@ function AppContent() {
   };
 
   const handleTemplateImport = (xml: string) => {
-    // Import without sourceUrl so hosted link isn't set
-    handleImport(xml);
-    // After import, regenerate the GUID and clear hosted credentials
-    const newGuid = crypto.randomUUID();
-    if (isPublisherFeed(xml)) {
-      dispatch({ type: 'UPDATE_PUBLISHER_FEED', payload: { podcastGuid: newGuid } });
-    } else if (isVideoFeed(xml)) {
-      dispatch({ type: 'UPDATE_VIDEO_FEED', payload: { podcastGuid: newGuid } });
-    } else {
-      dispatch({ type: 'UPDATE_ALBUM', payload: { podcastGuid: newGuid } });
-    }
+    // Import without sourceUrl so hosted link isn't set; regenerate feed + track
+    // GUIDs so the template doesn't clone the source feed's track identities.
+    handleImport(xml, undefined, true);
     pendingHostedStorage.clear();
   };
 
   const handleTemplateLoadAlbum = (album: Album) => {
     pendingHostedStorage.clear();
-    dispatch({ type: 'SET_ALBUM', payload: { ...album, podcastGuid: crypto.randomUUID() } });
+    dispatch({ type: 'SET_ALBUM', payload: regenerateAlbumGuids(album) });
   };
 
   const handleSwitchFeedType = (feedType: FeedType) => {
