@@ -4,6 +4,7 @@ import { FeedProvider, useFeed } from './store/feedStore.tsx';
 import type { FeedType } from './store/feedStore.tsx';
 import { NostrProvider, useNostr } from './store/nostrStore.tsx';
 import { ThemeProvider, useTheme } from './store/themeStore.tsx';
+import { ExperimentalProvider, useExperimental } from './store/experimentalStore.tsx';
 import { parseRssFeed, isPublisherFeed, isVideoFeed, parsePublisherRssFeed } from './utils/xmlParser';
 import { createEmptyAlbum, createEmptyPublisherFeed, createEmptyVideoAlbum } from './types/feed';
 import { pendingHostedStorage } from './utils/storage';
@@ -40,6 +41,7 @@ import './App.css';
 function AppContent() {
   const { state, dispatch } = useFeed();
   const { theme, toggleTheme } = useTheme();
+  const { showExperimental, toggleExperimental } = useExperimental();
   const [showImportModal, setShowImportModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -280,6 +282,12 @@ function AppContent() {
                     onClick={() => { toggleTheme(); setShowDropdown(false); }}
                   >
                     {theme === 'dark' ? '☀️' : '🌙'} Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode
+                  </button>
+                  <button
+                    className="dropdown-item"
+                    onClick={() => { toggleExperimental(); setShowDropdown(false); }}
+                  >
+                    🧪 {showExperimental ? 'Hide' : 'Show'} Experimental Features
                   </button>
                   {isTauri() && (
                     <button
@@ -530,20 +538,24 @@ function App() {
   if (isAdminRoute) {
     return (
       <ThemeProvider>
-        <NostrProvider>
-          <AdminPage />
-        </NostrProvider>
+        <ExperimentalProvider>
+          <NostrProvider>
+            <AdminPage />
+          </NostrProvider>
+        </ExperimentalProvider>
       </ThemeProvider>
     );
   }
 
   return (
     <ThemeProvider>
-      <NostrProvider>
-        <FeedProvider>
-          <AppContent />
-        </FeedProvider>
-      </NostrProvider>
+      <ExperimentalProvider>
+        <NostrProvider>
+          <FeedProvider>
+            <AppContent />
+          </FeedProvider>
+        </NostrProvider>
+      </ExperimentalProvider>
     </ThemeProvider>
   );
 }

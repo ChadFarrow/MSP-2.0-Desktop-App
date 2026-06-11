@@ -152,10 +152,11 @@ Feeds are stored as plain XML files in the app data directory (`com.podtards.msp
 - **Delete**: Two-click pattern (× → Confirm?) with `deleteFeedLocal()`. Deleting the active feed clears `currentLocalFeedId` via `onDeleteFeed` callback
 
 ### State Management
-Uses React Context + useReducer pattern (not Redux). Three separate stores:
+Uses React Context + useReducer pattern (not Redux). Four separate stores:
 - `feedStore.tsx` - Main feed state with album/video/publisher data, persisted to localStorage
 - `nostrStore.tsx` - Nostr authentication state
 - `themeStore.tsx` - Dark/light theme
+- `experimentalStore.tsx` - "Show Experimental Features" toggle (localStorage key `msp-show-experimental`, default off); gates the Import Modal's "Nostr Event 🧪" and "From Nostr 🧪" sources. The toggle lives in the header dropdown. Any component calling `useExperimental()` requires `ExperimentalProvider` in `App.tsx` — upstream changes that consume this hook in shared components will crash desktop if the provider wiring is dropped in a sync.
 
 Actions are dispatched via reducer pattern. The `FeedAction` union type in `feedStore.tsx` defines all available actions. The `feedReducer`, `FeedState`, and `initialState` are exported for direct testing.
 
@@ -271,9 +272,9 @@ gh issue view <number>     # View issue details
 - App layout: header → `app-body` (flex row: sidebar + `app-content`) → `bottom-toolbar`
 
 ### Header & Bottom Toolbar
-The 6 most-common actions live on the **bottom toolbar** (matches the web layout): 📂 New, 📥 Import, 💾 Save, 🔵 Podcast Index, 📡 Podping, 👁️ View Feed. The Podcast Index button uses an `<img>` with `src/assets/podcast-index-logo.svg`; the others use emoji icons. CSS classes `.bottom-toolbar*` are at `src/App.css:906-956` with mobile rules at `:1452-1462`.
+The 5 most-common actions live on the **bottom toolbar** (matches the web layout), all with emoji icons: 📂 New, 📥 Import, 💾 Save, 📡 Podping, 👁️ View Feed. The former Podcast Index toolbar button was removed to match upstream — manual PI submission is now the "Submit to Podcast Index" destination in the Save Modal. CSS classes `.bottom-toolbar*` are at `src/App.css:906-956` with mobile rules at `:1452-1462`.
 
-The **header dropdown** (☰ button) holds settings/info-style items only — Info, Overview videos, Theme toggle, "Check for Updates" (Tauri-only), Switch Account / Sign In/Out, dev-only Test Data, version footer. Adding a new common action: prefer the toolbar; reserve the dropdown for things you don't want in the user's main eyeline.
+The **header dropdown** (☰ button) holds settings/info-style items only — Info, Overview videos, Theme toggle, "Show/Hide Experimental Features" toggle, "Check for Updates" (Tauri-only), Switch Account / Sign In/Out, dev-only Test Data, version footer. Adding a new common action: prefer the toolbar; reserve the dropdown for things you don't want in the user's main eyeline.
 
 ### New Feed Flow
 The 📂 **New** toolbar button calls `handleNew(state.feedType)`, which opens a `ConfirmModal` warning that current data will be cleared. On confirm, `handleConfirmNew` clears `pendingHostedStorage` and dispatches `SET_PUBLISHER_FEED` / `SET_VIDEO_FEED` / `SET_ALBUM` with the appropriate `createEmpty*` factory.
