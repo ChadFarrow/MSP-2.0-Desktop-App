@@ -174,4 +174,69 @@ describe('ModalWrapper', () => {
 
     expect(screen.getByTestId('custom-title')).toBeInTheDocument();
   });
+
+  it('exposes dialog semantics and an accessibly named close button', () => {
+    const onClose = vi.fn();
+    render(
+      <ModalWrapper isOpen={true} onClose={onClose} title={title}>
+        <p>{content}</p>
+      </ModalWrapper>
+    );
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+  });
+
+  it('moves focus into the modal when opened', () => {
+    const onClose = vi.fn();
+    render(
+      <ModalWrapper isOpen={true} onClose={onClose} title={title}>
+        <p>{content}</p>
+      </ModalWrapper>
+    );
+
+    expect(document.activeElement).toBe(screen.getByRole('dialog'));
+  });
+
+  it('wraps Tab focus from the last focusable element back to the first', () => {
+    const onClose = vi.fn();
+    render(
+      <ModalWrapper
+        isOpen={true}
+        onClose={onClose}
+        title={title}
+        footer={<button>Confirm</button>}
+      >
+        <p>{content}</p>
+      </ModalWrapper>
+    );
+
+    const closeButton = screen.getByRole('button', { name: 'Close' });
+    const confirmButton = screen.getByRole('button', { name: 'Confirm' });
+
+    confirmButton.focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(document.activeElement).toBe(closeButton);
+  });
+
+  it('wraps Shift+Tab focus from the first focusable element back to the last', () => {
+    const onClose = vi.fn();
+    render(
+      <ModalWrapper
+        isOpen={true}
+        onClose={onClose}
+        title={title}
+        footer={<button>Confirm</button>}
+      >
+        <p>{content}</p>
+      </ModalWrapper>
+    );
+
+    const closeButton = screen.getByRole('button', { name: 'Close' });
+    const confirmButton = screen.getByRole('button', { name: 'Confirm' });
+
+    closeButton.focus();
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(confirmButton);
+  });
 });

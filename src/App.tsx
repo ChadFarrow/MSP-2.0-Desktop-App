@@ -388,7 +388,7 @@ function AppContent() {
             onClick={() => handleNew(state.feedType)}
             title={`New ${state.feedType === 'publisher' ? 'Publisher' : state.feedType === 'video' ? 'Video Feed' : 'Album'}`}
           >
-            <span className="bottom-toolbar-icon">📂</span>
+            <span className="bottom-toolbar-icon" aria-hidden="true">📂</span>
             <span className="bottom-toolbar-label">New</span>
           </button>
           <button
@@ -396,7 +396,7 @@ function AppContent() {
             onClick={() => setShowImportModal(true)}
             title="Import"
           >
-            <span className="bottom-toolbar-icon">📥</span>
+            <span className="bottom-toolbar-icon" aria-hidden="true">📥</span>
             <span className="bottom-toolbar-label">Import</span>
           </button>
           <button
@@ -404,7 +404,7 @@ function AppContent() {
             onClick={() => setShowSaveModal(true)}
             title="Save"
           >
-            <span className="bottom-toolbar-icon">💾</span>
+            <span className="bottom-toolbar-icon" aria-hidden="true">💾</span>
             <span className="bottom-toolbar-label">Save</span>
           </button>
           <button
@@ -412,7 +412,7 @@ function AppContent() {
             onClick={() => setShowPodpingModal(true)}
             title="Send Podping"
           >
-            <span className="bottom-toolbar-icon">📡</span>
+            <span className="bottom-toolbar-icon" aria-hidden="true">📡</span>
             <span className="bottom-toolbar-label">Podping</span>
           </button>
           <button
@@ -420,7 +420,7 @@ function AppContent() {
             onClick={() => setShowPreviewModal(true)}
             title="View Feed"
           >
-            <span className="bottom-toolbar-icon">👁️</span>
+            <span className="bottom-toolbar-icon" aria-hidden="true">👁️</span>
             <span className="bottom-toolbar-label">View Feed</span>
           </button>
         </div>
