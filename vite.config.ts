@@ -31,6 +31,19 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(getAutoVersion()),
   },
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return undefined
+          if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'vendor-react'
+          if (id.includes('nostr-tools') || id.includes('@noble') || id.includes('@scure')) return 'vendor-nostr'
+          if (id.includes('react-markdown')) return 'vendor-markdown'
+          return undefined
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       // Proxy API calls to production server during development

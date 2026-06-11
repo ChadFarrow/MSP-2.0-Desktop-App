@@ -2,7 +2,7 @@
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI } from 'nostr-tools/nip46';
 import { SimplePool } from 'nostr-tools/pool';
 import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import type { EventTemplate, VerifiedEvent } from 'nostr-tools/pure';
 import type { BunkerPointer } from 'nostr-tools/nip46';
 
@@ -87,7 +87,11 @@ class Nip46SignerWrapper implements NostrSigner {
   }
 }
 
-// Get or generate client secret key for NIP-46
+// Get or generate client secret key for NIP-46.
+// Stored in localStorage deliberately: reconnectNip46() needs it to restore the
+// remote-signer session across app restarts. This is the per-app transport key
+// for the bunker connection — NOT the user's nsec — and it is cleared on logout
+// and on failed reconnect.
 function getClientSecretKey(): Uint8Array {
   const stored = localStorage.getItem(CLIENT_SECRET_KEY);
   if (stored) {
