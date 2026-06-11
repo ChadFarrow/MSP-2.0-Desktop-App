@@ -1,16 +1,21 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { applyCors } from './_utils/cors.js';
+import { getExternalUrlError, fetchPublicUrl, UrlSafetyError } from './_utils/urlSafety.js';
+
+// Feeds larger than this are refused to keep the proxy from relaying huge payloads
+const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
 
 /**
  * Server-side proxy to fetch feeds - avoids CORS issues
  * GET /api/proxy-feed?url=<encoded-url>
+ *
+ * Users import feeds from arbitrary public hosts, so instead of a domain
+ * allowlist this enforces that the target is on the public internet
+ * (no private/loopback/link-local/metadata addresses, http(s) only).
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    return res.status(204).end();
+  if (applyCors(req, res, { methods: 'GET, OPTIONS', public: true })) {
+    return;
   }
 
   if (req.method !== 'GET') {
@@ -23,51 +28,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing url parameter' });
   }
 
-  // Validate URL
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(url);
-  } catch {
-    return res.status(400).json({ error: 'Invalid URL' });
-  }
-
-  // Only allow fetching RSS/XML feeds from trusted domains
-  const allowedDomains = [
-    'msp.podtards.com',
-    'feeds.podcastindex.org',
-    'anchor.fm',
-    'feeds.transistor.fm',
-    'feeds.buzzsprout.com',
-    'feeds.libsyn.com',
-    'feeds.simplecast.com',
-    'rss.art19.com',
-    'feeds.megaphone.fm',
-    'feeds.acast.com',
-    'omnycontent.com',
-    'pinecast.com',
-    'podbean.com',
-    'spreaker.com',
-    'audioboom.com',
-    'soundcloud.com',
-    'localhost'
-  ];
-
-  const isDomainAllowed = allowedDomains.some(domain =>
-    parsedUrl.hostname === domain || parsedUrl.hostname.endsWith(`.${domain}`)
-  );
-
-  if (!isDomainAllowed) {
-    // For unlisted domains, still allow but log it
-    console.log(`Proxy fetch from unlisted domain: ${parsedUrl.hostname}`);
+  const urlError = getExternalUrlError(url);
+  if (urlError) {
+    return res.status(400).json({ error: urlError });
   }
 
   try {
-    const response = await fetch(url, {
+    const response = await fetchPublicUrl(url, {
       headers: {
         'Accept': 'application/rss+xml, application/xml, text/xml, */*',
         'User-Agent': 'MSP-FeedProxy/1.0'
-      },
-      redirect: 'follow'
+      }
     });
 
     if (!response.ok) {
@@ -76,16 +47,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    const contentLength = Number(response.headers.get('content-length'));
+    if (contentLength > MAX_RESPONSE_BYTES) {
+      return res.status(413).json({ error: 'Feed too large' });
+    }
+
     const content = await response.text();
+    if (content.length > MAX_RESPONSE_BYTES) {
+      return res.status(413).json({ error: 'Feed too large' });
+    }
+
     const contentType = response.headers.get('content-type') || 'application/xml';
 
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=60'); // Cache for 1 minute
 
     return res.status(200).send(content);
   } catch (error) {
+    if (error instanceof UrlSafetyError) {
+      return res.status(400).json({ error: error.message });
+    }
     console.error('Proxy fetch error:', error);
     const message = error instanceof Error ? error.message : 'Failed to fetch';
     return res.status(500).json({ error: message });

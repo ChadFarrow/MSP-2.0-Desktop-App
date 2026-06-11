@@ -1,3 +1,5 @@
+import type { VercelRequest } from '@vercel/node';
+
 interface Bucket {
   count: number;
   resetAt: number;
@@ -35,6 +37,27 @@ export function checkRateLimit(key: string, options: RateLimitOptions): RateLimi
     remaining: options.limit - bucket.count,
     retryAfterMs: 0
   };
+}
+
+function firstHeaderValue(value: string | string[] | undefined): string | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== 'string') return null;
+  const first = raw.split(',')[0].trim();
+  return first.length > 0 ? first : null;
+}
+
+/**
+ * Client IP for rate-limit keys. Prefers headers set by Vercel's proxy
+ * (x-vercel-forwarded-for, x-real-ip), which clients cannot spoof, over
+ * x-forwarded-for, which clients can prepend arbitrary values to.
+ */
+export function getClientIp(req: VercelRequest): string {
+  return (
+    firstHeaderValue(req.headers['x-vercel-forwarded-for']) ??
+    firstHeaderValue(req.headers['x-real-ip']) ??
+    firstHeaderValue(req.headers['x-forwarded-for']) ??
+    'unknown'
+  );
 }
 
 /** Test-only — clears all buckets. Do not call from production code. */

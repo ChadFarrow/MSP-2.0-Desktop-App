@@ -173,14 +173,16 @@ export async function lookupPodcastIndexId(podcastGuid: string): Promise<number 
  * Falls back to canonical URL for localhost (PI can't reach local dev servers)
  */
 export function getBaseUrl(req: VercelRequest): string {
-  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
+  const hostHeader = req.headers['x-forwarded-host'] ?? req.headers.host;
+  const host = (Array.isArray(hostHeader) ? hostHeader[0] : hostHeader) || 'localhost';
 
   // Use canonical URL for localhost since PI can't reach local dev servers
   if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
     return process.env.CANONICAL_URL || 'https://msp.podtards.com';
   }
 
-  const proto = req.headers['x-forwarded-proto'] || 'https';
+  const protoHeader = req.headers['x-forwarded-proto'];
+  const proto = (Array.isArray(protoHeader) ? protoHeader[0] : protoHeader) || 'https';
   return `${proto}://${host}`;
 }
 

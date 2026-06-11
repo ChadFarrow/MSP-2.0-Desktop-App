@@ -20,12 +20,14 @@ vi.mock('crypto', () => ({
 function createMockReqRes(query: Record<string, string | undefined>) {
   const req = {
     method: 'GET',
-    query
-  } as VercelRequest;
+    query,
+    headers: {}
+  } as unknown as VercelRequest;
 
   const res = {
     status: vi.fn().mockReturnThis(),
-    json: vi.fn().mockReturnThis()
+    json: vi.fn().mockReturnThis(),
+    setHeader: vi.fn().mockReturnThis()
   } as unknown as VercelResponse;
 
   return { req, res };

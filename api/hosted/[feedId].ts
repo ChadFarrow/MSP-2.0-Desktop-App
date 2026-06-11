@@ -7,7 +7,8 @@ import {
   hashToken,
   isValidFeedId
 } from '../_utils/feedUtils.js';
-import { extractPodcastMedium } from '../_utils/xmlUtils.js';
+import { extractPodcastMedium, isWellFormedRss } from '../_utils/xmlUtils.js';
+import { applyCors } from '../_utils/cors.js';
 
 // Metadata stored in separate .meta.json blob
 interface FeedMetadata {
@@ -62,12 +63,13 @@ async function backupFeed(feedId: string, blobUrl: string): Promise<void> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Edit-Token, Authorization, X-Admin-Key');
-    return res.status(204).end();
+  // Restricted CORS for state-changing methods; the GET branch below
+  // overrides with a public wildcard so feed XML stays world-fetchable.
+  if (applyCors(req, res, {
+    methods: 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+    headers: 'Content-Type, X-Edit-Token, Authorization, X-Admin-Key'
+  })) {
+    return;
   }
 
   let { feedId } = req.query;
@@ -119,7 +121,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             })
             .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 
-          res.setHeader('Access-Control-Allow-Origin', '*');
           return res.status(200).json({ feedId, backups, count: backups.length });
         }
 
@@ -188,7 +189,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           addRandomSuffix: false
         });
 
-        res.setHeader('Access-Control-Allow-Origin', '*');
         return res.status(200).json({ success: true, restored: backup });
       }
 
@@ -265,9 +265,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(400).json({ error: 'Missing XML content' });
         }
 
-        // Size limit
+        // Size limit (before validation — validation walks the whole document)
         if (xml.length > 1024 * 1024) {
           return res.status(400).json({ error: 'XML content too large (max 1MB)' });
+        }
+
+        if (!isWellFormedRss(xml)) {
+          return res.status(400).json({ error: 'Invalid XML format' });
         }
 
         // Save a backup copy of the current feed before overwriting

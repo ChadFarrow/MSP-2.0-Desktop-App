@@ -1,8 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuthHeaders } from './_utils/podcastIndex.js';
 import { getFeedUrlError } from './_utils/urlValidation.js';
+import { applyCors } from './_utils/cors.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (applyCors(req, res, { methods: 'POST, OPTIONS' })) {
+    return;
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

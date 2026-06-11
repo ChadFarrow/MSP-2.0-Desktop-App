@@ -9,7 +9,8 @@ import {
   hashToken,
   isValidFeedId
 } from '../_utils/feedUtils.js';
-import { extractPodcastMedium } from '../_utils/xmlUtils.js';
+import { extractPodcastMedium, isWellFormedRss } from '../_utils/xmlUtils.js';
+import { applyCors } from '../_utils/cors.js';
 
 // Generate a secure edit token
 function generateEditToken(): string {
@@ -17,6 +18,13 @@ function generateEditToken(): string {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (applyCors(req, res, {
+    methods: 'GET, POST, OPTIONS',
+    headers: 'Content-Type, X-Edit-Token, Authorization, X-Admin-Key'
+  })) {
+    return;
+  }
+
   // GET - List feeds (admin sees all, regular users see their own)
   if (req.method === 'GET') {
     // Check legacy admin key
@@ -125,14 +133,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Invalid podcast GUID format' });
     }
 
-    // Basic XML validation
-    if (!xml.trim().startsWith('<?xml') && !xml.trim().startsWith('<rss')) {
-      return res.status(400).json({ error: 'Invalid XML format' });
-    }
-
-    // Size limit: 1MB
+    // Size limit: 1MB (before validation — validation walks the whole document)
     if (xml.length > 1024 * 1024) {
       return res.status(400).json({ error: 'XML content too large (max 1MB)' });
+    }
+
+    if (!isWellFormedRss(xml)) {
+      return res.status(400).json({ error: 'Invalid XML format' });
     }
 
     // Use podcast GUID as feed ID (one feed per podcast)

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuthHeaders } from './_utils/podcastIndex.js';
 import { isValidFeedId } from './_utils/feedUtils.js';
+import { applyCors } from './_utils/cors.js';
 
 // Extract Podcast Index feed ID from URL or plain number
 function extractFeedId(input: string): string | null {
@@ -26,6 +27,10 @@ function isFeedUrl(input: string): boolean {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (applyCors(req, res, { methods: 'GET, OPTIONS', public: true })) {
+    return;
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

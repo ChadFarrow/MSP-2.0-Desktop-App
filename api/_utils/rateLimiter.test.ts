@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { checkRateLimit, __resetRateLimiterForTests } from './rateLimiter';
+import type { VercelRequest } from '@vercel/node';
+import { checkRateLimit, getClientIp, __resetRateLimiterForTests } from './rateLimiter';
 
 describe('checkRateLimit', () => {
   beforeEach(() => {
@@ -60,5 +61,42 @@ describe('checkRateLimit', () => {
     const afterReset = checkRateLimit('1.2.3.4', { limit: 10, windowMs: 3600_000 });
     expect(afterReset.allowed).toBe(true);
     expect(afterReset.remaining).toBe(9);
+  });
+});
+
+describe('getClientIp', () => {
+  function reqWithHeaders(headers: Record<string, string | string[]>): VercelRequest {
+    return { headers } as unknown as VercelRequest;
+  }
+
+  it('prefers x-vercel-forwarded-for over spoofable headers', () => {
+    const req = reqWithHeaders({
+      'x-vercel-forwarded-for': '9.9.9.9',
+      'x-real-ip': '8.8.8.8',
+      'x-forwarded-for': 'spoofed, 7.7.7.7'
+    });
+    expect(getClientIp(req)).toBe('9.9.9.9');
+  });
+
+  it('falls back to x-real-ip when x-vercel-forwarded-for is absent', () => {
+    const req = reqWithHeaders({
+      'x-real-ip': '8.8.8.8',
+      'x-forwarded-for': 'spoofed'
+    });
+    expect(getClientIp(req)).toBe('8.8.8.8');
+  });
+
+  it('falls back to the first x-forwarded-for entry', () => {
+    const req = reqWithHeaders({ 'x-forwarded-for': '1.2.3.4, 10.0.0.1' });
+    expect(getClientIp(req)).toBe('1.2.3.4');
+  });
+
+  it('handles array-form headers', () => {
+    const req = reqWithHeaders({ 'x-vercel-forwarded-for': ['5.5.5.5, 6.6.6.6'] });
+    expect(getClientIp(req)).toBe('5.5.5.5');
+  });
+
+  it('returns "unknown" when no IP headers are present', () => {
+    expect(getClientIp(reqWithHeaders({}))).toBe('unknown');
   });
 });
