@@ -98,3 +98,27 @@ describe('notifyPodping', () => {
     expect(result.error).toBe('ECONNREFUSED');
   });
 });
+
+describe('timingSafeEqualHex', () => {
+  it('returns true for identical hex strings', async () => {
+    const { timingSafeEqualHex, hashToken } = await import('./feedUtils');
+    const h = hashToken('some-secret-token');
+    expect(timingSafeEqualHex(h, h)).toBe(true);
+  });
+
+  it('returns false for differing hex strings of equal length', async () => {
+    const { timingSafeEqualHex, hashToken } = await import('./feedUtils');
+    expect(timingSafeEqualHex(hashToken('a'), hashToken('b'))).toBe(false);
+  });
+
+  it('returns false for length mismatch without throwing', async () => {
+    const { timingSafeEqualHex } = await import('./feedUtils');
+    expect(timingSafeEqualHex('abcd', 'abcdef')).toBe(false);
+  });
+
+  it('returns false for non-string input', async () => {
+    const { timingSafeEqualHex } = await import('./feedUtils');
+    // @ts-expect-error testing defensive runtime guard
+    expect(timingSafeEqualHex(undefined, 'abcd')).toBe(false);
+  });
+});

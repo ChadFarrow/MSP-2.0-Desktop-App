@@ -618,23 +618,25 @@ const FeedContext = createContext<FeedContextType | undefined>(undefined);
 export function FeedProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(feedReducer, initialState);
 
-  // Auto-save to localStorage whenever album changes
+  // Auto-save to localStorage, debounced so rapid edits (every keystroke produces
+  // a new state object) collapse into one write ~0.5s after the user pauses.
   useEffect(() => {
-    albumStorage.save(state.album);
+    const timer = setTimeout(() => albumStorage.save(state.album), 500);
+    return () => clearTimeout(timer);
   }, [state.album]);
 
-  // Auto-save video feed to localStorage
+  // Auto-save video feed to localStorage (debounced)
   useEffect(() => {
-    if (state.videoFeed) {
-      videoStorage.save(state.videoFeed);
-    }
+    if (!state.videoFeed) return;
+    const timer = setTimeout(() => videoStorage.save(state.videoFeed!), 500);
+    return () => clearTimeout(timer);
   }, [state.videoFeed]);
 
-  // Auto-save publisher feed to localStorage
+  // Auto-save publisher feed to localStorage (debounced)
   useEffect(() => {
-    if (state.publisherFeed) {
-      publisherStorage.save(state.publisherFeed);
-    }
+    if (!state.publisherFeed) return;
+    const timer = setTimeout(() => publisherStorage.save(state.publisherFeed!), 500);
+    return () => clearTimeout(timer);
   }, [state.publisherFeed]);
 
   return (

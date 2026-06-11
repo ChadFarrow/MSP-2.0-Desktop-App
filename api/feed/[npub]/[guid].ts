@@ -201,7 +201,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Redirect to the Blossom URL
     return res.redirect(302, feedUrl);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return res.status(500).json({ error: message });
+    console.error('Error resolving feed pointer:', error);
+    return res.status(500).json({ error: 'Failed to resolve feed' });
   }
 }

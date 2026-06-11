@@ -402,7 +402,7 @@ const generateTrackXml = (track: Track, album: Album, level: number): string => 
   lines.push(`${indent(level + 1)}<guid isPermaLink="false">${escapeXml(track.guid)}</guid>`);
 
   if (track.transcriptUrl) {
-    lines.push(`${indent(level + 1)}<podcast:transcript url="${escapeXml(track.transcriptUrl)}" type="${track.transcriptType || 'application/srt'}" />`);
+    lines.push(`${indent(level + 1)}<podcast:transcript url="${escapeXml(track.transcriptUrl)}" type="${escapeXml(track.transcriptType || 'application/srt')}" />`);
   }
 
   // Track artwork (falls back to album)
@@ -419,7 +419,7 @@ const generateTrackXml = (track: Track, album: Album, level: number): string => 
   // Enclosure (audio file)
   const fileLength = track.enclosureLength || '0';
   const enclosureUrl = album.op3 ? applyOp3Prefix(track.enclosureUrl, album.podcastGuid) : track.enclosureUrl;
-  lines.push(`${indent(level + 1)}<enclosure url="${escapeXml(enclosureUrl)}" length="${fileLength}" type="${track.enclosureType}"/>`);
+  lines.push(`${indent(level + 1)}<enclosure url="${escapeXml(enclosureUrl)}" length="${fileLength}" type="${escapeXml(track.enclosureType)}"/>`);
 
 
   // Duration

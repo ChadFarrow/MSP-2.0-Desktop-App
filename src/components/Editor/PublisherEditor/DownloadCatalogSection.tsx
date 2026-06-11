@@ -20,28 +20,32 @@ export function DownloadCatalogSection({ publisherFeed }: DownloadCatalogSection
   // Auto-populate URL from sourceUrl (imported URL) or MSP hosted URL
   // Check periodically in case user hosts from the reminder section above
   useEffect(() => {
-    const checkHostedUrl = () => {
-      if (!publisherFeedUrl) {
-        // First priority: use sourceUrl if the feed was imported from a URL
-        if (publisherFeed.sourceUrl) {
-          setPublisherFeedUrl(publisherFeed.sourceUrl);
-          return;
-        }
-        // Second priority: check if hosted on MSP
-        if (publisherFeed.podcastGuid) {
-          const hostedInfo = getHostedFeedInfo(publisherFeed.podcastGuid);
-          if (hostedInfo) {
-            setPublisherFeedUrl(buildHostedUrl(hostedInfo.feedId));
-          }
+    // Already resolved — nothing to poll for.
+    if (publisherFeedUrl) return;
+
+    const checkHostedUrl = (): boolean => {
+      // First priority: use sourceUrl if the feed was imported from a URL
+      if (publisherFeed.sourceUrl) {
+        setPublisherFeedUrl(publisherFeed.sourceUrl);
+        return true;
+      }
+      // Second priority: check if hosted on MSP (in case hosted from another section)
+      if (publisherFeed.podcastGuid) {
+        const hostedInfo = getHostedFeedInfo(publisherFeed.podcastGuid);
+        if (hostedInfo) {
+          setPublisherFeedUrl(buildHostedUrl(hostedInfo.feedId));
+          return true;
         }
       }
+      return false;
     };
 
-    // Check immediately
-    checkHostedUrl();
+    // Check immediately; only keep polling while the URL is still unresolved.
+    if (checkHostedUrl()) return;
 
-    // Check periodically (in case hosted from another section)
-    const interval = setInterval(checkHostedUrl, 1000);
+    const interval = setInterval(() => {
+      if (checkHostedUrl()) clearInterval(interval);
+    }, 2000);
     return () => clearInterval(interval);
   }, [publisherFeed.podcastGuid, publisherFeed.sourceUrl, publisherFeedUrl]);
 

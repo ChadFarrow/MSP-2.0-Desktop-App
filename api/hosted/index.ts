@@ -212,7 +212,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (error) {
     console.error('Error creating hosted feed:', error);
-    const message = error instanceof Error ? error.message : 'Failed to create feed';
-    return res.status(500).json({ error: message });
+    return res.status(500).json({ error: 'Failed to create feed' });
   }
 }

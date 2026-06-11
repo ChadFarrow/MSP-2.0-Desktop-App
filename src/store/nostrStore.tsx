@@ -128,7 +128,6 @@ export function NostrProvider({ children }: { children: ReactNode }) {
       // Check for stored session
       const storedUser = loadStoredUser();
       const storedMethod = loadConnectionMethod();
-      console.log('[Nostr] Init - storedUser:', storedUser?.npub, 'storedMethod:', storedMethod);
 
       // Check for NIP-07 extension
       // Wait a bit for extension to inject
@@ -141,12 +140,9 @@ export function NostrProvider({ children }: { children: ReactNode }) {
         if (storedMethod === 'nip46') {
           // Try to reconnect NIP-46
           const bunkerPointer = loadBunkerPointer();
-          console.log('[Nostr] Attempting NIP-46 reconnect, bunkerPointer:', !!bunkerPointer);
           if (bunkerPointer) {
             try {
-              console.log('[Nostr] Calling reconnectNip46...');
               const pubkey = await reconnectNip46();
-              console.log('[Nostr] reconnectNip46 returned:', pubkey);
               if (pubkey && pubkey === storedUser.pubkey) {
                 dispatch({ type: 'RESTORE_SESSION', payload: { user: storedUser, method: 'nip46' } });
                 refreshProfile(pubkey);
@@ -161,13 +157,11 @@ export function NostrProvider({ children }: { children: ReactNode }) {
             // use the stored pubkey directly, and the signer will re-connect on the next
             // signing operation via checkSignerConnection().
             if (loadBunkerPointer()) {
-              console.log('[Nostr] Reconnect timed out, restoring session from stored data');
               dispatch({ type: 'RESTORE_SESSION', payload: { user: storedUser, method: 'nip46' } });
               return;
             }
           }
           // Credentials were cleared (auth error) — fully log out
-          console.log('[Nostr] Reconnection failed (auth error), clearing stored session');
           clearStoredUser();
           clearSigner();
           dispatch({ type: 'SET_LOADING', payload: false });

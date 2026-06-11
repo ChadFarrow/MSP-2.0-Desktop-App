@@ -1,6 +1,6 @@
 // Shared API utilities for hosted feed endpoints
 import type { VercelRequest } from '@vercel/node';
-import { createHash } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 import { getAuthHeaders } from './podcastIndex.js';
 
 const PI_API_KEY = process.env.PODCASTINDEX_API_KEY;
@@ -189,6 +189,22 @@ export function getBaseUrl(req: VercelRequest): string {
  */
 export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
+}
+
+/**
+ * Constant-time comparison of two hex strings (e.g. token hashes).
+ * Returns false on any length mismatch without leaking timing on the contents.
+ */
+export function timingSafeEqualHex(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) {
+    return false;
+  }
+  const bufA = Buffer.from(a, 'hex');
+  const bufB = Buffer.from(b, 'hex');
+  if (bufA.length !== bufB.length) {
+    return false;
+  }
+  return timingSafeEqual(bufA, bufB);
 }
 
 /**

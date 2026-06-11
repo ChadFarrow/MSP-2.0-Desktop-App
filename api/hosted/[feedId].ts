@@ -5,6 +5,7 @@ import {
   notifyPodcastIndex,
   getBaseUrl,
   hashToken,
+  timingSafeEqualHex,
   isValidFeedId
 } from '../_utils/feedUtils.js';
 import { extractPodcastMedium } from '../_utils/xmlUtils.js';
@@ -244,7 +245,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // Try token auth first
           if (editToken && typeof editToken === 'string') {
             const providedHash = hashToken(editToken);
-            if (storedHash === providedHash) {
+            if (timingSafeEqualHex(storedHash, providedHash)) {
               isAuthorized = true;
             }
           }
@@ -346,7 +347,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Validate token
         const providedHash = hashToken(editToken);
-        if (metadata.editTokenHash !== providedHash) {
+        if (!timingSafeEqualHex(metadata.editTokenHash, providedHash)) {
           return res.status(403).json({ error: 'Invalid edit token' });
         }
 
@@ -397,7 +398,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // For legacy feeds without metadata, allow deletion with any token
           // (can't verify, but feed is unusable anyway)
           if (metadata) {
-            if (metadata.editTokenHash !== providedHash) {
+            if (!timingSafeEqualHex(metadata.editTokenHash, providedHash)) {
               return res.status(403).json({ error: 'Invalid edit token' });
             }
           }
@@ -433,7 +434,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (error) {
     console.error('Error handling hosted feed:', error);
-    const message = error instanceof Error ? error.message : 'Operation failed';
-    return res.status(500).json({ error: message });
+    return res.status(500).json({ error: 'Operation failed' });
   }
 }
