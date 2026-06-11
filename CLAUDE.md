@@ -151,7 +151,7 @@ Vercel serverless functions:
 - `pisubmit.ts` - Submit feed to Podcast Index
 - `pubnotify.ts` - Podcast Index pub notification + feed lookup; accepts optional `medium` query param and fire-and-forgets a podping via `notifyPodping()` in parallel so the toolbar "Podcast Index" button hits both indexing pathways
 - `podping.ts` - Broadcast feed update via self-hosted hivepinger Railway service (requires `PODPING_ENDPOINT_URL` + `PODPING_BEARER_TOKEN`); rate-limited 10/hour per IP
-- `proxy-feed.ts` - CORS proxy for fetching external feeds
+- `proxy-feed.ts` - CORS proxy for fetching external feeds. Enforces an `allowedDomains` allowlist (SSRF guard) and rejects private/loopback/link-local hosts — adding a new external feed host means adding its domain to that array, or the proxy returns 403.
 - `hosted/` - MSP feed hosting endpoints (create, update, delete, backup/restore)
 - `feed/[npub]/[guid].ts` - Nostr-stored feed retrieval
 - `admin/` - Admin authentication (challenge/verify)
