@@ -93,6 +93,9 @@ export function NostrConnectModal({ onClose, excludePubkey }: NostrConnectModalP
             }
           }));
         }
+      }).catch((err) => {
+        // Profile fetch is best-effort decoration; the key list still works without it
+        console.warn('Failed to fetch Nostr profile:', err);
       });
     }
   }, [storedKeyInfo]);

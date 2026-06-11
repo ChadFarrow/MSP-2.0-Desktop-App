@@ -225,7 +225,7 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
     setSubmitResult(null);
     try {
       // First validate it's an actual RSS feed
-      const proxyRes = await fetch(`/api/proxy-feed?url=${encodeURIComponent(submitUrl)}`);
+      const proxyRes = await apiFetch(`/api/proxy-feed?url=${encodeURIComponent(submitUrl)}`);
       if (!proxyRes.ok) {
         setSubmitResult({ success: false, message: 'Could not fetch URL - check the address' });
         return;
@@ -237,7 +237,7 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
       }
 
       // Submit to Podcast Index
-      const response = await fetch('/api/pisubmit', {
+      const response = await apiFetch('/api/pisubmit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: submitUrl })
@@ -499,7 +499,10 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
 
       <div className="repeatable-list">
         {publisherFeed.remoteItems.map((item, index) => (
-          <div key={index} className="repeatable-item">
+          // feedGuid is duplicate-guarded on add, so it's a stable identity for
+          // reorderable items; index keys would leak DOM state (e.g. the
+          // onError-hidden artwork img) across items on reorder
+          <div key={item.feedGuid || `new-${index}`} className="repeatable-item">
             <div className="repeatable-item-content" style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
               {/* Album Art Preview */}
               <div style={{ flexShrink: 0, position: 'relative' }}>

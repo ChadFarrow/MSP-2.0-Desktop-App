@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 // MSP 2.0 - Nostr Authentication State Management
 import { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';

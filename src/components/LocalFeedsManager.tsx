@@ -5,7 +5,7 @@
  * Desktop-only component (won't render in web).
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   listFeedsLocal,
   loadFeedLocal,
@@ -28,15 +28,7 @@ export function LocalFeedsManager({ onLoadFeed }: LocalFeedsManagerProps) {
   const [feedsDir, setFeedsDir] = useState<string>('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  // Load feeds on mount
-  useEffect(() => {
-    if (!hasLocalStorage()) return;
-    
-    loadFeeds();
-    getFeedsDirectory().then(setFeedsDir).catch(console.error);
-  }, []);
-
-  const loadFeeds = async () => {
+  const loadFeeds = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -47,7 +39,15 @@ export function LocalFeedsManager({ onLoadFeed }: LocalFeedsManagerProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Load feeds on mount
+  useEffect(() => {
+    if (!hasLocalStorage()) return;
+
+    loadFeeds();
+    getFeedsDirectory().then(setFeedsDir).catch(console.error);
+  }, [loadFeeds]);
 
   const handleLoad = async (feed: FeedSummary) => {
     try {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchAdminFeeds, deleteFeed } from '../../utils/adminAuth';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 
@@ -23,7 +23,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
   const [deleteTarget, setDeleteTarget] = useState<FeedInfo | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const loadFeeds = async () => {
+  const loadFeeds = useCallback(async () => {
     setLoading(true);
     try {
       const result = await fetchAdminFeeds();
@@ -33,11 +33,11 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [onError]);
 
   useEffect(() => {
     loadFeeds();
-  }, []);
+  }, [loadFeeds]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;

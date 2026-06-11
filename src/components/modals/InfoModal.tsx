@@ -13,6 +13,10 @@ export function InfoModal({ onClose }: InfoModalProps) {
     const loadContent = async () => {
       try {
         const res = await fetch('/info.md');
+        if (!res.ok) {
+          setContent('Failed to load content');
+          return;
+        }
         const text = await res.text();
         setContent(text);
       } catch {

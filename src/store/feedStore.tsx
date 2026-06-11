@@ -1,6 +1,5 @@
-/* eslint-disable react-refresh/only-export-components */
 // MSP 2.0 - Feed State Management (React Context)
-import { createContext, useContext, useReducer, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useReducer, useEffect, useState, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { Album, Track, Person, PersonRole, ValueRecipient, Funding, PublisherFeed, RemoteItem, FeedType } from '../types/feed';
 import { createEmptyAlbum, createEmptyTrack, createEmptyPerson, createEmptyPersonRole, createEmptyRecipient, createEmptyFunding, createEmptyPublisherFeed, createEmptyRemoteItem, createEmptyVideoAlbum, createSupportRecipients, isCommunitySupport, hasUserRecipients } from '../types/feed';
@@ -620,6 +619,11 @@ interface FeedContextType {
 const FeedContext = createContext<FeedContextType | undefined>(undefined);
 
 // Provider
+// Debounce windows for auto-save: short for synchronous localStorage,
+// longer for desktop saves that cross the Tauri IPC boundary to disk.
+const LOCAL_SAVE_DEBOUNCE_MS = 400;
+const DESKTOP_SAVE_DEBOUNCE_MS = 1000;
+
 export function FeedProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(feedReducer, initialState);
   const [hydrated, setHydrated] = useState(!isTauri());
@@ -699,43 +703,72 @@ export function FeedProvider({ children }: { children: ReactNode }) {
     hydrateFromDesktop();
   }, [hydrateFromDesktop]);
 
-  // Auto-save to localStorage whenever album changes
+  // Auto-save to localStorage, debounced so typing doesn't serialize the whole
+  // feed on every keystroke. The pagehide/beforeunload flush below guarantees
+  // pending edits are persisted synchronously before the page goes away.
+  const latestStateRef = useRef(state);
   useEffect(() => {
-    albumStorage.save(state.album);
+    latestStateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => albumStorage.save(state.album), LOCAL_SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
   }, [state.album]);
 
-  // Auto-save video feed to localStorage
   useEffect(() => {
-    if (state.videoFeed) {
-      videoStorage.save(state.videoFeed);
-    }
+    if (!state.videoFeed) return;
+    const videoFeed = state.videoFeed;
+    const timer = setTimeout(() => videoStorage.save(videoFeed), LOCAL_SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
   }, [state.videoFeed]);
 
-  // Auto-save publisher feed to localStorage
   useEffect(() => {
-    if (state.publisherFeed) {
-      publisherStorage.save(state.publisherFeed);
-    }
+    if (!state.publisherFeed) return;
+    const publisherFeed = state.publisherFeed;
+    const timer = setTimeout(() => publisherStorage.save(publisherFeed), LOCAL_SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
   }, [state.publisherFeed]);
 
-  // Desktop auto-save: persist feeds to filesystem (in addition to localStorage)
+  // Flush pending debounced saves synchronously when the page is going away
+  // (localStorage writes are sync, so nothing is lost; the desktop filesystem
+  // save is best-effort fire-and-forget at that point).
+  useEffect(() => {
+    const flush = () => {
+      const current = latestStateRef.current;
+      albumStorage.save(current.album);
+      if (current.videoFeed) videoStorage.save(current.videoFeed);
+      if (current.publisherFeed) publisherStorage.save(current.publisherFeed);
+    };
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', flush);
+    };
+  }, []);
+
+  // Desktop auto-save: persist feeds to filesystem (in addition to localStorage).
+  // Debounced longer than localStorage since each save crosses the Tauri IPC
+  // boundary and writes to disk.
   useEffect(() => {
     if (!hydrated) return;
-    saveToDesktop(DESKTOP_KEYS.ALBUM_DATA, state.album);
+    const timer = setTimeout(() => saveToDesktop(DESKTOP_KEYS.ALBUM_DATA, state.album), DESKTOP_SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
   }, [state.album, hydrated]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    if (state.videoFeed) {
-      saveToDesktop(DESKTOP_KEYS.VIDEO_DATA, state.videoFeed);
-    }
+    if (!hydrated || !state.videoFeed) return;
+    const videoFeed = state.videoFeed;
+    const timer = setTimeout(() => saveToDesktop(DESKTOP_KEYS.VIDEO_DATA, videoFeed), DESKTOP_SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
   }, [state.videoFeed, hydrated]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    if (state.publisherFeed) {
-      saveToDesktop(DESKTOP_KEYS.PUBLISHER_DATA, state.publisherFeed);
-    }
+    if (!hydrated || !state.publisherFeed) return;
+    const publisherFeed = state.publisherFeed;
+    const timer = setTimeout(() => saveToDesktop(DESKTOP_KEYS.PUBLISHER_DATA, publisherFeed), DESKTOP_SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
   }, [state.publisherFeed, hydrated]);
 
   useEffect(() => {

@@ -298,8 +298,9 @@ const generateCommonChannelElements = (data: BaseChannelData, medium: string, le
   }
 
   // Artist Npub (only for Album feeds)
-  if ((data as Album).artistNpub) {
-    lines.push(`${indent(level)}<podcast:txt purpose="npub">${escapeXml((data as Album).artistNpub!)}</podcast:txt>`);
+  const artistNpub = (data as Partial<Album>).artistNpub;
+  if (artistNpub) {
+    lines.push(`${indent(level)}<podcast:txt purpose="npub">${escapeXml(artistNpub)}</podcast:txt>`);
   }
 
   // Categories (default to Music for music feeds)

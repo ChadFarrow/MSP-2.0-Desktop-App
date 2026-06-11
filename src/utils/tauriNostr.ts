@@ -303,19 +303,19 @@ export function getNostrInterface() {
     return tauriNostr;
   }
   
-  if (hasNip07()) {
+  const nostr = window.nostr;
+  if (hasNip07() && nostr) {
     // Return the browser extension with our extensions stubbed
     return {
-      ...window.nostr,
+      ...nostr,
       loginWithNsec: () => Promise.reject(new Error('Use browser extension to login')),
       loginWithHex: () => Promise.reject(new Error('Use browser extension to login')),
       logout: () => Promise.resolve(),
       getPubkey: async () => {
-        const pubkey = await window.nostr!.getPublicKey();
+        const pubkey = await nostr.getPublicKey();
         return { pubkey, npub: '' };
       },
       publishEvent: async (event: UnsignedEvent) => {
-        const nostr = window.nostr!;
         const signed = await nostr.signEvent(event as Parameters<typeof nostr.signEvent>[0]);
         // In web mode, you'd need to publish via your existing relay logic
         return signed.id;
