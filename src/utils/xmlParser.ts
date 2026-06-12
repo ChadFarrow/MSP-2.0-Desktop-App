@@ -1,8 +1,9 @@
 // MSP 2.0 - XML Parser for importing Demu RSS Feeds
 import { XMLParser } from 'fast-xml-parser';
 import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData } from '../types/feed';
-import { createEmptyTrack } from '../types/feed';
+import { createEmptyTrack, LEGACY_MSP_NODE_PUBKEY, MSP_SUPPORT_RECIPIENT } from '../types/feed';
 import { areValueBlocksStrictEqual, arePersonsEqual } from './comparison';
+import { detectAddressType } from './addressUtils';
 import { apiFetch } from './api';
 
 // OP3 prefix pattern: https://op3.dev/e/ or https://op3.dev/e,pg=GUID/
@@ -322,11 +323,31 @@ function parseFunding(node: unknown): Funding | null {
 function parseRecipient(node: unknown): ValueRecipient | null {
   if (!node) return null;
 
+  // Derive the type from the address rather than trusting the XML's `type`
+  // attribute: older tools (e.g. the original musicsideproject.com) only knew
+  // about Lightning nodes and wrote type="node" even for Lightning addresses.
+  // An address containing "@" is always a Lightning address. This mirrors the
+  // auto-detection the editor UI applies on manual edit (RecipientsList.tsx).
+  const address = getAttr(node, 'address') || '';
+  const split = parseInt(getAttr(node, 'split')) || 0;
+
+  // Migrate the legacy MSP 1.0 support node to the MSP 2.0 lnaddress identity,
+  // preserving the split so support payments keep flowing after import. Match
+  // on the pubkey (unique, unforgeable) — not the name, which a user may rename.
+  if (address.toLowerCase() === LEGACY_MSP_NODE_PUBKEY) {
+    return {
+      name: MSP_SUPPORT_RECIPIENT.name,
+      address: MSP_SUPPORT_RECIPIENT.address,
+      split,
+      type: 'lnaddress'
+    };
+  }
+
   return {
     name: getAttr(node, 'name') || '',
-    address: getAttr(node, 'address') || '',
-    split: parseInt(getAttr(node, 'split')) || 0,
-    type: (getAttr(node, 'type') || 'node') as 'node' | 'lnaddress',
+    address,
+    split,
+    type: address ? detectAddressType(address) : 'node',
     customKey: getAttr(node, 'customKey') || undefined,
     customValue: getAttr(node, 'customValue') || undefined
   };

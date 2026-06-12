@@ -141,7 +141,6 @@ export function NostrProvider({ children }: { children: ReactNode }) {
       const storedUser = loadStoredUser();
       // On desktop, default to 'tauri' method if user exists but method was lost (localStorage cleared)
       const storedMethod = loadConnectionMethod() || (isDesktop && storedUser ? 'tauri' : null);
-      console.log('[Nostr] Init - storedUser:', storedUser?.npub, 'storedMethod:', storedMethod, 'isDesktop:', isDesktop);
 
       // Check for NIP-07 extension (skip on desktop — no browser extensions available)
       if (!isDesktop) {
@@ -176,24 +175,28 @@ export function NostrProvider({ children }: { children: ReactNode }) {
         } else if (storedMethod === 'nip46') {
           // Try to reconnect NIP-46
           const bunkerPointer = loadBunkerPointer();
-          console.log('[Nostr] Attempting NIP-46 reconnect, bunkerPointer:', !!bunkerPointer);
           if (bunkerPointer) {
             try {
-              console.log('[Nostr] Calling reconnectNip46...');
               const pubkey = await reconnectNip46();
-              console.log('[Nostr] reconnectNip46 returned:', pubkey);
               if (pubkey && pubkey === storedUser.pubkey) {
                 dispatch({ type: 'RESTORE_SESSION', payload: { user: storedUser, method: 'nip46' } });
-
                 refreshProfile(pubkey);
                 return;
               }
             } catch (e) {
               console.error('[Nostr] Failed to reconnect NIP-46:', e);
             }
+            // Reconnect failed — if credentials are still stored it was a timeout
+            // (reconnectNip46 only clears credentials for auth errors, not timeouts).
+            // Restore the UI session so the user appears logged in; read-only operations
+            // use the stored pubkey directly, and the signer will re-connect on the next
+            // signing operation via checkSignerConnection().
+            if (loadBunkerPointer()) {
+              dispatch({ type: 'RESTORE_SESSION', payload: { user: storedUser, method: 'nip46' } });
+              return;
+            }
           }
-          // Failed to reconnect, clear stored session
-          console.log('[Nostr] Reconnection failed, clearing stored session');
+          // Credentials were cleared (auth error) — fully log out
           clearStoredUser();
           clearSigner();
           dispatch({ type: 'SET_LOADING', payload: false });

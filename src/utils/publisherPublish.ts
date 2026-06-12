@@ -90,13 +90,16 @@ const isCorsOrNetworkError = (errMsg: string): boolean => {
 
 // Notify Podcast Index about a feed update. Medium is forwarded to podping so indexers and
 // the MSP consumer can classify the feed correctly (pp_music_update vs pp_podcast_update).
+// guid enables the faster GUID-based lookup on the PI side, returning the PI page URL immediately.
 async function notifyPodcastIndex(
   feedUrl: string,
-  medium?: string
+  medium?: string,
+  guid?: string
 ): Promise<{ status: 'indexed' | 'pending' | 'failed'; pageUrl?: string }> {
   try {
     const params = new URLSearchParams({ url: feedUrl });
     if (medium) params.set('medium', medium);
+    if (guid) params.set('guid', guid);
     const res = await apiFetch(`/api/pubnotify?${params}`);
     const data = await res.json();
     if (data.success) {
@@ -566,7 +569,7 @@ export async function publishPublisherFeed(
 
   // Step 3: Notify Podcast Index
   onProgress({ step: 'notifying', message: 'Notifying Podcast Index...' });
-  const piResult = await notifyPodcastIndex(feedUrl, updatedPublisherFeed.medium);
+  const piResult = await notifyPodcastIndex(feedUrl, updatedPublisherFeed.medium, updatedPublisherFeed.podcastGuid);
 
   // Step 4: Update catalog feeds with publisher reference (if requested)
   let catalogUpdateResults: FeedUpdateResult[] | undefined;
