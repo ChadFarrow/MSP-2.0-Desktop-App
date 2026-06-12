@@ -39,9 +39,10 @@ deprecated `<podcast:images>` (plural, srcset) tag.
 
 ## Scope
 
-- **Feed level + track level.** Both the whole album/video/publisher feed and
-  individual tracks can carry additional images. (liveItem is not part of MSP's model;
-  out of scope.)
+- **Feed level + track level.** Both the whole album/video feed and individual tracks
+  can carry additional images. (Publisher feeds are out of scope — the data model only
+  touches `Album`/`Track`; see "Out of scope" below. liveItem is not part of MSP's
+  model; out of scope.)
 - These arrays hold **additional** images only. The primary cover (`imageUrl` /
   `trackArtUrl`) is unchanged and still emitted as `<itunes:image>` + `<image>`.
 - **Out of scope:** the unused `bannerArtUrl` field is left alone; we do not
