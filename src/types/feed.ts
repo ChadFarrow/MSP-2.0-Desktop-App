@@ -284,6 +284,14 @@ export const createSupportRecipients = (): ValueRecipient[] => [
   { name: 'Podcastindex.org', address: 'podcastindex@getalby.com', split: 1, type: 'lnaddress' },
 ];
 
+// Legacy MSP 1.0 support node. Feeds created by the original musicsideproject.com
+// paid this Lightning *node* pubkey; on import we migrate it to the MSP 2.0
+// lnaddress identity (preserving the split) so support payments keep flowing.
+export const LEGACY_MSP_NODE_PUBKEY =
+  '035ad2c954e264004986da2d9499e1732e5175e1dcef2453c921c6cdcc3536e9d8';
+
+export const MSP_SUPPORT_RECIPIENT = { name: 'MSP 2.0', address: 'chadf@getalby.com' } as const;
+
 export const isCommunitySupport = (r: ValueRecipient): boolean =>
   COMMUNITY_SUPPORT_RECIPIENTS.some(cs => cs.name === r.name && cs.address === r.address);
 

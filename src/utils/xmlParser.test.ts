@@ -166,7 +166,8 @@ describe('value recipient type detection on import', () => {
 </rss>`;
   }
 
-  const NODE_PUBKEY = '035ad2c954e264004986da2d9499e1732e5175e1dcef2453c921c6cdcc3536e9d8';
+  // A generic, non-MSP node pubkey (the legacy MSP pubkey would be migrated to an lnaddress).
+  const NODE_PUBKEY = '02aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
 
   it('corrects type="node" to "lnaddress" when the address contains @', () => {
     const xml = buildRssWithValueBlock(
@@ -209,5 +210,89 @@ describe('value recipient type detection on import', () => {
 
     expect(regenerated).toContain('method="lnaddress"');
     expect(regenerated).toContain('address="gless@coinos.io" split="99" type="lnaddress"');
+  });
+});
+
+describe('legacy MSP 1.0 recipient migration on import', () => {
+  const LEGACY_MSP_PUBKEY = '035ad2c954e264004986da2d9499e1732e5175e1dcef2453c921c6cdcc3536e9d8';
+
+  // RSS feed with a channel-level value block (raw recipients) and a track that
+  // optionally carries its own value block.
+  function buildRss(channelRecipients: string, trackRecipients?: string): string {
+    const trackValue = trackRecipients
+      ? `<podcast:value type="lightning" method="keysend">${trackRecipients}</podcast:value>`
+      : '';
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+  <channel>
+    <title>Test Feed</title>
+    <itunes:author>Test Artist</itunes:author>
+    <description>A test feed</description>
+    <language>en</language>
+    <podcast:medium>music</podcast:medium>
+    <podcast:guid>test-guid</podcast:guid>
+    <podcast:value type="lightning" method="keysend">${channelRecipients}</podcast:value>
+    <item>
+      <title>Track 1</title>
+      <guid isPermaLink="false">track-guid-1</guid>
+      <enclosure url="https://example.com/track1.mp3" length="1234" type="audio/mpeg"/>
+      <itunes:duration>03:45</itunes:duration>
+      ${trackValue}
+    </item>
+  </channel>
+</rss>`;
+  }
+
+  it('swaps the old MSP node recipient to the MSP 2.0 lnaddress identity', () => {
+    const xml = buildRss(
+      `<podcast:valueRecipient name="Music Side Project" type="node" address="${LEGACY_MSP_PUBKEY}" split="1"/>`
+    );
+
+    const r = parseRssFeed(xml).value.recipients[0];
+
+    expect(r.name).toBe('MSP 2.0');
+    expect(r.address).toBe('chadf@getalby.com');
+    expect(r.type).toBe('lnaddress');
+  });
+
+  it('preserves the existing split when migrating', () => {
+    const xml = buildRss(
+      `<podcast:valueRecipient name="Music Side Project" type="node" address="${LEGACY_MSP_PUBKEY}" split="5"/>`
+    );
+
+    expect(parseRssFeed(xml).value.recipients[0].split).toBe(5);
+  });
+
+  it('matches the legacy pubkey case-insensitively', () => {
+    const xml = buildRss(
+      `<podcast:valueRecipient name="Whatever" type="node" address="${LEGACY_MSP_PUBKEY.toUpperCase()}" split="1"/>`
+    );
+
+    expect(parseRssFeed(xml).value.recipients[0].address).toBe('chadf@getalby.com');
+  });
+
+  it('leaves an unrelated node recipient untouched', () => {
+    const other = '02aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
+    const xml = buildRss(
+      `<podcast:valueRecipient name="Some Artist" type="node" address="${other}" split="1"/>`
+    );
+
+    const r = parseRssFeed(xml).value.recipients[0];
+
+    expect(r.name).toBe('Some Artist');
+    expect(r.address).toBe(other);
+    expect(r.type).toBe('node');
+  });
+
+  it('migrates the legacy recipient inside a track-level value block too', () => {
+    const xml = buildRss(
+      `<podcast:valueRecipient name="Artist" type="node" address="02aa" split="1"/>`,
+      `<podcast:valueRecipient name="Music Side Project" type="node" address="${LEGACY_MSP_PUBKEY}" split="1"/>`
+    );
+
+    const trackRecipient = parseRssFeed(xml).tracks[0].value?.recipients[0];
+
+    expect(trackRecipient?.address).toBe('chadf@getalby.com');
+    expect(trackRecipient?.type).toBe('lnaddress');
   });
 });

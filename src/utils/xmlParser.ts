@@ -1,7 +1,7 @@
 // MSP 2.0 - XML Parser for importing Demu RSS Feeds
 import { XMLParser } from 'fast-xml-parser';
 import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData } from '../types/feed';
-import { createEmptyTrack } from '../types/feed';
+import { createEmptyTrack, LEGACY_MSP_NODE_PUBKEY, MSP_SUPPORT_RECIPIENT } from '../types/feed';
 import { areValueBlocksStrictEqual, arePersonsEqual } from './comparison';
 import { detectAddressType } from './addressUtils';
 
@@ -328,11 +328,24 @@ function parseRecipient(node: unknown): ValueRecipient | null {
   // An address containing "@" is always a Lightning address. This mirrors the
   // auto-detection the editor UI applies on manual edit (RecipientsList.tsx).
   const address = getAttr(node, 'address') || '';
+  const split = parseInt(getAttr(node, 'split')) || 0;
+
+  // Migrate the legacy MSP 1.0 support node to the MSP 2.0 lnaddress identity,
+  // preserving the split so support payments keep flowing after import. Match
+  // on the pubkey (unique, unforgeable) — not the name, which a user may rename.
+  if (address.toLowerCase() === LEGACY_MSP_NODE_PUBKEY) {
+    return {
+      name: MSP_SUPPORT_RECIPIENT.name,
+      address: MSP_SUPPORT_RECIPIENT.address,
+      split,
+      type: 'lnaddress'
+    };
+  }
 
   return {
     name: getAttr(node, 'name') || '',
     address,
-    split: parseInt(getAttr(node, 'split')) || 0,
+    split,
     type: address ? detectAddressType(address) : 'node',
     customKey: getAttr(node, 'customKey') || undefined,
     customValue: getAttr(node, 'customValue') || undefined
