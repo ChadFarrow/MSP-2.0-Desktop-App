@@ -1,0 +1,150 @@
+import { useState } from 'react';
+import type { PodcastImage } from '../types/feed';
+import { PODCAST_IMAGE_PURPOSES } from '../types/feed';
+import { detectImageMetadata, suggestPurpose } from '../utils/imageMetadata';
+
+interface PodcastImagesListProps {
+  images: PodcastImage[];
+  onChange: (images: PodcastImage[]) => void;
+  label?: string;
+}
+
+const CUSTOM = '__custom__';
+const isPreset = (p?: string) => !!p && PODCAST_IMAGE_PURPOSES.some(opt => opt.value === p);
+
+export function PodcastImagesList({ images, onChange, label = 'Additional Images' }: PodcastImagesListProps) {
+  // Track which rows have the custom purpose input open (by index).
+  const [customRows, setCustomRows] = useState<Set<number>>(new Set());
+
+  const update = (index: number, patch: Partial<PodcastImage>) => {
+    onChange(images.map((img, i) => (i === index ? { ...img, ...patch } : img)));
+  };
+
+  const add = () => onChange([...images, { href: '' }]);
+
+  const remove = (index: number) => {
+    onChange(images.filter((_, i) => i !== index));
+    setCustomRows(prev => {
+      const next = new Set<number>();
+      prev.forEach(i => { if (i < index) next.add(i); else if (i > index) next.add(i - 1); });
+      return next;
+    });
+  };
+
+  // On URL entry, auto-detect dimensions/ratio/type and suggest a purpose if none set.
+  const handleUrlBlur = async (index: number, url: string) => {
+    if (!url) return;
+    const meta = await detectImageMetadata(url);
+    const current = images[index];
+    const patch: Partial<PodcastImage> = {
+      width: meta.width,
+      height: meta.height,
+      aspectRatio: meta.aspectRatio,
+      type: meta.type,
+    };
+    if (!current.purpose && meta.aspectRatio) {
+      const suggested = suggestPurpose(meta.aspectRatio);
+      if (suggested) patch.purpose = suggested;
+    }
+    update(index, patch);
+  };
+
+  const handlePurposeSelect = (index: number, value: string) => {
+    if (value === CUSTOM) {
+      setCustomRows(prev => new Set(prev).add(index));
+      update(index, { purpose: '' });
+    } else {
+      setCustomRows(prev => { const next = new Set(prev); next.delete(index); return next; });
+      update(index, { purpose: value });
+    }
+  };
+
+  return (
+    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+      <label className="form-label">{label}</label>
+      <div className="repeatable-list">
+        {images.map((img, index) => {
+          const showCustom = customRows.has(index) || (!!img.purpose && !isPreset(img.purpose));
+          const selectValue = showCustom ? CUSTOM : (img.purpose || '');
+          return (
+            <div key={index} className="repeatable-item">
+              <div className="repeatable-item-content">
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label className="form-label">Image URL <span className="required">*</span></label>
+                    <input
+                      type="url"
+                      className="form-input"
+                      placeholder="https://example.com/background.jpg"
+                      value={img.href}
+                      onChange={e => update(index, { href: e.target.value })}
+                      onBlur={e => handleUrlBlur(index, e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Purpose</label>
+                    <select className="form-input" value={selectValue} onChange={e => handlePurposeSelect(index, e.target.value)}>
+                      <option value="">(none)</option>
+                      {PODCAST_IMAGE_PURPOSES.map(opt => (
+                        <option key={opt.value} value={opt.value} title={opt.description}>{opt.label}</option>
+                      ))}
+                      <option value={CUSTOM}>Custom…</option>
+                    </select>
+                    {showCustom && (
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="custom purpose token(s)"
+                        value={img.purpose || ''}
+                        onChange={e => update(index, { purpose: e.target.value })}
+                        style={{ marginTop: '0.5rem' }}
+                      />
+                    )}
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Alt text</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Describe the image (accessibility)"
+                      value={img.alt || ''}
+                      onChange={e => update(index, { alt: e.target.value })}
+                    />
+                  </div>
+                </div>
+                {(img.width || img.height || img.aspectRatio || img.type) && (
+                  <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '0.25rem' }}>
+                    {[img.width && img.height ? `${img.width}×${img.height}` : null, img.aspectRatio, img.type]
+                      .filter(Boolean)
+                      .join(' · ')}{' '}
+                    <span style={{ opacity: 0.6 }}>(auto-detected)</span>
+                  </div>
+                )}
+                {img.href && (
+                  <img
+                    src={img.href}
+                    alt={img.alt || 'preview'}
+                    style={{ maxHeight: '80px', marginTop: '0.5rem', borderRadius: '4px' }}
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                )}
+              </div>
+              <div className="repeatable-item-actions">
+                <button
+                  type="button"
+                  className="btn btn-icon btn-danger"
+                  onClick={() => remove(index)}
+                >
+                  &#10005;
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        <button type="button" className="add-item-btn" onClick={add}>
+          + Add Image
+        </button>
+      </div>
+    </div>
+  );
+}

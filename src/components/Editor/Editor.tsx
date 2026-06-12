@@ -16,6 +16,7 @@ import { AddRecipientSelect } from '../AddRecipientSelect';
 import { RecipientsList } from '../RecipientsList';
 import { FundingFields } from '../FundingFields';
 import { ArtworkFields } from '../ArtworkFields';
+import { PodcastImagesList } from '../PodcastImagesList';
 
 // Roles Reference Modal
 function RolesModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -430,6 +431,10 @@ export function Editor() {
               urlPlaceholder={isVideo ? "https://example.com/video-art.jpg" : "https://example.com/album-art.jpg"}
               titlePlaceholder={isVideo ? "Video cover description" : "Album cover description"}
               previewAlt={isVideo ? "Video preview" : "Album preview"}
+            />
+            <PodcastImagesList
+              images={album.podcastImages || []}
+              onChange={images => dispatch({ type: 'UPDATE_ALBUM', payload: { podcastImages: images } })}
             />
           </Section>
 
@@ -1078,6 +1083,11 @@ export function Editor() {
                         })}
                       />
                     </div>
+                    <PodcastImagesList
+                      label="Additional Track Images"
+                      images={track.podcastImages || []}
+                      onChange={images => dispatch({ type: 'UPDATE_TRACK', payload: { index, track: { podcastImages: images } } })}
+                    />
                     <div className="form-group">
                       <label className="form-label">Lyrics URL<InfoIcon text={FIELD_INFO.transcriptUrl} /></label>
                       <input
