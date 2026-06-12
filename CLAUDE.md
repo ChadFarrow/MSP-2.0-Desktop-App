@@ -195,6 +195,12 @@ Most experimental/power-user options are additionally gated behind a "Show Exper
 - `xmlParser.ts` - Uses fast-xml-parser to parse RSS feeds, preserves unknown elements, detects and strips OP3 prefixes on import
 - `xmlGenerator.ts` - Generates Podcasting 2.0 compliant RSS XML, applies OP3 prefix to enclosure URLs when enabled
 
+#### Value recipient normalization on import
+`parseRecipient()` in `xmlParser.ts` does not trust the feed's `<podcast:valueRecipient>` `type` attribute — it normalizes every recipient at parse time (the single choke point covering channel- and track-level value blocks):
+- **Type detection**: type is derived from the address via `detectAddressType()` (`src/utils/addressUtils.ts`) — an `@` in the address means `lnaddress`, otherwise `node`. Feeds from older node-only tools (the original musicsideproject.com) wrote `type="node"` even for Lightning addresses; this fixes them on import. Mirrors the editor's auto-detection on manual address edit (`RecipientsList.tsx`).
+- **Legacy MSP migration**: a recipient whose address equals `LEGACY_MSP_NODE_PUBKEY` (`types/feed.ts`, the MSP 1.0 support node pubkey) is swapped to the MSP 2.0 lnaddress identity (`MSP_SUPPORT_RECIPIENT` = `MSP 2.0` / `chadf@getalby.com`), **preserving the existing split** and dropping keysend-only `customKey`/`customValue`. Matches on the pubkey (unique, unforgeable), not the name. `LEGACY_MSP_NODE_PUBKEY` / `MSP_SUPPORT_RECIPIENT` in `types/feed.ts` are the single source of truth.
+- Tests in `xmlParser.test.ts` cover type detection, the legacy migration (swap, split preservation, case-insensitive match, track-level coverage), and round-trip to `method="lnaddress"` output.
+
 ### OP3 Analytics
 - [OP3](https://op3.dev/) (Open Podcast Prefix Project) provides open, privacy-respecting download stats
 - Toggle in Album Info enables/disables OP3 prefix on enclosure URLs
@@ -256,6 +262,8 @@ MSP 2.0 and Podcastindex.org are auto-added as value recipients with small split
 - **Imported feeds**: Support splits are NOT auto-added. Instead, `RecipientsList.tsx` shows an "Add Community Support" button in the Value section when user recipients exist but support splits are missing
 
 Key helpers in `types/feed.ts`: `isCommunitySupport()`, `hasUserRecipients()`, `createSupportRecipients()`, `COMMUNITY_SUPPORT_RECIPIENTS`. These are the canonical definitions — imported by both `feedStore.tsx` and `RecipientsList.tsx`.
+
+Imported feeds carrying the **legacy MSP 1.0 support node** (`LEGACY_MSP_NODE_PUBKEY`) are auto-migrated to the MSP 2.0 lnaddress at parse time — see "Value recipient normalization on import" under XML Handling.
 
 ### Adding New Fields
 1. Add to type definition in `types/feed.ts`
