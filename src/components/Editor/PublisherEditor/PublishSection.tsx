@@ -232,13 +232,18 @@ export function PublishSection({ publisherFeed }: PublishSectionProps) {
           <span style={{ flex: 1, fontWeight: 500 }}>Notify Podcast Index</span>
           <span style={{
             fontSize: '13px',
-            color: stepStates.notifying === 'complete' ? 'var(--success-color)' :
-              stepStates.notifying === 'error' ? 'var(--danger-color)' :
-                'var(--text-secondary)'
+            color: stepStates.notifying === 'complete'
+              ? (publishResult?.piStatus === 'failed' ? 'var(--danger-color)' : 'var(--success-color)')
+              : stepStates.notifying === 'error' ? 'var(--danger-color)'
+              : 'var(--text-secondary)'
           }}>
             {stepStates.notifying === 'pending' ? 'Not started' :
               stepStates.notifying === 'in-progress' ? 'Notifying...' :
-              stepStates.notifying === 'complete' ? (publishResult?.piStatus === 'indexed' ? 'Indexed' : 'Notified') : 'Failed'}
+              stepStates.notifying === 'complete'
+                ? (publishResult?.piStatus === 'indexed' ? 'Indexed'
+                   : publishResult?.piStatus === 'failed' ? 'Failed'
+                   : 'Notified')
+                : 'Failed'}
           </span>
         </div>
 
@@ -496,7 +501,7 @@ export function PublishSection({ publisherFeed }: PublishSectionProps) {
           </div>
 
           {/* Podcast Index Link */}
-          {(publishResult?.piPageUrl || publishResult?.piStatus === 'pending') && (
+          {(publishResult?.piPageUrl || publishResult?.piStatus === 'pending' || publishResult?.piStatus === 'failed') && (
             <div style={{ paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
               <label style={{
                 display: 'block',
@@ -515,6 +520,10 @@ export function PublishSection({ publisherFeed }: PublishSectionProps) {
                 >
                   {publishResult.piPageUrl}
                 </a>
+              ) : publishResult.piStatus === 'failed' ? (
+                <p style={{ fontSize: '13px', color: 'var(--danger-color)', margin: 0 }}>
+                  Failed to notify Podcast Index. Feed was hosted successfully — you can retry via Save → Submit to PodcastIndex.
+                </p>
               ) : (
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
                   Feed submitted to Podcast Index. It may take a few minutes to appear.

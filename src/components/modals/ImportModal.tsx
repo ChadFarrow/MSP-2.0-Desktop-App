@@ -60,15 +60,14 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templa
   }, [showExperimental, mode]);
 
   const fetchSavedAlbums = async () => {
-    setLoadingAlbums(true);
-    setError('');
-    const health = await checkSignerConnection();
-    if (!health.connected) {
-      setError(health.error ?? 'Nostr signer is not connected.');
-      setLoadingAlbums(false);
+    const pubkey = nostrState.user?.pubkey;
+    if (!pubkey) {
+      setError('Not logged in to Nostr.');
       return;
     }
-    const result = await loadAlbumsFromNostr();
+    setLoadingAlbums(true);
+    setError('');
+    const result = await loadAlbumsFromNostr(pubkey);
     setLoadingAlbums(false);
 
     if (result.success) {
@@ -112,17 +111,15 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templa
   };
 
   const handleLoadFromNostr = async (dTag: string) => {
+    const pubkey = nostrState.user?.pubkey;
+    if (!pubkey) {
+      setError('Not logged in to Nostr.');
+      return;
+    }
     setLoading(true);
     setError('');
 
-    const health = await checkSignerConnection();
-    if (!health.connected) {
-      setError(health.error ?? 'Nostr signer is not connected.');
-      setLoading(false);
-      return;
-    }
-
-    const result = await loadAlbumByDTag(dTag);
+    const result = await loadAlbumByDTag(dTag, pubkey);
 
     if (result.success && result.album) {
       onClose();
@@ -135,17 +132,15 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templa
 
 
   const fetchMusicTracks = async () => {
+    const pubkey = nostrState.user?.pubkey;
+    if (!pubkey) {
+      setError('Not logged in to Nostr.');
+      return;
+    }
     setLoadingMusic(true);
     setError('');
 
-    const health = await checkSignerConnection();
-    if (!health.connected) {
-      setError(health.error ?? 'Nostr signer is not connected.');
-      setLoadingMusic(false);
-      return;
-    }
-
-    const result = await fetchNostrMusicTracks();
+    const result = await fetchNostrMusicTracks(pubkey);
     setLoadingMusic(false);
 
     if (result.success) {

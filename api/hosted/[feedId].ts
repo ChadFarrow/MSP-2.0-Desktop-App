@@ -5,6 +5,7 @@ import {
   notifyPodcastIndex,
   getBaseUrl,
   hashToken,
+  timingSafeEqualHex,
   isValidFeedId
 } from '../_utils/feedUtils.js';
 import { extractPodcastMedium, isWellFormedRss } from '../_utils/xmlUtils.js';
@@ -19,6 +20,7 @@ interface FeedMetadata {
   ownerPubkey?: string;  // Nostr pubkey (hex) - if linked
   linkedAt?: string;     // When Nostr was linked
   podcastIndexId?: number;
+  isDraft?: boolean;     // True when hosted without PI/podping notification
 }
 
 // Helper to fetch metadata from .meta.json blob
@@ -211,6 +213,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let ownerPubkey: string | undefined;
         let linkedAt: string | undefined;
         let existingPodcastIndexId: number | undefined;
+        let existingIsDraft: boolean | undefined;
 
         const editToken = req.headers['x-edit-token'];
         const authHeader = req.headers['authorization'] as string | undefined;
@@ -226,6 +229,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ownerPubkey = undefined;
           linkedAt = undefined;
           existingPodcastIndexId = undefined;
+          existingIsDraft = undefined;
         } else {
           storedHash = metadata.editTokenHash;
           createdAt = metadata.createdAt;
@@ -233,6 +237,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ownerPubkey = metadata.ownerPubkey;
           linkedAt = metadata.linkedAt;
           existingPodcastIndexId = metadata.podcastIndexId;
+          existingIsDraft = metadata.isDraft;
 
           // Validate auth: accept either token or Nostr (if linked)
           let isAuthorized = false;
@@ -240,7 +245,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // Try token auth first
           if (editToken && typeof editToken === 'string') {
             const providedHash = hashToken(editToken);
-            if (storedHash === providedHash) {
+            if (timingSafeEqualHex(storedHash, providedHash)) {
               isAuthorized = true;
             }
           }
@@ -259,7 +264,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Parse request body
-        const { xml, title } = req.body;
+        const { xml, title, isDraft } = req.body;
 
         if (!xml || typeof xml !== 'string') {
           return res.status(400).json({ error: 'Missing XML content' });
@@ -295,11 +300,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           await del(existingMeta.url);
         }
 
+        // Determine effective draft status:
+        // If the request explicitly sets isDraft, use that; otherwise fall back to existing value
+        const effectiveIsDraft = isDraft !== undefined ? (isDraft === true) : (existingIsDraft === true);
+
         // Notify Podcast Index and get PI ID (may update existing ID)
+        // Skip PI/podping when in draft mode
         const stableUrl = `${getBaseUrl(req)}/api/hosted/${feedId}.xml`;
         const medium = extractPodcastMedium(xml);
-        const newPodcastIndexId = await notifyPodcastIndex(stableUrl, { medium });
-        const podcastIndexId = newPodcastIndexId || existingPodcastIndexId;
+        let podcastIndexId: number | undefined;
+        if (!effectiveIsDraft) {
+          const newPodcastIndexId = await notifyPodcastIndex(stableUrl, { medium });
+          podcastIndexId = newPodcastIndexId || existingPodcastIndexId;
+        } else {
+          podcastIndexId = existingPodcastIndexId;
+        }
 
         await put(metaPath, JSON.stringify({
           editTokenHash: storedHash,
@@ -308,14 +323,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           title: (typeof title === 'string' ? title : existingTitle || 'Untitled Feed').slice(0, 200),
           ownerPubkey,
           linkedAt,
-          podcastIndexId
+          podcastIndexId,
+          ...(effectiveIsDraft && { isDraft: true })
         }), {
           access: 'public',
           contentType: 'application/json',
           addRandomSuffix: false
         });
 
-        return res.status(200).json({ success: true, podcastIndexId });
+        return res.status(200).json({ success: true, podcastIndexId, isDraft: effectiveIsDraft });
       }
 
       case 'PATCH': {
@@ -335,7 +351,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Validate token
         const providedHash = hashToken(editToken);
-        if (metadata.editTokenHash !== providedHash) {
+        if (!timingSafeEqualHex(metadata.editTokenHash, providedHash)) {
           return res.status(403).json({ error: 'Invalid edit token' });
         }
 
@@ -386,7 +402,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // For legacy feeds without metadata, allow deletion with any token
           // (can't verify, but feed is unusable anyway)
           if (metadata) {
-            if (metadata.editTokenHash !== providedHash) {
+            if (!timingSafeEqualHex(metadata.editTokenHash, providedHash)) {
               return res.status(403).json({ error: 'Invalid edit token' });
             }
           }
@@ -422,7 +438,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (error) {
     console.error('Error handling hosted feed:', error);
-    const message = error instanceof Error ? error.message : 'Operation failed';
-    return res.status(500).json({ error: message });
+    return res.status(500).json({ error: 'Operation failed' });
   }
 }
