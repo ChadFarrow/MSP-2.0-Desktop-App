@@ -183,7 +183,7 @@ Vercel serverless functions (the desktop dev server proxies `/api/*` to `msp.pod
 - `pisubmit.ts` - Submit feed to Podcast Index
 - `pubnotify.ts` - Podcast Index pub-notify + add/byfeedurl + optional Podping pass-through
 - `podping.ts` - Self-hosted hivepinger broadcast endpoint (rate-limited, gated on env vars)
-- `proxy-feed.ts` - CORS proxy for fetching external feeds
+- `proxy-feed.ts` - CORS proxy for fetching external feeds. **Intentional divergence from the web repo:** desktop blocks private/reserved targets but allows any public host (import-by-URL needs arbitrary feeds; see `_utils/urlSafety.ts`), while the web repo enforces a domain allowlist with 403s. Don't port the web version or its allowlist tests during syncs.
 - `example-feed.ts` - Reference example feed endpoint
 - `hosted/` - MSP feed hosting endpoints (create, update, delete, backup/restore)
 - `feed/[npub]/[guid].ts` - Nostr-stored feed retrieval
@@ -225,7 +225,7 @@ The Save Modal destination dropdown in `SaveModal.tsx` exposes these options. Su
 | Save to Computer / Local Storage | App data folder (Tauri) or browser localStorage | No | Per-machine only; fronts the desktop sidebar |
 | Download XML | User filesystem | No | One-shot file export |
 | Copy to Clipboard | Clipboard | No | One-shot text copy |
-| Host on MSP | Vercel Blob via `/api/hosted/*` | Yes (`msp.podtards.com/feeds/{id}.xml`) | Triggers `pubnotify` and Podping; can link a Nostr identity for token-free edits |
+| Host on MSP | Vercel Blob via `/api/hosted/*` | Yes (`msp.podtards.com/feeds/{id}.xml`) | Triggers `pubnotify` and Podping (unless "Draft mode" is checked); can link a Nostr identity for token-free edits |
 | Submit to Podcast Index | n/a (POST `/api/pubnotify`) | n/a | Notifies an already-published URL so PI re-crawls it |
 | Send Podping | n/a (POST `/api/podping`) | n/a | Self-hosted hivepinger broadcast; rate-limited |
 | Save RSS feed to Nostr | Kind 30054 event | No (sync only) | Personal cross-device load; requires login |

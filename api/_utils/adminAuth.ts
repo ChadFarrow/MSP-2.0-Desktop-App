@@ -69,7 +69,13 @@ export async function verifyNostrEvent(event: NostrEvent): Promise<boolean> {
 // Check if pubkey is in admin list
 export function isAdminPubkey(pubkey: string): boolean {
   const adminPubkeys = process.env.MSP_ADMIN_PUBKEYS || '';
-  const allowedPubkeys = adminPubkeys.split(',').map(p => p.trim().toLowerCase());
+  const allowedPubkeys = adminPubkeys
+    .split(',')
+    .map(p => p.trim().toLowerCase())
+    .filter(Boolean);
+  if (allowedPubkeys.length === 0) {
+    return false;
+  }
   return allowedPubkeys.includes(pubkey.toLowerCase());
 }
 
