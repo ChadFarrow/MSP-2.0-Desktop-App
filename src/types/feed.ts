@@ -78,13 +78,13 @@ export interface PodcastImage {
 
 // Suggested purpose tokens (open list per the spec). Single source of truth for the UI dropdown.
 export const PODCAST_IMAGE_PURPOSES: { value: string; label: string; description: string }[] = [
-  { value: 'artwork', label: 'Artwork', description: 'Represents the show/episode (square cover)' },
-  { value: 'banner', label: 'Banner', description: 'Wide hero image to complement your artwork' },
-  { value: 'canvas', label: 'Canvas', description: 'Immersive Now Playing background (desktop/mobile)' },
-  { value: 'social', label: 'Social', description: 'Social preview / share card' },
-  { value: 'publisher', label: 'Publisher', description: 'Publisher / label logo' },
-  { value: 'circular', label: 'Circular', description: 'Image meant to be cropped to a circle' },
-  { value: 'poster', label: 'Poster', description: 'Static thumbnail for video episodes' },
+  { value: 'artwork', label: 'Artwork', description: 'Alternate square (1:1) cover' },
+  { value: 'banner', label: 'Banner', description: 'Wide hero image (~4:1 or 3:1)' },
+  { value: 'canvas', label: 'Canvas', description: 'Full-screen Now Playing background (9:16 phone, 16:9 desktop)' },
+  { value: 'social', label: 'Social', description: 'Social preview / share card (~1.91:1, e.g. 1200×630)' },
+  { value: 'publisher', label: 'Publisher', description: 'Publisher / label logo (square 1:1)' },
+  { value: 'circular', label: 'Circular', description: 'Cropped to a circle — use square (1:1)' },
+  { value: 'poster', label: 'Poster', description: 'Static video thumbnail (16:9)' },
 ];
 
 // Base channel data shared between Album and PublisherFeed
