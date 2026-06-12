@@ -44,15 +44,18 @@ npm run test:e2e     # Run Playwright E2E tests (starts dev server automatically
 npm run test:e2e:ui  # Playwright interactive UI mode
 ```
 
-Unit tests use Vitest with jsdom, configured in `vitest.config.ts`. Test files live alongside source as `*.test.{ts,tsx}`. Key test files:
+Unit tests use Vitest with jsdom, configured in `vitest.config.ts`. Test files live alongside source as `*.test.{ts,tsx}` in **both `src/` and `api/`** (the vitest include covers `api/**/*.test.ts` — api tests existed but never ran until June 2026). Key test files:
 - `feedStore.test.ts` - Reducer unit tests (all action types, community support auto-add logic)
-- `xmlParser.test.ts` - Parser tests (parseRssFeed, parsePublisherRssFeed, feed type detection)
+- `feedStorePersistence.test.tsx` - Provider-level debounced auto-save + pagehide flush
+- `xmlParser.test.ts` - Parser tests (parseRssFeed, parsePublisherRssFeed, feed type detection, recipient type detection/migration)
 - `xmlGenerator.test.ts` - Generator tests (publisher reference output)
+- `api/_utils/urlSafety.test.ts` + `api/proxy-feed.test.ts` - SSRF guard (desktop's public-host policy, NOT web's allowlist)
+- `api/_utils/cors.test.ts` - Origin allowlist behavior
 
 E2E tests are in `e2e/` and run Playwright against Chrome at multiple viewports (desktop, tablet 1024px, mobile 768px, mobile 480px). Config in `playwright.config.ts`.
 
 ### CI/CD
-Push to `master` or PR triggers three parallel GitHub Actions jobs: unit tests, E2E tests, and lint.
+Push to `master` or PR triggers four parallel GitHub Actions jobs: unit tests, E2E tests, lint, and a blocking dependency audit (`npm audit --omit=dev --audit-level=high` — dev-only transitives don't gate CI, shipped deps do).
 
 Every push to `master` also triggers cross-platform release builds (macOS arm64/x86_64, Ubuntu, Windows) that auto-increment the version, sign artifacts, and publish a GitHub release. Multiple pushes in a day each produce a new release.
 
@@ -77,7 +80,7 @@ The desktop app uses Tauri's updater plugin with signed releases hosted on GitHu
 **Key files:**
 - `src/utils/updater.ts` - Update check and install logic
 - `src/components/modals/UpdateModal.tsx` - Update prompt UI
-- `src-tauri/tauri.conf.json` - Updater config with public key and endpoint
+- `src-tauri/tauri.conf.json` - Updater config with public key and endpoint; also the webview CSP (`app.security.csp` + `devCsp`). The CSP's broad `https: wss:` connect-src is intentional — relays, Blossom servers, and artwork/audio URLs are user-configurable. `devCsp` additionally allows inline scripts and `ws://localhost:5173` for Vite HMR. If a new feature hits a CSP violation (check the webview console), extend the policy rather than nulling it
 
 **GitHub Secrets required:**
 - `TAURI_SIGNING_PRIVATE_KEY` - Base64-encoded signing key (single line, no whitespace)
@@ -110,6 +113,8 @@ For manual version control (optional):
 | Linux auto-update downloads but fails to install | `tauri-plugin-updater` <2.10 lacks privilege escalation for `.deb` installs (`/usr/bin/` is root-owned) | Fixed by upgrading to `tauri-plugin-updater` 2.10+; users on older versions must manually install `.deb` via `sudo dpkg -i` |
 | "Not Found" uploading `latest.json` in release | Parallel build jobs race to upload/update the same `latest.json` asset | Fixed: `includeUpdaterJson: false` on build jobs; separate `upload-updater-json` job assembles it after all builds complete |
 | Windows AV false positive (NSIS:MalwareX-gen) | NSIS `.exe` installers without Authenticode EV code signing trigger heuristic AV detections | Recommend `.msi` installer; long-term fix is purchasing an EV code signing certificate (~$400-600/yr) |
+| Tauri build fails with "version mismatched Tauri packages" | `npm update` bumped `@tauri-apps/*` past the Rust crates — Tauri requires matching major/minor across the NPM/crate boundary | Run `cargo update` in `src-tauri/` after any npm update that touches `@tauri-apps/*`, then commit both lockfiles |
+| Build fails: Missing "./utils" specifier in @noble/hashes | @noble/hashes 2.x (via nostr-tools) requires the `.js` suffix on subpath imports | Import from `@noble/hashes/utils.js`, not `@noble/hashes/utils` |
 
 ## Architecture
 
@@ -153,7 +158,7 @@ Feeds are stored as plain XML files in the app data directory (`com.podtards.msp
 
 ### State Management
 Uses React Context + useReducer pattern (not Redux). Four separate stores:
-- `feedStore.tsx` - Main feed state with album/video/publisher data, persisted to localStorage
+- `feedStore.tsx` - Main feed state with album/video/publisher data, persisted to localStorage. Auto-save is debounced (400ms localStorage, 1s desktop filesystem) with a synchronous `pagehide`/`beforeunload` flush so rapid edits don't thrash storage but nothing is lost on quit
 - `nostrStore.tsx` - Nostr authentication state
 - `themeStore.tsx` - Dark/light theme
 - `experimentalStore.tsx` - "Show Experimental Features" toggle (localStorage key `msp-show-experimental`, default off); gates the Import Modal's "Nostr Event 🧪" and "From Nostr 🧪" sources. The toggle lives in the header dropdown. Any component calling `useExperimental()` requires `ExperimentalProvider` in `App.tsx` — upstream changes that consume this hook in shared components will crash desktop if the provider wiring is dropped in a sync.
@@ -190,13 +195,17 @@ Vercel serverless functions (the desktop dev server proxies `/api/*` to `msp.pod
 - `admin/` - Admin authentication (challenge/verify)
 - `_utils/feedUtils.ts` - `notifyPodcastIndex()` and `notifyPodping()` helpers shared across endpoints
 - `_utils/podcastIndex.ts` - Podcast Index auth + request signing
-- `_utils/rateLimiter.ts` - In-memory IP rate limiter for `/api/podping`
+- `_utils/cors.ts` - Origin allowlist for state-changing endpoints. Must keep `tauri://localhost` (macOS) and `http://tauri.localhost` (Windows) allowed or the desktop app breaks — the Windows webview enforces CORS. Public read-only GETs (proxy-feed, example-feed, pisearch, hosted feed XML) stay wildcard
+- `_utils/urlSafety.ts` - SSRF protection for user-supplied URLs (`getExternalUrlError`, `fetchPublicUrl` with per-hop redirect validation)
+- `_utils/rateLimiter.ts` - In-memory IP rate limiter for `/api/podping`; `getClientIp` prefers Vercel-set headers (`x-vercel-forwarded-for`, `x-real-ip`) over spoofable `x-forwarded-for`
 - `_utils/xmlUtils.ts` - `extractPodcastMedium()` for routing music vs podcast podping reasons
 - `_utils/adminAuth.ts` - Admin pubkey verification
 
 ### Feed Hosting & Podcast Index
 - Hosted feeds are stored as Vercel Blobs at `feeds/{feedId}.xml` with metadata in `feeds/{feedId}.meta.json`
 - Feeds are **automatically submitted to Podcast Index** on creation (POST) and update (PUT) via `notifyPodcastIndex()` in `api/_utils/feedUtils.ts` — no manual step needed
+- **Draft mode**: the Save Modal's "Draft mode" checkbox sends `isDraft: true`, which hosts the feed but skips PI notification and podping; the draft flag lives in the feed's `.meta.json` and shows as a DRAFT badge in the modal. Unchecking it on a later save publishes normally
+- Hosted XML is validated for well-formedness (`isWellFormedRss` in `api/_utils/xmlUtils.ts`) on create and update, after the 1MB size check
 - The function sends a pubnotify ping (triggers re-crawl) and calls `add/byfeedurl` (registers new feeds, returns PI ID)
 - **Backup retention**: `backupFeed()` helper in `api/hosted/[feedId].ts` creates timestamped backups before PUT, DELETE, and restore operations; keeps only the 10 most recent backups per feed
 
@@ -206,7 +215,7 @@ Vercel serverless functions (the desktop dev server proxies `/api/*` to `msp.pod
 
 ### Nostr Integration
 - NIP-07 browser extension support for signing (web)
-- NIP-46 remote signer support (Amber, etc.)
+- NIP-46 remote signer support (Primal, Amber, etc.). The client transport key persists in localStorage on purpose — `reconnectNip46()` needs it across restarts. On startup, a reconnect *timeout* keeps the session alive (the signer reconnects on the next signing op via `checkSignerConnection()`); only an auth error (cleared bunker pointer) logs the user out
 - Native key management on desktop (nsec/hex via Tauri secure storage)
 - **Kind 30054** — entire RSS XML stored as a Nostr event for personal cross-device sync (`saveFeedToNostr` / `loadAlbumsFromNostr`, `d`-tag = `podcastGuid`)
 - **Kind 36787** — Nostr Music track publishing (`publishNostrMusicTracks`)
@@ -259,7 +268,7 @@ gh issue view <number>     # View issue details
 ## Key Patterns
 
 ### Component Structure
-- Modal-based dialogs (`components/modals/`) using `ModalWrapper` for consistent styling + Escape key support
+- Modal-based dialogs (`components/modals/`) using `ModalWrapper` for consistent styling, Escape key support, dialog ARIA semantics, and a Tab focus trap (focus moves into the modal on open)
 - Collapsible sections using `Section.tsx`
 - **Editor (Album/Video)**: `Editor.tsx` is a thin composition file that imports section components:
   - `CreditsSection.tsx` - Person/role management with thumbnail previews
