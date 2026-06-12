@@ -145,9 +145,6 @@ export const parseRssFeed = (xmlString: string): Album => {
     album.imageUrl = getAttr(itunesImage, 'href') || '';
   }
 
-  // Podcasting 2.0 additional images
-  album.podcastImages = parsePodcastImages(channel);
-
   // Contact
   album.managingEditor = getText(channel.managingEditor) || '';
   album.webMaster = getText(channel.webMaster) || '';
@@ -491,6 +488,7 @@ function parseCommonChannelElements(channel: Record<string, unknown>): Omit<Base
     imageTitle,
     imageLink,
     imageDescription,
+    podcastImages: parsePodcastImages(channel),
     managingEditor,
     webMaster,
     persons,
@@ -776,16 +774,13 @@ export const parsePublisherRssFeed = (xmlString: string): PublisherFeed => {
   // Parse common channel elements
   const common = parseCommonChannelElements(channel);
 
-  // Create publisher feed with common elements
+  // Create publisher feed with common elements (podcastImages comes via ...common)
   const feed: PublisherFeed = {
     ...common,
     medium: 'publisher',
     unknownChannelElements: captureUnknownElements(channel, KNOWN_CHANNEL_KEYS),
     remoteItems: []
   };
-
-  // Podcasting 2.0 additional images
-  feed.podcastImages = parsePodcastImages(channel);
 
   // Remote items (the feeds this publisher owns)
   const remoteItems = channel['podcast:remoteItem'];
