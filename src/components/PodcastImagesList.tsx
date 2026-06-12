@@ -72,7 +72,7 @@ export function PodcastImagesList({ images, onChange, label = 'Additional Images
       <label className="form-label">{label}<InfoIcon text={FIELD_INFO.podcastImages} /></label>
       <p style={{ fontSize: '0.85rem', opacity: 0.7, margin: '0 0 0.75rem' }}>
         Optional extra artwork apps can use in different places — e.g. a wide background for
-        Now Playing screens or a banner. Paste a URL and MSP fills in the size and type for you.
+        Now Playing screens or a banner.
       </p>
       <div className="repeatable-list">
         {images.map((img, index) => {
