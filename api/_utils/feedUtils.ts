@@ -105,7 +105,7 @@ export async function notifyPodcastIndex(
 
   // Broadcast feed update via self-hosted hivepinger (no-ops without PODPING_ENDPOINT_URL + PODPING_BEARER_TOKEN).
   // Intentionally not awaited so PI submission isn't blocked; surface failures to function logs.
-  notifyPodping(feedUrl, { medium: options.medium }).then((result) => {
+  notifyPodping(feedUrl, { reason: 'update', medium: options.medium }).then((result) => {
     if (!result.ok) {
       console.warn(`Podping broadcast failed for ${feedUrl}: ${result.error ?? 'unknown'}`);
     }

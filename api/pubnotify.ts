@@ -62,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Broadcast a podping in parallel so indexers that watch Hive re-crawl too.
     // Fire-and-forget; Railway/hivepinger handles its own retries.
     if (isPodpingConfigured()) {
-      notifyPodping(url, { medium: podpingMedium }).then((result) => {
+      notifyPodping(url, { reason: 'update', medium: podpingMedium }).then((result) => {
         if (!result.ok) {
           console.warn(`Podping broadcast failed for ${url}: ${result.error ?? 'unknown'}`);
         }
