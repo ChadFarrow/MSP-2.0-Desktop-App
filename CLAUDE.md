@@ -32,11 +32,21 @@ npm run dev
 
 ## Deployment
 
-- Hosted on Vercel at msp.podtards.com
+- Hosted on Vercel at msp.podtards.com (primary, runs `master`)
+- Also served on the custom domain **musicsideproject.com** (apex + `www`) and **new.musicsideproject.com** — all point to MSP 2.0 on Vercel. DNS is managed at Squarespace (Google Domains nameservers)
 - API functions in `/api/` directory are Vercel serverless functions
 - Dev server proxies `/api/*` to production
 - Build: `npm run build` (tsc + vite)
 - Build auto-unshallows Vercel's git clone for accurate version computation
+
+### Domains & canonical URL
+`VITE_CANONICAL_URL` is the stable host stamped into **Host-on-MSP feed URLs** (`buildHostedUrl()` in `src/utils/hostedFeed.ts` → `{canonical}/api/hosted/{feedId}.xml`, the URL submitted to Podcast Index). It's a **build-time** Vite var (`import.meta.env`), so changing it requires a redeploy. **Critical when one Vercel project answers on multiple domains**: if unset it falls back to the current `window.location.origin`, so the same project would mint *different* "permanent" feed URLs depending on which domain the user visited (apex vs `new.`). Set it explicitly to one host. The project serving the apex uses `https://musicsideproject.com`.
+
+### Legacy site decommissioning (June 2026)
+`musicsideproject.com` previously served the **original MSP Studio** — thebells1111's Svelte feed *generator* (https://github.com/thebells1111/msp-studio), unrelated to this codebase. It was decommissioned and the apex repointed to MSP 2.0. Notes:
+- The original is a client-side generator (hosts no feeds/data/email), so the takeover broke no live podcast subscriptions. Source archived read-only at [ChadFarrow/msp-studio](https://github.com/ChadFarrow/msp-studio).
+- The inherited Squarespace zone was full of non-functional junk records (Office-365/Zoho/Google email templates with no MX, DKIM-as-A records). Pre-cleanup backup + keep/delete classification: `docs/dns-musicsideproject-backup-2026-06-17.txt`. Only 4 records are real: `@`/`www` (apex → MSP 2.0), `new` CNAME, and the `_vercel` verification TXTs.
+- Legacy MSP 1.0 feeds (from the old node-based tooling) are auto-migrated on import — see "Value recipient normalization on import" under XML Handling (`LEGACY_MSP_NODE_PUBKEY` → MSP 2.0 lnaddress).
 
 ### Versioning
 Version is auto-computed at build time from git commit count: `0.1.{count - 255}` (zero-padded). Each push to master increments the patch number. Configured in `vite.config.ts` via `getAutoVersion()`, with `package.json` version as fallback when git is unavailable. Displayed in the hamburger menu.
