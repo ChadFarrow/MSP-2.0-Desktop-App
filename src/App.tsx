@@ -242,7 +242,8 @@ function AppContent() {
                       🔑 Sign In (nostr)
                     </button>
                   )}
-                  {showExperimental && (
+                  {/* Local dev only — gated on import.meta.env.DEV so it is tree-shaken out of production builds */}
+                  {import.meta.env.DEV && (
                     <>
                       <div className="dropdown-divider" />
                       <button
@@ -254,6 +255,10 @@ function AppContent() {
                       >
                         🧪 Load Test Data
                       </button>
+                    </>
+                  )}
+                  {showExperimental && (
+                    <>
                       <div className="dropdown-divider" />
                       <a
                         className="dropdown-item"
