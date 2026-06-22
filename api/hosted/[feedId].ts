@@ -138,9 +138,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const blobResponse = await fetch(blob.url);
         const content = await blobResponse.text();
 
-        // Set cache and CORS headers
+        // Set cache and CORS headers. application/xml (not application/rss+xml)
+        // so browsers render the feed inline in a tab instead of downloading it;
+        // podcast apps / Podcast Index parse either content-type the same.
         res.setHeader('Cache-Control', 'public, max-age=300');
-        res.setHeader('Content-Type', 'application/rss+xml');
+        res.setHeader('Content-Type', 'application/xml; charset=utf-8');
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
 
@@ -302,7 +304,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Notify Podcast Index and get PI ID (may update existing ID)
         // Skip PI/podping when in draft mode
-        const stableUrl = `${getBaseUrl(req)}/api/hosted/${feedId}.xml`;
+        const stableUrl = `${getBaseUrl()}/api/hosted/${feedId}.xml`;
         const medium = extractPodcastMedium(xml);
         let podcastIndexId: number | undefined;
         if (!effectiveIsDraft) {

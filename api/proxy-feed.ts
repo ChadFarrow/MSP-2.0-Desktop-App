@@ -77,6 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Only allow fetching RSS/XML feeds from trusted podcast-host domains.
   const allowedDomains = [
+    'musicsideproject.com',
     'msp.podtards.com',
     'feeds.podcastindex.org',
     'anchor.fm',
