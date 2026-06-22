@@ -178,7 +178,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     // Build stable URL
-    const stableUrl = `${getBaseUrl(req)}/api/hosted/${feedId}.xml`;
+    const stableUrl = `${getBaseUrl()}/api/hosted/${feedId}.xml`;
 
     // Extract podcast:medium from XML for podping broadcast (music/video/publisher)
     const medium = extractPodcastMedium(xml);

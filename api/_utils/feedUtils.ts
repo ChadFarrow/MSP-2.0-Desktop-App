@@ -1,5 +1,4 @@
 // Shared API utilities for hosted feed endpoints
-import type { VercelRequest } from '@vercel/node';
 import { createHash, timingSafeEqual } from 'crypto';
 import { getAuthHeaders } from './podcastIndex.js';
 
@@ -172,16 +171,12 @@ export async function lookupPodcastIndexId(podcastGuid: string): Promise<number 
  * Get base URL from request headers
  * Falls back to canonical URL for localhost (PI can't reach local dev servers)
  */
-export function getBaseUrl(req: VercelRequest): string {
-  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
-
-  // Use canonical URL for localhost since PI can't reach local dev servers
-  if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
-    return process.env.CANONICAL_URL || 'https://msp.podtards.com';
-  }
-
-  const proto = req.headers['x-forwarded-proto'] || 'https';
-  return `${proto}://${host}`;
+export function getBaseUrl(): string {
+  // Always use the canonical domain for hosted feed URLs so every feed (album,
+  // video, publisher) is stable regardless of which alias/preview host served the
+  // request. msp.podtards.com is a legacy alias and must never appear in newly
+  // generated feed URLs.
+  return (process.env.CANONICAL_URL || 'https://musicsideproject.com').replace(/\/$/, '');
 }
 
 /**
