@@ -99,6 +99,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     switch (req.method) {
       case 'GET': {
+        // Legacy-host migration: feeds first hosted under msp.podtards.com were
+        // submitted to Podcast Index with that URL. Return a literal 301 to the
+        // canonical domain so apps/PI move the subscription. Exact-host match +
+        // canonical target means musicsideproject.com / preview hosts never loop.
+        const host = ((req.headers['x-forwarded-host'] || req.headers.host || '') as string).toLowerCase();
+        if (host === 'msp.podtards.com') {
+          res.setHeader('Location', `${getBaseUrl()}/api/hosted/${feedId}.xml`);
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          return res.status(301).end();
+        }
+
         // List backups for this feed (admin only)
         if ('backups' in req.query) {
           if (!isAdmin) {
