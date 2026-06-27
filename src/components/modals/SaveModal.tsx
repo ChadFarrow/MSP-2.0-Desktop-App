@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { generateRssFeed, generatePublisherRssFeed, downloadXml, copyToClipboard } from '../../utils/xmlGenerator';
 import { saveFeedToNostr, publishNostrMusicTracks, deleteNostrMusicTracks } from '../../utils/nostrSync';
 import { uploadFeedToBlossom } from '../../utils/blossom';
@@ -67,7 +68,9 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   const { showExperimental } = useExperimental();
   const [mode, setMode] = useState<SaveMode>('local');
   const [destOpen, setDestOpen] = useState(false);
+  const [destMenuPos, setDestMenuPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const destRef = useRef<HTMLDivElement>(null);
+  const destMenuRef = useRef<HTMLUListElement>(null);
   const isPublisherMode = feedType === 'publisher';
   const isVideoMode = feedType === 'video';
 
@@ -156,17 +159,36 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
     }
   }, [showExperimental, mode]);
 
-  // Close the destination dropdown when clicking outside it
+  // Close the destination dropdown when clicking outside it. The menu is
+  // portaled to <body> (to escape the modal's overflow clipping), so the
+  // outside check has to ignore the portaled menu too.
   useEffect(() => {
     if (!destOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (destRef.current && !destRef.current.contains(event.target as Node)) {
-        setDestOpen(false);
-      }
+      const target = event.target as Node;
+      if (destRef.current?.contains(target) || destMenuRef.current?.contains(target)) return;
+      setDestOpen(false);
     };
+    // The fixed-positioned menu would detach from the trigger on scroll, so close it.
+    const handleScrollOrResize = () => setDestOpen(false);
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('resize', handleScrollOrResize);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleScrollOrResize);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+    };
   }, [destOpen]);
+
+  // Measure the trigger so the portaled menu can sit directly beneath it.
+  const openDestMenu = () => {
+    if (destRef.current) {
+      const r = destRef.current.getBoundingClientRect();
+      setDestMenuPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+    setDestOpen(true);
+  };
 
   // Auto-fill the Podcast Index submission URL from whichever hosted URL we have
   useEffect(() => {
@@ -710,7 +732,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                 aria-haspopup="listbox"
                 aria-expanded={destOpen}
                 aria-labelledby="save-dest-label"
-                onClick={() => setDestOpen((o) => !o)}
+                onClick={() => (destOpen ? setDestOpen(false) : openDestMenu())}
                 onKeyDown={(e) => { if (e.key === 'Escape') setDestOpen(false); }}
               >
                 <span className="save-dest-trigger-text">
@@ -719,8 +741,14 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                 </span>
                 <span className="save-dest-caret" aria-hidden="true">▾</span>
               </button>
-              {destOpen && (
-                <ul className="save-dest-menu" role="listbox" aria-labelledby="save-dest-label">
+              {destOpen && destMenuPos && createPortal(
+                <ul
+                  ref={destMenuRef}
+                  className="save-dest-menu"
+                  role="listbox"
+                  aria-labelledby="save-dest-label"
+                  style={{ top: destMenuPos.top, left: destMenuPos.left, width: destMenuPos.width }}
+                >
                   {visibleDestinations.map((d) => (
                     <li
                       key={d.value}
@@ -741,7 +769,8 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                       {d.value === mode && <span className="save-dest-check" aria-hidden="true">✓</span>}
                     </li>
                   ))}
-                </ul>
+                </ul>,
+                document.body
               )}
             </div>
           </div>

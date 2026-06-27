@@ -305,11 +305,10 @@ body {
   font-size: 0.75rem;
 }
 
+/* Portaled to <body> and positioned via inline `top`/`left`/`width` so it
+   escapes the modal's overflow clipping; z-index sits above .modal-overlay. */
 .save-dest-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
+  position: fixed;
   margin: 0;
   padding: 4px;
   list-style: none;
@@ -317,7 +316,7 @@ body {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
-  z-index: 100;
+  z-index: 1100;
   max-height: 320px;
   overflow-y: auto;
 }
