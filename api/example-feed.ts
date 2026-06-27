@@ -18,7 +18,7 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
         <description>
             This is an example feed created with MSP 2.0 (Music Side Project Studio). It demonstrates Podcasting 2.0 features including Value 4 Value Lightning payments, person credits, track-level value splits, and lyrics/transcript support. Use this as a reference when building your own music feeds.
         </description>
-        <link>https://msp.podtards.com</link>
+        <link>https://musicsideproject.com</link>
         <language>en</language>
         <generator>MSP 2.0 - Music Side Project Studio</generator>
         <pubDate>Sat, 01 Feb 2025 00:00:00 GMT</pubDate>
@@ -27,19 +27,19 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
         <itunes:category text="Music" />
         <itunes:keywords>example, demo, msp, podcasting2.0, value4value</itunes:keywords>
         <image>
-            <url>https://msp.podtards.com/msp-logo.png</url>
+            <url>https://musicsideproject.com/msp-logo.png</url>
             <title>MSP Example Album</title>
-            <link>https://msp.podtards.com</link>
+            <link>https://musicsideproject.com</link>
             <description>MSP Example Album artwork</description>
         </image>
-        <itunes:image href="https://msp.podtards.com/msp-logo.png" />
+        <itunes:image href="https://musicsideproject.com/msp-logo.png" />
         <podcast:medium>music</podcast:medium>
         <itunes:explicit>false</itunes:explicit>
         <itunes:owner>
             <itunes:name>MSP Demo Band</itunes:name>
-            <itunes:email>example@msp.podtards.com</itunes:email>
+            <itunes:email>example@musicsideproject.com</itunes:email>
         </itunes:owner>
-        <podcast:person href="https://msp.podtards.com" img="https://msp.podtards.com/msp-logo.png" group="music" role="band">MSP Demo Band</podcast:person>
+        <podcast:person href="https://musicsideproject.com" img="https://musicsideproject.com/msp-logo.png" group="music" role="band">MSP Demo Band</podcast:person>
         <podcast:person group="music" role="vocalist">Demo Singer</podcast:person>
         <podcast:person group="music" role="guitarist">Demo Guitarist</podcast:person>
         <podcast:person group="audio-post-production" role="composer">Demo Producer</podcast:person>
@@ -48,20 +48,20 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
             <podcast:valueRecipient name="Podcast Index" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="1" type="node" />
             <podcast:valueRecipient name="MSP" address="podtards@strike.me" split="4" type="lnaddress" />
         </podcast:value>
-        <podcast:funding url="https://msp.podtards.com">Support MSP Development</podcast:funding>
+        <podcast:funding url="https://musicsideproject.com">Support MSP Development</podcast:funding>
         <item>
             <title>First Track</title>
             <description>The opening track of the album. Uses the album-level value block and person credits.</description>
             <pubDate>Sat, 01 Feb 2025 00:00:00 GMT</pubDate>
             <guid isPermaLink="false">a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d</guid>
-            <itunes:image href="https://msp.podtards.com/msp-logo.png" />
-            <podcast:images srcset="https://msp.podtards.com/msp-logo.png" />
+            <itunes:image href="https://musicsideproject.com/msp-logo.png" />
+            <podcast:images srcset="https://musicsideproject.com/msp-logo.png" />
             <enclosure url="https://example.com/audio/track01.mp3" length="5242880" type="audio/mpeg"/>
             <itunes:duration>3:45</itunes:duration>
             <podcast:season>1</podcast:season>
             <podcast:episode>1</podcast:episode>
             <itunes:explicit>false</itunes:explicit>
-            <podcast:person href="https://msp.podtards.com" img="https://msp.podtards.com/msp-logo.png" group="music" role="band">MSP Demo Band</podcast:person>
+            <podcast:person href="https://musicsideproject.com" img="https://musicsideproject.com/msp-logo.png" group="music" role="band">MSP Demo Band</podcast:person>
             <podcast:person group="music" role="vocalist">Demo Singer</podcast:person>
             <podcast:person group="music" role="guitarist">Demo Guitarist</podcast:person>
             <podcast:person group="audio-post-production" role="composer">Demo Producer</podcast:person>
@@ -77,14 +77,14 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
             <pubDate>Sat, 01 Feb 2025 00:01:00 GMT</pubDate>
             <guid isPermaLink="false">b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e</guid>
             <podcast:transcript url="https://example.com/lyrics/track02.srt" type="application/srt" />
-            <itunes:image href="https://msp.podtards.com/msp-logo.png" />
-            <podcast:images srcset="https://msp.podtards.com/msp-logo.png" />
+            <itunes:image href="https://musicsideproject.com/msp-logo.png" />
+            <podcast:images srcset="https://musicsideproject.com/msp-logo.png" />
             <enclosure url="https://example.com/audio/track02.mp3" length="6291456" type="audio/mpeg"/>
             <itunes:duration>4:32</itunes:duration>
             <podcast:season>1</podcast:season>
             <podcast:episode>2</podcast:episode>
             <itunes:explicit>false</itunes:explicit>
-            <podcast:person href="https://msp.podtards.com" img="https://msp.podtards.com/msp-logo.png" group="music" role="band">MSP Demo Band</podcast:person>
+            <podcast:person href="https://musicsideproject.com" img="https://musicsideproject.com/msp-logo.png" group="music" role="band">MSP Demo Band</podcast:person>
             <podcast:person group="music" role="vocalist">Demo Singer</podcast:person>
             <podcast:person group="music" role="guitarist">Demo Guitarist</podcast:person>
             <podcast:person group="audio-post-production" role="composer">Demo Producer</podcast:person>
@@ -99,8 +99,8 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
             <description>This track features a guest artist with their own value split. The track-level value block overrides the album default.</description>
             <pubDate>Sat, 01 Feb 2025 00:02:00 GMT</pubDate>
             <guid isPermaLink="false">c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f</guid>
-            <itunes:image href="https://msp.podtards.com/msp-logo.png" />
-            <podcast:images srcset="https://msp.podtards.com/msp-logo.png" />
+            <itunes:image href="https://musicsideproject.com/msp-logo.png" />
+            <podcast:images srcset="https://musicsideproject.com/msp-logo.png" />
             <enclosure url="https://example.com/audio/track03.mp3" length="7340032" type="audio/mpeg"/>
             <itunes:duration>5:18</itunes:duration>
             <podcast:season>1</podcast:season>

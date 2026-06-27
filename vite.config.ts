@@ -48,7 +48,7 @@ export default defineConfig({
     proxy: {
       // Proxy API calls to production server during development
       '/api': {
-        target: 'https://msp.podtards.com',
+        target: 'https://musicsideproject.com',
         changeOrigin: true,
         secure: true
       }

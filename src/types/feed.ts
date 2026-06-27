@@ -64,6 +64,29 @@ export interface RemoteItem {
   image?: string;
 }
 
+// Podcasting 2.0 additional images (<podcast:image>). These are EXTRA images
+// (banner/canvas/social/etc.) — the primary cover stays in imageUrl/trackArtUrl.
+export interface PodcastImage {
+  href: string;          // required
+  purpose?: string;      // space-separated tokens, e.g. "canvas" or "artwork social"
+  alt?: string;
+  aspectRatio?: string;  // CSS ratio syntax, e.g. "16/9", "1/1"
+  width?: number;
+  height?: number;
+  type?: string;         // MIME, e.g. "image/jpeg"
+}
+
+// Suggested purpose tokens (open list per the spec). Single source of truth for the UI dropdown.
+export const PODCAST_IMAGE_PURPOSES: { value: string; label: string; description: string }[] = [
+  { value: 'artwork', label: 'Artwork', description: 'Alternate square (1:1) cover' },
+  { value: 'banner', label: 'Banner', description: 'Wide hero image (~4:1 or 3:1)' },
+  { value: 'canvas', label: 'Canvas', description: 'Full-screen Now Playing background (9:16 phone, 16:9 desktop)' },
+  { value: 'social', label: 'Social', description: 'Social preview / share card (~1.91:1, e.g. 1200×630)' },
+  { value: 'publisher', label: 'Publisher', description: 'Publisher / label logo (square 1:1)' },
+  { value: 'circular', label: 'Circular', description: 'Cropped to a circle — use square (1:1)' },
+  { value: 'poster', label: 'Poster', description: 'Static video thumbnail (16:9)' },
+];
+
 // Base channel data shared between Album and PublisherFeed
 export interface BaseChannelData {
   title: string;
@@ -91,6 +114,7 @@ export interface BaseChannelData {
   persons: Person[];
   value: ValueBlock;
   funding: Funding[];
+  podcastImages?: PodcastImage[];
   unknownChannelElements?: Record<string, unknown>;
 }
 
@@ -118,6 +142,7 @@ export interface Track {
   trackArtWidth?: number;
   trackArtHeight?: number;
   bannerArtUrl?: string;
+  podcastImages?: PodcastImage[];
   transcriptUrl?: string;
   transcriptType?: string;
   overridePersons: boolean;
@@ -158,6 +183,7 @@ export interface Album {
   imageLink: string;
   imageDescription: string;
   bannerArtUrl: string;
+  podcastImages?: PodcastImage[];
 
   // Contact
   managingEditor: string;
@@ -215,6 +241,7 @@ export interface PublisherFeed {
   imageTitle: string;
   imageLink: string;
   imageDescription: string;
+  podcastImages?: PodcastImage[];
 
   // Contact
   managingEditor: string;
@@ -254,6 +281,7 @@ export const createEmptyTrack = (trackNumber: number, enclosureType: string = 'a
   explicit: false,
   trackArtUrl: '',
   bannerArtUrl: '',
+  podcastImages: [],
   transcriptUrl: '',
   transcriptType: 'application/srt',
   overridePersons: false,
@@ -323,6 +351,7 @@ export const createEmptyAlbum = (): Album => ({
   imageLink: '',
   imageDescription: '',
   bannerArtUrl: '',
+  podcastImages: [],
   managingEditor: '',
   webMaster: '',
   persons: [],
@@ -362,6 +391,7 @@ export const createEmptyVideoAlbum = (): Album => ({
   imageLink: '',
   imageDescription: '',
   bannerArtUrl: '',
+  podcastImages: [],
   managingEditor: '',
   webMaster: '',
   persons: [],
@@ -434,6 +464,7 @@ export const createEmptyPublisherFeed = (): PublisherFeed => ({
   imageTitle: '',
   imageLink: '',
   imageDescription: '',
+  podcastImages: [],
   managingEditor: '',
   webMaster: '',
   persons: [],

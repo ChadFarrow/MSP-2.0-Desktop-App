@@ -1,6 +1,6 @@
 // MSP 2.0 - XML Parser for importing Demu RSS Feeds
 import { XMLParser } from 'fast-xml-parser';
-import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData } from '../types/feed';
+import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData, PodcastImage } from '../types/feed';
 import { createEmptyTrack, LEGACY_MSP_NODE_PUBKEY, MSP_SUPPORT_RECIPIENT } from '../types/feed';
 import { areValueBlocksStrictEqual, arePersonsEqual } from './comparison';
 import { detectAddressType } from './addressUtils';
@@ -46,7 +46,8 @@ const KNOWN_CHANNEL_KEYS = new Set([
   'podcast:funding',
   'podcast:publisher',
   'podcast:remoteItem',  // For publisher feeds
-  'podcast:txt'  // For npub and other txt tags
+  'podcast:txt',  // For npub and other txt tags
+  'podcast:image'
 ]);
 
 // Known item keys that we explicitly parse (don't capture as unknown)
@@ -62,6 +63,7 @@ const KNOWN_ITEM_KEYS = new Set([
   'podcast:season',
   'podcast:episode',
   'podcast:images',
+  'podcast:image',
   'podcast:transcript',
   'podcast:person',
   'podcast:value'
@@ -225,6 +227,32 @@ function getAttr(node: unknown, attr: string): string {
     if (key in node) return String((node as Record<string, unknown>)[key]);
   }
   return '';
+}
+
+// Parse all <podcast:image> elements under a channel or item node into PodcastImage[].
+function parsePodcastImages(parent: unknown): PodcastImage[] {
+  if (!parent || typeof parent !== 'object') return [];
+  const raw = (parent as Record<string, unknown>)['podcast:image'];
+  if (!raw) return [];
+  const arr = Array.isArray(raw) ? raw : [raw];
+  return arr
+    .map((node): PodcastImage => {
+      const image: PodcastImage = { href: getAttr(node, 'href') };
+      const purpose = getAttr(node, 'purpose');
+      const alt = getAttr(node, 'alt');
+      const aspectRatio = getAttr(node, 'aspect-ratio');
+      const width = getAttr(node, 'width');
+      const height = getAttr(node, 'height');
+      const type = getAttr(node, 'type');
+      if (purpose) image.purpose = purpose;
+      if (alt) image.alt = alt;
+      if (aspectRatio) image.aspectRatio = aspectRatio;
+      if (width) image.width = parseInt(width) || undefined;
+      if (height) image.height = parseInt(height) || undefined;
+      if (type) image.type = type;
+      return image;
+    })
+    .filter(img => img.href);
 }
 
 // Capture unknown elements from a parsed XML object
@@ -461,6 +489,7 @@ function parseCommonChannelElements(channel: Record<string, unknown>): Omit<Base
     imageTitle,
     imageLink,
     imageDescription,
+    podcastImages: parsePodcastImages(channel),
     managingEditor,
     webMaster,
     persons,
@@ -577,6 +606,9 @@ function parseTrack(node: unknown, trackNumber: number, albumValue: ValueBlock, 
     if (height) track.trackArtHeight = parseInt(height) || undefined;
   }
 
+  // Podcasting 2.0 additional images
+  track.podcastImages = parsePodcastImages(item);
+
   // Transcript
   const transcript = item['podcast:transcript'];
   if (transcript) {
@@ -607,6 +639,7 @@ function parseTrack(node: unknown, trackNumber: number, albumValue: ValueBlock, 
 // Check if URL is an MSP-hosted feed
 const isMspUrl = (url: string): boolean => {
   return url.includes('/api/hosted/') ||
+    url.includes('musicsideproject.com') ||
     url.includes('msp.podtards.com') ||
     url.includes('msp-2-0');
 };
@@ -749,7 +782,7 @@ export const parsePublisherRssFeed = (xmlString: string): PublisherFeed => {
   // Parse common channel elements
   const common = parseCommonChannelElements(channel);
 
-  // Create publisher feed with common elements
+  // Create publisher feed with common elements (podcastImages comes via ...common)
   const feed: PublisherFeed = {
     ...common,
     medium: 'publisher',

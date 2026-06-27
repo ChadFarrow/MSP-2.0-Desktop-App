@@ -7,6 +7,7 @@ interface ArtworkFieldsProps {
   imageDescription: string | undefined;
   onUpdate: (field: 'imageUrl' | 'imageTitle' | 'imageDescription', value: string) => void;
   urlLabel?: string;
+  urlInfo?: string;
   urlPlaceholder?: string;
   titlePlaceholder?: string;
   previewAlt?: string;
@@ -18,6 +19,7 @@ export function ArtworkFields({
   imageDescription,
   onUpdate,
   urlLabel = 'Image URL',
+  urlInfo = FIELD_INFO.imageUrl,
   urlPlaceholder = 'https://example.com/image.jpg',
   titlePlaceholder = 'Image description',
   previewAlt = 'Image preview'
@@ -25,7 +27,7 @@ export function ArtworkFields({
   return (
     <div className="form-grid">
       <div className="form-group">
-        <label className="form-label">{urlLabel} <span className="required">*</span><InfoIcon text={FIELD_INFO.imageUrl} /></label>
+        <label className="form-label">{urlLabel} <span className="required">*</span><InfoIcon text={urlInfo} /></label>
         <input
           type="url"
           className="form-input"

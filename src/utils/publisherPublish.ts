@@ -65,6 +65,7 @@ const isMspHosted = (url: string): boolean => {
   if (!url) return false;
   return (
     url.includes('/api/hosted/') ||
+    url.includes('musicsideproject.com') ||
     url.includes('msp.podtards.com') ||
     url.includes('msp-2-0')
   );

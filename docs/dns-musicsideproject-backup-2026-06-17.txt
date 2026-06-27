@@ -1,0 +1,64 @@
+musicsideproject.com — DNS BACKUP + cleanup classification
+Captured: 2026-06-17
+Source: Squarespace DNS dashboard (authoritative zone, pasted by owner) + external dig confirmation.
+DNS host: Squarespace (nameservers ns-cloud-a1..a4.googledomains.com)
+
+This file is the pre-cleanup backup. If anything breaks after editing DNS, restore from this list.
+
+========================================================================
+KEEP — 4 records that matter (do NOT delete; apex/www get REPOINTED)
+========================================================================
+  @     A      76.76.21.21                              -> apex. REPOINT to MSP 2.0 per Vercel (value may stay 76.76.21.21)
+  www   CNAME  cname.vercel-dns-0.com                   -> REPOINT to MSP 2.0 per Vercel (likely cname.vercel-dns.com)
+  new   CNAME  938650dcd08d36fa.vercel-dns-016.com      -> MSP 2.0 (live, shared during transition). KEEP AS-IS. DO NOT TOUCH.
+  _vercel TXT  vc-domain-verify=new.musicsideproject.com,ce287c4dee4dfddfbd18
+                                                         -> Vercel ownership verification for new. KEEP.
+
+========================================================================
+DELETE — junk template (all non-functional: no MX, DKIM-as-A, expired certs,
+Office365/Lync records pointing at Vercel IPs). Safe to remove all of these.
+========================================================================
+  autodiscover           A  76.76.21.98 / 76.76.21.22
+  webmail                A  66.33.60.130 / 66.33.60.129
+  _sip                   A  76.76.21.164 / 76.76.21.98
+  _sip._tls              A  76.76.21.164 / 76.76.21.22
+  _sipfederationtls      A  66.33.60.193 / 66.33.60.130
+  _sipfederationtls._tcp A  76.76.21.241 / 66.33.60.66
+  lyncdiscover           A  66.33.60.193 / 76.76.21.22
+  msoid                  A  66.33.60.194 / 76.76.21.241
+  enterpriseregistration A  66.33.60.66
+  sip                    A  76.76.21.98
+  k1._domainkey          A  66.33.60.66
+  zoho._domainkey        A  76.76.21.61 / 66.33.60.194
+  google._domainkey      A  66.33.60.194 / 76.76.21.61
+  mail                   A  76.76.21.98 / 76.76.21.61
+  email                  A  76.76.21.98 / 66.33.60.35
+  imap                   A  76.76.21.61 / 76.76.21.142
+  webmail (dup above)
+  drive                  A  66.33.60.194 / 76.76.21.142
+  docs                   A  76.76.21.142 / 66.33.60.193
+  calendar               A  66.33.60.194 / 76.76.21.164
+  cal                    A  76.76.21.22 / 66.33.60.194
+  groups                 A  66.33.60.194 / 76.76.21.142
+  gallery                A  76.76.21.93 / 76.76.21.22
+  sites                  A  66.33.60.66
+  info                   A  76.76.21.22 / 76.76.21.164
+  client                 A  66.33.60.193
+  blog                   A  66.33.60.129 / 66.33.60.193
+  shop                   A  66.33.60.130
+  blank                  A  66.33.60.34 / 66.33.60.129
+
+EVIDENCE these are junk (2026-06-17):
+  - `dig musicsideproject.com MX` -> NONE. No inbound email configured, so mail/imap/webmail/autodiscover do nothing.
+  - `*._domainkey` are A records; real DKIM is TXT/CNAME -> invalid, non-functional.
+  - Office365/Lync names (autodiscover, lyncdiscover, msoid, _sip*, enterpriseregistration) as A records to Vercel
+    IPs is nonsensical; those services need CNAMEs to Microsoft, which these are not.
+  - https://mail.* and https://shop.* return expired SSL certs -> serving nothing real.
+  - Every record resolves into one shared pool (76.76.21.x = Vercel; 66.33.60.x) = templated bulk import.
+
+ORDER OF OPERATIONS:
+  1. This backup exists (done).
+  2. Add musicsideproject.com + www to the MSP 2.0 Vercel project; complete TXT verification it asks for.
+  3. Repoint @ and www per Vercel. Leave `new` and `_vercel` alone.
+  4. Verify apex + www serve MSP 2.0 (valid cert, your app).
+  5. THEN delete every record in the DELETE list above.
