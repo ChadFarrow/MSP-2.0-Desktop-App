@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { generateRssFeed, generatePublisherRssFeed, downloadXml, copyToClipboard } from '../../utils/xmlGenerator';
 import { saveFeedToNostr, publishNostrMusicTracks, deleteNostrMusicTracks } from '../../utils/nostrSync';
 import { uploadFeedToBlossom } from '../../utils/blossom';
@@ -29,6 +29,29 @@ import { ModalWrapper } from './ModalWrapper';
 
 const DEFAULT_BLOSSOM_SERVER = 'https://blossom.primal.net/';
 
+type SaveMode = 'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'nsite' | 'hosted' | 'podcastIndex';
+
+interface SaveDestination {
+  value: SaveMode;
+  label: string;
+  blurb: string;
+  experimental?: boolean;
+}
+
+// Single source of truth for the destination dropdown. `blurb` is the short
+// inline description; the richer wording lives in the ℹ️ help popup below.
+const SAVE_DESTINATIONS: SaveDestination[] = [
+  { value: 'local', label: 'Local Storage', blurb: 'Save in this browser only' },
+  { value: 'download', label: 'Download XML', blurb: 'Download the RSS feed as an XML file' },
+  { value: 'clipboard', label: 'Copy to Clipboard', blurb: 'Copy the RSS XML to your clipboard' },
+  { value: 'hosted', label: 'Host on MSP', blurb: 'Permanent URL hosted on MSP — use in any podcast app' },
+  { value: 'podcastIndex', label: 'Submit to PodcastIndex', blurb: 'Submit a feed URL so apps can discover it' },
+  { value: 'nostrMusic', label: 'Publish to Nostr Music', blurb: 'Per-track Nostr events for Wavlake / Fountain' },
+  { value: 'nostr', label: 'Save RSS feed to Nostr', blurb: 'Back up the full RSS inside a Nostr event', experimental: true },
+  { value: 'blossom', label: 'Publish RSS feed to a Blossom server', blurb: 'Host the RSS on a Blossom server', experimental: true },
+  { value: 'nsite', label: 'Publish RSS feed to nsite', blurb: 'Publish the RSS as an nsite web URL', experimental: true },
+];
+
 interface SaveModalProps {
   onClose: () => void;
   album: Album;
@@ -42,7 +65,9 @@ interface SaveModalProps {
 export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', isDirty, isLoggedIn, onImport }: SaveModalProps) {
   const { state: nostrState } = useNostr();
   const { showExperimental } = useExperimental();
-  const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'nsite' | 'hosted' | 'podcastIndex'>('local');
+  const [mode, setMode] = useState<SaveMode>('local');
+  const [destOpen, setDestOpen] = useState(false);
+  const destRef = useRef<HTMLDivElement>(null);
   const isPublisherMode = feedType === 'publisher';
   const isVideoMode = feedType === 'video';
 
@@ -130,6 +155,18 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
       setMode('local');
     }
   }, [showExperimental, mode]);
+
+  // Close the destination dropdown when clicking outside it
+  useEffect(() => {
+    if (!destOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (destRef.current && !destRef.current.contains(event.target as Node)) {
+        setDestOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [destOpen]);
 
   // Auto-fill the Podcast Index submission URL from whichever hosted URL we have
   useEffect(() => {
@@ -605,6 +642,15 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
     }
   };
 
+  // Which destinations are visible given login / publisher / experimental state.
+  const isDestinationVisible = (value: SaveMode): boolean => {
+    if (value === 'nostrMusic') return !isPublisherMode && isLoggedIn;
+    if (value === 'nostr' || value === 'blossom' || value === 'nsite') return showExperimental && isLoggedIn;
+    return true;
+  };
+  const visibleDestinations = SAVE_DESTINATIONS.filter((d) => isDestinationVisible(d.value));
+  const selectedDestination = SAVE_DESTINATIONS.find((d) => d.value === mode) ?? SAVE_DESTINATIONS[0];
+
   return (
     <>
       <ModalWrapper
@@ -656,22 +702,48 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
         }
       >
           <div className="form-group" style={{ marginBottom: '16px' }}>
-            <label className="form-label">Save Destination</label>
-            <select
-              className="form-select"
-              value={mode}
-              onChange={(e) => setMode(e.target.value as typeof mode)}
-            >
-              <option value="local">Local Storage</option>
-              <option value="download">Download XML</option>
-              <option value="clipboard">Copy to Clipboard</option>
-              <option value="hosted">Host on MSP</option>
-              <option value="podcastIndex">Submit to PodcastIndex</option>
-              {!isPublisherMode && isLoggedIn && <option value="nostrMusic">Publish to Nostr Music</option>}
-              {showExperimental && isLoggedIn && <option value="nostr">Save RSS feed to Nostr 🧪</option>}
-              {showExperimental && isLoggedIn && <option value="blossom">Publish RSS feed to a Blossom server 🧪</option>}
-              {showExperimental && isLoggedIn && <option value="nsite">Publish RSS feed to nsite 🧪</option>}
-            </select>
+            <label className="form-label" id="save-dest-label">Save Destination</label>
+            <div className="save-dest" ref={destRef}>
+              <button
+                type="button"
+                className="save-dest-trigger"
+                aria-haspopup="listbox"
+                aria-expanded={destOpen}
+                aria-labelledby="save-dest-label"
+                onClick={() => setDestOpen((o) => !o)}
+                onKeyDown={(e) => { if (e.key === 'Escape') setDestOpen(false); }}
+              >
+                <span className="save-dest-trigger-text">
+                  <span className="label">{selectedDestination.label}{selectedDestination.experimental ? ' 🧪' : ''}</span>
+                  <span className="blurb">{selectedDestination.blurb}</span>
+                </span>
+                <span className="save-dest-caret" aria-hidden="true">▾</span>
+              </button>
+              {destOpen && (
+                <ul className="save-dest-menu" role="listbox" aria-labelledby="save-dest-label">
+                  {visibleDestinations.map((d) => (
+                    <li
+                      key={d.value}
+                      role="option"
+                      aria-selected={d.value === mode}
+                      tabIndex={0}
+                      className={`save-dest-option${d.value === mode ? ' selected' : ''}`}
+                      onClick={() => { setMode(d.value); setDestOpen(false); }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMode(d.value); setDestOpen(false); }
+                        else if (e.key === 'Escape') setDestOpen(false);
+                      }}
+                    >
+                      <span className="save-dest-option-text">
+                        <span className="label">{d.label}{d.experimental ? ' 🧪' : ''}</span>
+                        <span className="blurb">{d.blurb}</span>
+                      </span>
+                      {d.value === mode && <span className="save-dest-check" aria-hidden="true">✓</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
           <div className="nostr-album-preview">

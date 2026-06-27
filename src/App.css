@@ -251,6 +251,112 @@ body {
   text-align: center;
 }
 
+/* Save Destination custom dropdown (SaveModal) — like .form-select but with
+   a description line per option, which a native <select> can't render. */
+.save-dest {
+  position: relative;
+}
+
+.save-dest-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.save-dest-trigger:focus-visible {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--border-focus);
+}
+
+.save-dest-trigger-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.save-dest-trigger-text .label,
+.save-dest-option .label {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.save-dest-trigger-text .blurb,
+.save-dest-option .blurb {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.save-dest-caret {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.save-dest-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.save-dest-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.save-dest-option:hover,
+.save-dest-option:focus-visible {
+  outline: none;
+  background: var(--bg-secondary);
+}
+
+.save-dest-option.selected {
+  background: var(--border-focus);
+}
+
+.save-dest-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.save-dest-check {
+  flex-shrink: 0;
+  color: var(--accent-primary);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .dropdown-avatar {
   width: 20px;
   height: 20px;
