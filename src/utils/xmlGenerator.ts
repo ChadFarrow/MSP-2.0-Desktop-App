@@ -1,5 +1,5 @@
 // MSP 2.0 - XML Generator for Demu RSS Feeds
-import type { Album, Track, Person, ValueBlock, ValueRecipient, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData } from '../types/feed';
+import type { Album, Track, Person, ValueBlock, ValueRecipient, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData, PodcastImage } from '../types/feed';
 import { formatRFC822Date } from './dateUtils';
 
 // Escape XML special characters
@@ -341,6 +341,12 @@ const generateCommonChannelElements = (data: BaseChannelData, medium: string, le
     lines.push(`${indent(level)}<itunes:image href="${escapeXml(data.imageUrl)}" />`);
   }
 
+  // Podcasting 2.0 additional images
+  (data.podcastImages || []).forEach(img => {
+    const tag = generatePodcastImageXml(img);
+    if (tag) lines.push(`${indent(level)}${tag}`);
+  });
+
   // Medium
   lines.push(`${indent(level)}<podcast:medium>${medium}</podcast:medium>`);
 
@@ -388,6 +394,19 @@ const applyOp3Prefix = (url: string, podcastGuid?: string): string => {
   return `https://op3.dev/e${pgParam}/${urlWithoutProtocol}`;
 };
 
+// Generate a single <podcast:image> element (without indentation). Returns null when href is empty.
+const generatePodcastImageXml = (image: PodcastImage): string | null => {
+  if (!image.href) return null;
+  const attrs = [`href="${escapeXml(image.href)}"`];
+  if (image.purpose) attrs.push(`purpose="${escapeXml(image.purpose)}"`);
+  if (image.alt) attrs.push(`alt="${escapeXml(image.alt)}"`);
+  if (image.aspectRatio) attrs.push(`aspect-ratio="${escapeXml(image.aspectRatio)}"`);
+  if (image.width) attrs.push(`width="${image.width}"`);
+  if (image.height) attrs.push(`height="${image.height}"`);
+  if (image.type) attrs.push(`type="${escapeXml(image.type)}"`);
+  return `<podcast:image ${attrs.join(' ')} />`;
+};
+
 // Generate track/item XML
 const generateTrackXml = (track: Track, album: Album, level: number): string => {
   const lines: string[] = [];
@@ -410,12 +429,12 @@ const generateTrackXml = (track: Track, album: Album, level: number): string => 
   const artUrl = track.trackArtUrl || album.imageUrl;
   if (artUrl) {
     lines.push(`${indent(level + 1)}<itunes:image href="${escapeXml(artUrl)}" />`);
-    // Add podcast:images for better Podcast 2.0 app compatibility
-    const imageAttrs = [`srcset="${escapeXml(artUrl)}"`];
-    if (track.trackArtWidth) imageAttrs.push(`width="${track.trackArtWidth}"`);
-    if (track.trackArtHeight) imageAttrs.push(`height="${track.trackArtHeight}"`);
-    lines.push(`${indent(level + 1)}<podcast:images ${imageAttrs.join(' ')} />`);
   }
+  // Podcasting 2.0 additional images
+  (track.podcastImages || []).forEach(img => {
+    const tag = generatePodcastImageXml(img);
+    if (tag) lines.push(`${indent(level + 1)}${tag}`);
+  });
 
   // Enclosure (audio file)
   const fileLength = track.enclosureLength || '0';

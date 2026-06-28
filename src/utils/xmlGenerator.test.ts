@@ -256,3 +256,31 @@ describe('Person npub attribute', () => {
     expect(parsed.persons[0].roles).toEqual([{ group: 'music', role: 'drummer' }]);
   });
 });
+
+describe('podcast:image generation', () => {
+  it('emits a channel-level <podcast:image> for each album image, with only non-empty attrs', () => {
+    const album = createEmptyAlbum();
+    album.title = 'Test';
+    album.podcastImages = [
+      { href: 'https://x.com/canvas.jpg', purpose: 'canvas', alt: 'wide bg', aspectRatio: '16/9', width: 1920, height: 1080, type: 'image/jpeg' },
+    ];
+    const xml = generateRssFeed(album);
+    expect(xml).toContain('<podcast:image href="https://x.com/canvas.jpg" purpose="canvas" alt="wide bg" aspect-ratio="16/9" width="1920" height="1080" type="image/jpeg" />');
+  });
+
+  it('emits an item-level <podcast:image> for track images', () => {
+    const album = createEmptyAlbum();
+    album.tracks[0].title = 'Song';
+    album.tracks[0].podcastImages = [{ href: 'https://x.com/t.png', purpose: 'banner' }];
+    const xml = generateRssFeed(album);
+    expect(xml).toContain('<podcast:image href="https://x.com/t.png" purpose="banner" />');
+  });
+
+  it('no longer emits the deprecated <podcast:images> tag', () => {
+    const album = createEmptyAlbum();
+    album.tracks[0].trackArtUrl = 'https://x.com/art.jpg';
+    album.tracks[0].trackArtWidth = 3000;
+    const xml = generateRssFeed(album);
+    expect(xml).not.toContain('<podcast:images');
+  });
+});

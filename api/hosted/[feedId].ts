@@ -101,6 +101,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     switch (req.method) {
       case 'GET': {
+        // Legacy-host migration: feeds first hosted under msp.podtards.com were
+        // submitted to Podcast Index with that URL. Return a literal 301 to the
+        // canonical domain so apps/PI move the subscription. Exact-host match +
+        // canonical target means musicsideproject.com / preview hosts never loop.
+        const host = ((req.headers['x-forwarded-host'] || req.headers.host || '') as string).toLowerCase();
+        if (host === 'msp.podtards.com') {
+          res.setHeader('Location', `${getBaseUrl()}/api/hosted/${feedId}.xml`);
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          return res.status(301).end();
+        }
+
         // List backups for this feed (admin only)
         if ('backups' in req.query) {
           if (!isAdmin) {
@@ -139,9 +151,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const blobResponse = await fetch(blob.url);
         const content = await blobResponse.text();
 
-        // Set cache and CORS headers
+        // Set cache and CORS headers. application/xml (not application/rss+xml)
+        // so browsers render the feed inline in a tab instead of downloading it;
+        // podcast apps / Podcast Index parse either content-type the same.
         res.setHeader('Cache-Control', 'public, max-age=300');
-        res.setHeader('Content-Type', 'application/rss+xml');
+        res.setHeader('Content-Type', 'application/xml; charset=utf-8');
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
 
@@ -306,7 +320,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Notify Podcast Index and get PI ID (may update existing ID)
         // Skip PI/podping when in draft mode
-        const stableUrl = `${getBaseUrl(req)}/api/hosted/${feedId}.xml`;
+        const stableUrl = `${getBaseUrl()}/api/hosted/${feedId}.xml`;
         const medium = extractPodcastMedium(xml);
         let podcastIndexId: number | undefined;
         if (!effectiveIsDraft) {

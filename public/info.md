@@ -34,6 +34,8 @@ Any questions reach out.
 
 Mastodon - @ChadF@podcastindex.social
 
+Twitter/X - https://x.com/msp2app
+
 Nostr - npub177fz5zkm87jdmf0we2nz7mm7uc2e7l64uzqrv6rvdrsg8qkrg7yqx0aaq7
 
 Email - SirChadF@proton.me

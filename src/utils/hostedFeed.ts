@@ -164,14 +164,13 @@ export async function deleteHostedFeed(
 }
 
 /**
- * Build the stable URL for a hosted feed
- * Uses VITE_CANONICAL_URL env var if set, otherwise falls back to current origin
+ * Build the stable URL for a hosted feed.
+ * Always uses the canonical domain (VITE_CANONICAL_URL, else musicsideproject.com)
+ * so feed URLs never bake in a preview/legacy host like msp.podtards.com.
  */
 export function buildHostedUrl(feedId: string): string {
-  const canonicalUrl = import.meta.env.VITE_CANONICAL_URL;
-  const origin = canonicalUrl
-    || (window.location.hostname === 'localhost' ? 'https://msp.podtards.com' : window.location.origin);
-  return `${origin}/api/hosted/${feedId}.xml`;
+  const base = (import.meta.env.VITE_CANONICAL_URL || 'https://musicsideproject.com').replace(/\/$/, '');
+  return `${base}/api/hosted/${feedId}.xml`;
 }
 
 /**
