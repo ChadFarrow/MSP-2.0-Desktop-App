@@ -8,6 +8,7 @@ import { Toggle } from '../Toggle';
 import { RecipientsList } from '../RecipientsList';
 import { FundingFields } from '../FundingFields';
 import { ArtworkFields } from '../ArtworkFields';
+import { PodcastImagesList } from '../PodcastImagesList';
 import { CreditsSection } from './CreditsSection';
 import { PublisherLookupSection } from './PublisherLookupSection';
 import { TracksSection } from './TracksSection';
@@ -164,6 +165,10 @@ export function Editor() {
             urlPlaceholder={isVideo ? "https://example.com/video-art.jpg" : "https://example.com/album-art.jpg"}
             titlePlaceholder={isVideo ? "Video cover description" : "Album cover description"}
             previewAlt={isVideo ? "Video preview" : "Album preview"}
+          />
+          <PodcastImagesList
+            images={album.podcastImages || []}
+            onChange={images => dispatch({ type: 'UPDATE_ALBUM', payload: { podcastImages: images } })}
           />
         </Section>
 

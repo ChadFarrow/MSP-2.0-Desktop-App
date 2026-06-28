@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { parseRssFeed, parsePublisherRssFeed, isVideoFeed, isPublisherFeed } from './xmlParser';
-import { generateRssFeed } from './xmlGenerator';
+import { generateRssFeed, generatePublisherRssFeed } from './xmlGenerator';
+import { createEmptyPublisherFeed } from '../types/feed';
 
 // Mock apiFetch (used by fetchFeedFromUrl, not by parsers directly, but imported)
 vi.mock('./api', () => ({
@@ -753,5 +754,64 @@ describe('legacy MSP 1.0 recipient migration on import', () => {
 
     expect(trackRecipient?.address).toBe('chadf@getalby.com');
     expect(trackRecipient?.type).toBe('lnaddress');
+  });
+});
+
+describe('podcast:image parsing', () => {
+  const wrap = (channelExtra: string, itemExtra: string) => `<?xml version="1.0"?>
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:podcast="https://podcastindex.org/namespace/1.0">
+  <channel>
+    <title>Test</title>
+    ${channelExtra}
+    <item>
+      <title>Song</title>
+      <guid isPermaLink="false">g1</guid>
+      ${itemExtra}
+    </item>
+  </channel>
+</rss>`;
+
+  it('parses a channel-level podcast:image into album.podcastImages with numeric dims and aspectRatio', () => {
+    const xml = wrap('<podcast:image href="https://x.com/c.jpg" purpose="canvas" alt="bg" aspect-ratio="16/9" width="1920" height="1080" type="image/jpeg" />', '');
+    const album = parseRssFeed(xml);
+    expect(album.podcastImages).toEqual([
+      { href: 'https://x.com/c.jpg', purpose: 'canvas', alt: 'bg', aspectRatio: '16/9', width: 1920, height: 1080, type: 'image/jpeg' },
+    ]);
+  });
+
+  it('parses multiple item-level podcast:image entries into track.podcastImages', () => {
+    const xml = wrap('', '<podcast:image href="https://x.com/a.jpg" purpose="banner" /><podcast:image href="https://x.com/b.jpg" purpose="social" />');
+    const album = parseRssFeed(xml);
+    expect(album.tracks[0].podcastImages).toEqual([
+      { href: 'https://x.com/a.jpg', purpose: 'banner' },
+      { href: 'https://x.com/b.jpg', purpose: 'social' },
+    ]);
+  });
+
+  it('still parses the legacy podcast:images tag into trackArtUrl', () => {
+    const xml = wrap('', '<podcast:images srcset="https://x.com/legacy.jpg" width="3000" height="3000" />');
+    const album = parseRssFeed(xml);
+    expect(album.tracks[0].trackArtUrl).toBe('https://x.com/legacy.jpg');
+  });
+
+  it('round-trips podcastImages through generate -> parse', () => {
+    const album = parseRssFeed(wrap('', ''));
+    album.podcastImages = [{ href: 'https://x.com/c.jpg', purpose: 'canvas', aspectRatio: '16/9', width: 1920, height: 1080 }];
+    album.tracks[0].podcastImages = [{ href: 'https://x.com/t.png', purpose: 'banner' }];
+    const reparsed = parseRssFeed(generateRssFeed(album));
+    expect(reparsed.podcastImages).toEqual(album.podcastImages);
+    expect(reparsed.tracks[0].podcastImages).toEqual(album.tracks[0].podcastImages);
+  });
+});
+
+describe('podcast:image on publisher feeds', () => {
+  it('round-trips publisher podcastImages through generate -> parse', () => {
+    const publisher = createEmptyPublisherFeed();
+    publisher.title = 'Test Label';
+    publisher.podcastImages = [
+      { href: 'https://x.com/logo-wide.jpg', purpose: 'banner', aspectRatio: '4/1', width: 2000, height: 500 },
+    ];
+    const reparsed = parsePublisherRssFeed(generatePublisherRssFeed(publisher));
+    expect(reparsed.podcastImages).toEqual(publisher.podcastImages);
   });
 });

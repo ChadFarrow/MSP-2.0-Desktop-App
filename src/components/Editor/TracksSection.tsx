@@ -11,6 +11,7 @@ import { InfoIcon } from '../InfoIcon';
 import { Section } from '../Section';
 import { Toggle } from '../Toggle';
 import { AddRecipientSelect } from '../AddRecipientSelect';
+import { PodcastImagesList } from '../PodcastImagesList';
 
 interface TracksSectionProps {
   tracks: Track[];
@@ -362,6 +363,11 @@ export function TracksSection({ tracks, isVideo, dispatch }: TracksSectionProps)
                   })}
                 />
               </div>
+              <PodcastImagesList
+                label="Additional Track Images"
+                images={track.podcastImages || []}
+                onChange={images => dispatch({ type: 'UPDATE_TRACK', payload: { index, track: { podcastImages: images } } })}
+              />
               <div className="form-group">
                 <label className="form-label">Lyrics URL<InfoIcon text={FIELD_INFO.transcriptUrl} /></label>
                 <input

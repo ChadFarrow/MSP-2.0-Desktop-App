@@ -1,5 +1,4 @@
 // Shared API utilities for hosted feed endpoints
-import type { VercelRequest } from '@vercel/node';
 import { createHash, timingSafeEqual } from 'crypto';
 import { getAuthHeaders } from './podcastIndex.js';
 
@@ -105,7 +104,7 @@ export async function notifyPodcastIndex(
 
   // Broadcast feed update via self-hosted hivepinger (no-ops without PODPING_ENDPOINT_URL + PODPING_BEARER_TOKEN).
   // Intentionally not awaited so PI submission isn't blocked; surface failures to function logs.
-  notifyPodping(feedUrl, { medium: options.medium }).then((result) => {
+  notifyPodping(feedUrl, { reason: 'update', medium: options.medium }).then((result) => {
     if (!result.ok) {
       console.warn(`Podping broadcast failed for ${feedUrl}: ${result.error ?? 'unknown'}`);
     }
@@ -169,21 +168,14 @@ export async function lookupPodcastIndexId(podcastGuid: string): Promise<number 
 }
 
 /**
- * Get base URL from request headers
- * Falls back to canonical URL for localhost (PI can't reach local dev servers)
+ * Get the canonical base URL for hosted feed links.
  */
-export function getBaseUrl(req: VercelRequest): string {
-  const hostHeader = req.headers['x-forwarded-host'] ?? req.headers.host;
-  const host = (Array.isArray(hostHeader) ? hostHeader[0] : hostHeader) || 'localhost';
-
-  // Use canonical URL for localhost since PI can't reach local dev servers
-  if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
-    return process.env.CANONICAL_URL || 'https://msp.podtards.com';
-  }
-
-  const protoHeader = req.headers['x-forwarded-proto'];
-  const proto = (Array.isArray(protoHeader) ? protoHeader[0] : protoHeader) || 'https';
-  return `${proto}://${host}`;
+export function getBaseUrl(): string {
+  // Always use the canonical domain for hosted feed URLs so every feed (album,
+  // video, publisher) is stable regardless of which alias/preview host served the
+  // request. msp.podtards.com is a legacy alias and must never appear in newly
+  // generated feed URLs.
+  return (process.env.CANONICAL_URL || 'https://musicsideproject.com').replace(/\/$/, '');
 }
 
 /**
