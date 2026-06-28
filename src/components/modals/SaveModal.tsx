@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { generateRssFeed, generatePublisherRssFeed, downloadXml, copyToClipboard } from '../../utils/xmlGenerator';
 import { saveFeedToNostr, publishNostrMusicTracks, deleteNostrMusicTracks } from '../../utils/nostrSync';
 import { uploadFeedToBlossom } from '../../utils/blossom';
@@ -27,6 +28,28 @@ import { apiFetch, isTauri } from '../../utils/api';
 
 const DEFAULT_BLOSSOM_SERVER = 'https://blossom.primal.net/';
 
+type SaveMode = 'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'hosted' | 'podcastIndex' | 'podping';
+
+interface SaveDestination {
+  value: SaveMode;
+  label: string;
+  blurb: string;
+}
+
+// Single source of truth for the destination dropdown. `blurb` is the short
+// inline description; the richer wording lives in the ℹ️ help popup below.
+const SAVE_DESTINATIONS: SaveDestination[] = [
+  { value: 'local', label: isTauri() ? 'Save to Computer' : 'Local Storage', blurb: isTauri() ? 'Save in this app on this computer only' : 'Save in this browser only' },
+  { value: 'download', label: 'Download XML', blurb: 'Download the RSS feed as an XML file' },
+  { value: 'clipboard', label: 'Copy to Clipboard', blurb: 'Copy the RSS XML to your clipboard' },
+  { value: 'hosted', label: 'Host on MSP', blurb: 'Permanent URL hosted on MSP — use in any podcast app' },
+  { value: 'podcastIndex', label: 'Submit to Podcast Index', blurb: 'Notify Podcast Index so apps re-crawl your feed' },
+  { value: 'podping', label: 'Send Podping', blurb: 'Broadcast a podping so apps know the feed updated' },
+  { value: 'nostr', label: 'Save RSS feed to Nostr', blurb: 'Back up the full RSS inside a Nostr event' },
+  { value: 'nostrMusic', label: 'Publish to Nostr Music', blurb: 'Per-track Nostr events for Nostr-native music apps like Sunami' },
+  { value: 'blossom', label: 'Publish RSS feed to a Blossom server', blurb: 'Host the RSS on a Blossom server' },
+];
+
 interface SaveModalProps {
   onClose: () => void;
   album: Album;
@@ -41,7 +64,11 @@ interface SaveModalProps {
 
 export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', isDirty, isLoggedIn, onImport, onLocalFeedSaved, currentLocalFeedId }: SaveModalProps) {
   const { state: nostrState } = useNostr();
-  const [mode, setMode] = useState<'local' | 'download' | 'clipboard' | 'nostr' | 'nostrMusic' | 'blossom' | 'hosted' | 'podcastIndex' | 'podping'>('local');
+  const [mode, setMode] = useState<SaveMode>('local');
+  const [destOpen, setDestOpen] = useState(false);
+  const [destMenuPos, setDestMenuPos] = useState<{ left: number; width: number; top?: number; bottom?: number; maxHeight: number } | null>(null);
+  const destRef = useRef<HTMLDivElement>(null);
+  const destMenuRef = useRef<HTMLUListElement>(null);
   const isPublisherMode = feedType === 'publisher';
   const isVideoMode = feedType === 'video';
 
@@ -134,6 +161,55 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
       setPendingToken(generateEditToken());
     }
   }, [mode, hostedInfo, legacyHostedInfo, pendingToken, showRestore]);
+
+  // Close the destination dropdown when clicking outside it. The menu is
+  // portaled to <body> (to escape the modal's overflow clipping), so the
+  // outside check has to ignore the portaled menu too.
+  useEffect(() => {
+    if (!destOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (destRef.current?.contains(target) || destMenuRef.current?.contains(target)) return;
+      setDestOpen(false);
+    };
+    // The fixed-positioned menu detaches from the trigger when the page/modal
+    // scrolls, so close it — but ignore the menu's OWN internal scroll (capture
+    // phase sees it), otherwise scrolling the option list would close the menu.
+    const handleScroll = (e: Event) => {
+      if (destMenuRef.current && e.target instanceof Node && destMenuRef.current.contains(e.target)) return;
+      setDestOpen(false);
+    };
+    const handleResize = () => setDestOpen(false);
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [destOpen]);
+
+  // Measure the trigger so the portaled menu sits beside it, sized to the
+  // available viewport space (flipping above when there's more room there).
+  const openDestMenu = () => {
+    if (destRef.current) {
+      const r = destRef.current.getBoundingClientRect();
+      const margin = 8;
+      const spaceBelow = window.innerHeight - r.bottom - margin;
+      const spaceAbove = r.top - margin;
+      const placeAbove = spaceBelow < 240 && spaceAbove > spaceBelow;
+      // Keep the menu compact (it scrolls internally) but never taller than the
+      // space available on the chosen side.
+      const CAP = 340;
+      setDestMenuPos(
+        placeAbove
+          ? { left: r.left, width: r.width, bottom: window.innerHeight - r.top + 4, maxHeight: Math.min(spaceAbove, CAP) }
+          : { left: r.left, width: r.width, top: r.bottom + 4, maxHeight: Math.min(spaceBelow, CAP) }
+      );
+    }
+    setDestOpen(true);
+  };
 
   // Check for existing hosted feed on mount, and apply pending credentials
   useEffect(() => {
@@ -602,6 +678,15 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
     }
   };
 
+  // Which destinations are visible given login / publisher state.
+  const isDestinationVisible = (value: SaveMode): boolean => {
+    if (value === 'nostrMusic') return !isPublisherMode && isLoggedIn;
+    if (value === 'nostr' || value === 'blossom') return isLoggedIn;
+    return true;
+  };
+  const visibleDestinations = SAVE_DESTINATIONS.filter((d) => isDestinationVisible(d.value));
+  const selectedDestination = SAVE_DESTINATIONS.find((d) => d.value === mode) ?? SAVE_DESTINATIONS[0];
+
   return (
     <>
       <ModalWrapper
@@ -651,22 +736,55 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
         }
       >
           <div className="form-group" style={{ marginBottom: '16px' }}>
-            <label className="form-label">Save Destination</label>
-            <select
-              className="form-select"
-              value={mode}
-              onChange={(e) => setMode(e.target.value as typeof mode)}
-            >
-              <option value="local">{isTauri() ? 'Save to Computer' : 'Local Storage'}</option>
-              <option value="download">Download XML</option>
-              <option value="clipboard">Copy to Clipboard</option>
-              <option value="hosted">Host on MSP</option>
-              <option value="podcastIndex">Submit to Podcast Index</option>
-              <option value="podping">Send Podping</option>
-              {isLoggedIn && <option value="nostr">Save RSS feed to Nostr</option>}
-              {!isPublisherMode && isLoggedIn && <option value="nostrMusic">Publish to Nostr Music</option>}
-              {isLoggedIn && <option value="blossom">Publish RSS feed to a Blossom server</option>}
-            </select>
+            <label className="form-label" id="save-dest-label">Save Destination</label>
+            <div className="save-dest" ref={destRef}>
+              <button
+                type="button"
+                className="save-dest-trigger"
+                aria-haspopup="listbox"
+                aria-expanded={destOpen}
+                aria-labelledby="save-dest-label"
+                onClick={() => (destOpen ? setDestOpen(false) : openDestMenu())}
+                onKeyDown={(e) => { if (e.key === 'Escape') setDestOpen(false); }}
+              >
+                <span className="save-dest-trigger-text">
+                  <span className="label">{selectedDestination.label}</span>
+                  <span className="blurb">{selectedDestination.blurb}</span>
+                </span>
+                <span className="save-dest-caret" aria-hidden="true">▾</span>
+              </button>
+              {destOpen && destMenuPos && createPortal(
+                <ul
+                  ref={destMenuRef}
+                  className="save-dest-menu"
+                  role="listbox"
+                  aria-labelledby="save-dest-label"
+                  style={{ top: destMenuPos.top, bottom: destMenuPos.bottom, left: destMenuPos.left, width: destMenuPos.width, maxHeight: destMenuPos.maxHeight }}
+                >
+                  {visibleDestinations.map((d) => (
+                    <li
+                      key={d.value}
+                      role="option"
+                      aria-selected={d.value === mode}
+                      tabIndex={0}
+                      className={`save-dest-option${d.value === mode ? ' selected' : ''}`}
+                      onClick={() => { setMode(d.value); setDestOpen(false); }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMode(d.value); setDestOpen(false); }
+                        else if (e.key === 'Escape') setDestOpen(false);
+                      }}
+                    >
+                      <span className="save-dest-option-text">
+                        <span className="label">{d.label}</span>
+                        <span className="blurb">{d.blurb}</span>
+                      </span>
+                      {d.value === mode && <span className="save-dest-check" aria-hidden="true">✓</span>}
+                    </li>
+                  ))}
+                </ul>,
+                document.body
+              )}
+            </div>
           </div>
 
           <div className="nostr-album-preview">
