@@ -51,7 +51,10 @@ export async function fetchNostrProfile(
 
     const results = await Promise.allSettled(
       relays.map(async (relayUrl) => {
-        const ws = await connectRelay(relayUrl, 3000);
+        // Single attempt, no retries: this is a read gated by Promise.allSettled,
+        // so a dead relay's default 5× exponential-backoff retry (~30s) would
+        // stall the whole fetch — and the identity card — until it gives up.
+        const ws = await connectRelay(relayUrl, 3000, 1);
         try {
           const subId = Math.random().toString(36).substring(7);
           const filter = {
@@ -221,7 +224,10 @@ export async function loadAlbumsFromNostr(
     // Query each relay
     const results = await Promise.allSettled(
       relays.map(async (relayUrl) => {
-        const ws = await connectRelay(relayUrl);
+        // Single attempt, no retries: gated by Promise.allSettled, so a dead
+        // relay's default 5× exponential-backoff retry (~55s at 8s timeout)
+        // would stall the whole fan-out read until it gives up.
+        const ws = await connectRelay(relayUrl, 3000, 1);
         try {
           const subId = Math.random().toString(36).substring(7);
           const filter = {
@@ -299,7 +305,10 @@ export async function loadAlbumByDTag(
     // Query each relay
     const results = await Promise.allSettled(
       relays.map(async (relayUrl) => {
-        const ws = await connectRelay(relayUrl);
+        // Single attempt, no retries: gated by Promise.allSettled, so a dead
+        // relay's default 5× exponential-backoff retry (~55s at 8s timeout)
+        // would stall the whole fan-out read until it gives up.
+        const ws = await connectRelay(relayUrl, 3000, 1);
         try {
           const subId = Math.random().toString(36).substring(7);
           const filter = {
@@ -391,7 +400,10 @@ export async function fetchNostrMusicTracks(
     // Query each relay
     const results = await Promise.allSettled(
       relays.map(async (relayUrl) => {
-        const ws = await connectRelay(relayUrl);
+        // Single attempt, no retries: gated by Promise.allSettled, so a dead
+        // relay's default 5× exponential-backoff retry (~55s at 8s timeout)
+        // would stall the whole fan-out read until it gives up.
+        const ws = await connectRelay(relayUrl, 3000, 1);
         try {
           const subId = Math.random().toString(36).substring(7);
           const filter = {
