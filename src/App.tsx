@@ -220,12 +220,16 @@ function AppContent() {
                   >
                     {theme === 'dark' ? '☀️' : '🌙'} Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode
                   </button>
-                  <button
-                    className="dropdown-item"
-                    onClick={() => { toggleExperimental(); setShowDropdown(false); }}
-                  >
-                    🧪 {showExperimental ? 'Hide' : 'Show'} Experimental Features
-                  </button>
+                  {/* Local dev only — gated on import.meta.env.DEV so the experimental
+                      toggle is tree-shaken out of production builds */}
+                  {import.meta.env.DEV && (
+                    <button
+                      className="dropdown-item"
+                      onClick={() => { toggleExperimental(); setShowDropdown(false); }}
+                    >
+                      🧪 {showExperimental ? 'Hide' : 'Show'} Experimental Features
+                    </button>
+                  )}
                   <div className="dropdown-divider" />
                   {nostrState.isLoggedIn ? (
                     <button
