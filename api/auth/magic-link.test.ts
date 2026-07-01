@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const mockList = vi.fn();
 vi.mock('@vercel/blob', () => ({ list: mockList, put: vi.fn(), del: vi.fn() }));
@@ -19,12 +20,12 @@ vi.stubGlobal('fetch', mockFetch);
 import { hashToken } from '../_utils/feedUtils';
 
 function mockReqRes(method: string, body: unknown, ip = '9.9.9.9') {
-  const req = { method, body, headers: { 'x-forwarded-for': ip } } as any;
+  const req = { method, body, headers: { 'x-forwarded-for': ip } } as unknown as VercelRequest;
   const res = {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
     setHeader: vi.fn().mockReturnThis()
-  } as any;
+  } as unknown as VercelResponse;
   return { req, res };
 }
 

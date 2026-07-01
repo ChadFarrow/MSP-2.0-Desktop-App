@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const mockGetFeedIds = vi.fn();
 vi.mock('../_utils/accountStore.js', () => ({
@@ -13,8 +14,8 @@ vi.mock('../_utils/feedHydrate.js', () => ({
 import { signSession } from '../_utils/emailAuth';
 
 function mockReqRes(method: string, headers: Record<string, string> = {}) {
-  const req = { method, headers } as any;
-  const res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() } as any;
+  const req = { method, headers } as unknown as VercelRequest;
+  const res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() } as unknown as VercelResponse;
   return { req, res };
 }
 

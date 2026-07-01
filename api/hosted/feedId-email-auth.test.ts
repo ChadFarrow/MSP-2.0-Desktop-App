@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const mockList = vi.fn();
 const mockPut = vi.fn();
@@ -51,14 +52,14 @@ function configureBlobs(metaObj: Record<string, unknown> | null) {
 }
 
 function reqRes(method: string, opts: { headers?: Record<string, string>; body?: unknown } = {}) {
-  const req = { method, query: { feedId: FEED }, headers: opts.headers ?? {}, body: opts.body } as any;
+  const req = { method, query: { feedId: FEED }, headers: opts.headers ?? {}, body: opts.body } as unknown as VercelRequest;
   const res = {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
     send: vi.fn().mockReturnThis(),
     setHeader: vi.fn().mockReturnThis(),
     end: vi.fn().mockReturnThis()
-  } as any;
+  } as unknown as VercelResponse;
   return { req, res };
 }
 

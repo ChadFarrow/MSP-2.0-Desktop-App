@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const mockList = vi.fn();
 const mockPut = vi.fn();
@@ -17,8 +18,8 @@ vi.stubGlobal('fetch', mockFetch);
 import { verifySession } from '../_utils/emailAuth';
 
 function mockReqRes(method: string, body: unknown) {
-  const req = { method, body, headers: {} } as any;
-  const res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() } as any;
+  const req = { method, body, headers: {} } as unknown as VercelRequest;
+  const res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() } as unknown as VercelResponse;
   return { req, res };
 }
 
