@@ -24,7 +24,7 @@ import { AdminPage } from './components/admin/AdminPage';
 import { VerifyMagicLink } from './pages/VerifyMagicLink';
 import type { Album } from './types/feed';
 import mspLogo from './assets/msp-logo.png';
-import podcastIndexLogo from './assets/podcastindex-logo.png';
+import { PodcastIndexIcon } from './components/PodcastIndexIcon';
 import './App.css';
 
 // Main App Content (needs access to context)
@@ -339,7 +339,7 @@ function AppContent() {
               color: piFeedId ? 'var(--success, #10b981)' : undefined,
             }}
           >
-            <img className="bottom-toolbar-icon-img" src={podcastIndexLogo} alt="" />
+            <PodcastIndexIcon className="bottom-toolbar-icon-img" />
             <span className="bottom-toolbar-label">Podcast Index</span>
           </button>
           <button
