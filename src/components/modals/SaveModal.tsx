@@ -26,6 +26,7 @@ import {
 import { albumStorage, videoStorage, publisherStorage, pendingHostedStorage } from '../../utils/storage';
 import { getEmailSession, isEmailLoggedIn } from '../../utils/emailSession';
 import { EmailLoginModal } from '../auth/EmailLoginModal';
+import { SignInPrompt } from '../auth/SignInPrompt';
 import { NostrConnectModal } from './NostrConnectModal';
 import { useNostr } from '../../store/nostrStore';
 import { useExperimental } from '../../store/experimentalStore';
@@ -109,7 +110,6 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   const [restoreLoading, setRestoreLoading] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [pendingToken, setPendingToken] = useState<string | null>(null);
-  const [tokenAcknowledged, setTokenAcknowledged] = useState(false);
   const [linkingNostr, setLinkingNostr] = useState(false);
   const [linkingEmail, setLinkingEmail] = useState(false);
   const [emailModal, setEmailModal] = useState<null | { mode: 'login' } | { mode: 'claim' }>(null);
@@ -153,9 +153,12 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   // Helper to determine if button should be disabled
   const isButtonDisabled = () => {
     if (loading) return true;
-    // Signed-in users (email or Nostr) don't need to babysit a token — their identity
-    // is the recovery — so the "I saved my token" gate only applies to anonymous hosting.
-    if (mode === 'hosted' && !hostedInfo && !legacyHostedInfo && !tokenAcknowledged && !isEmailLoggedIn() && !isLoggedIn) return true;
+    // Every MSP-hosting write (create a new feed OR update an existing one) now
+    // requires being signed in with email or Nostr. The edit token alone no longer
+    // authorizes a save from the main button — it's only used to auto-claim a
+    // token-owned feed onto the account on the first signed-in save. (Token holders
+    // can still recover a feed via the "Restore" panel below.)
+    if (mode === 'hosted' && !isEmailLoggedIn() && !isLoggedIn) return true;
     if (mode === 'podcastIndex' && (!podcastIndexSubmitUrl.trim() || !!podcastIndexUrlError)) return true;
     return false;
   };
@@ -414,7 +417,10 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
     // For NIP-46 remote signers (Primal, Amber) this may require the user to approve
     // in their signer app — show a hint so they know to switch apps.
     const nostrSignModes = ['nostr', 'nostrMusic', 'blossom', 'nsite'] as const;
-    if ((nostrSignModes as readonly string[]).includes(mode)) {
+    // Hosted saves also sign with Nostr when the user is logged in with Nostr
+    // (creating/claiming/updating an account-owned feed), so pre-flight those too.
+    const hostedWillSignNostr = mode === 'hosted' && isLoggedIn && !!nostrState.user?.pubkey;
+    if ((nostrSignModes as readonly string[]).includes(mode) || hostedWillSignNostr) {
       setMessage({ type: 'success', text: 'Connecting to signer — if using a remote signer (Primal, Amber), open the app and approve now.' });
       const health = await checkSignerConnection();
       setMessage(null);
@@ -549,16 +555,64 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
           }
 
           if (hostedInfo) {
-            // Update existing feed - prefer Nostr, then email session, else token
+            // Saving changes to an existing hosted feed now requires being signed in.
+            // The edit token alone no longer authorizes an update here.
+            const nostrAvailable = isLoggedIn && !!nostrState.user?.pubkey;
+            const emailAvailable = isEmailLoggedIn();
+            if (!nostrAvailable && !emailAvailable) {
+              setMessage({ type: 'error', text: 'Sign in with email or Nostr to save changes to your hosted feed.' });
+              setLoading(false);
+              return;
+            }
+
+            // Pick the update path by which identity actually OWNS the feed
+            // (matching the server's auth ladder) — a feed claimed by email must
+            // update via the email session even if the user is also Nostr-logged-in,
+            // and vice versa. Only unclaimed feeds fall back to the login method.
+            const useNostr = isNostrLinked ? true : isEmailLinked ? false : nostrAvailable;
+            const useEmail = !useNostr && emailAvailable;
+
+            // If the feed is still token-owned, saving auto-claims it onto the
+            // signed-in account (best-effort) so the token is retired going forward.
+            let claimed: 'nostr' | 'email' | null = null;
+            if (useNostr && !isNostrLinked && hostedInfo.editToken) {
+              try {
+                await linkNostrToFeed(hostedInfo.feedId, hostedInfo.editToken);
+                claimed = 'nostr';
+              } catch (claimErr) {
+                console.warn('Auto-claim to Nostr failed:', claimErr);
+              }
+            } else if (useEmail && !isEmailLinked && hostedInfo.editToken) {
+              try {
+                await linkEmailToFeed(hostedInfo.feedId, hostedInfo.editToken);
+                claimed = 'email';
+              } catch (claimErr) {
+                console.warn('Auto-claim to email failed:', claimErr);
+              }
+            }
+
             let updateResult;
-            if (isNostrLinked) {
-              updateResult = await updateHostedFeedWithNostr(hostedInfo.feedId, hostedXml, currentFeedTitle, isDraft);
-            } else if (isEmailLinked) {
-              updateResult = await updateHostedFeedWithEmail(hostedInfo.feedId, hostedXml, currentFeedTitle, isDraft);
-            } else {
+            try {
+              updateResult = useNostr
+                ? await updateHostedFeedWithNostr(hostedInfo.feedId, hostedXml, currentFeedTitle, isDraft)
+                : await updateHostedFeedWithEmail(hostedInfo.feedId, hostedXml, currentFeedTitle, isDraft);
+            } catch (updateErr) {
+              // The account-owned path can fail while a valid edit token is in hand:
+              // the auto-claim above failed (signer rejected, network blip), the feed
+              // predates .meta.json (PATCH 404s, PUT demands the raw token), or the
+              // claim's metadata write hasn't propagated yet. Fall back to the token
+              // so a legitimate token holder can always save.
+              if (!hostedInfo.editToken) throw updateErr;
+              console.warn('Account-owned update failed, retrying with edit token:', updateErr);
               updateResult = await updateHostedFeed(hostedInfo.feedId, hostedInfo.editToken, hostedXml, currentFeedTitle, isDraft);
             }
-            const updatedInfo = { ...hostedInfo, lastUpdated: Date.now(), isDraft: updateResult.isDraft || undefined };
+            const updatedInfo: HostedFeedInfo = {
+              ...hostedInfo,
+              lastUpdated: Date.now(),
+              isDraft: updateResult.isDraft || undefined,
+              ...(claimed === 'nostr' ? { ownerPubkey: nostrState.user!.pubkey, linkedAt: Date.now() } : {}),
+              ...(claimed === 'email' ? { ownerEmailHash: getEmailSession()?.emailHash, emailLinkedAt: Date.now() } : {}),
+            };
             saveHostedFeedInfo(currentFeedGuid, updatedInfo);
             setHostedInfo(updatedInfo);
 
@@ -601,7 +655,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                 editToken: tokenToUse,
                 createdAt: Date.now(),
                 lastUpdated: Date.now(),
-                ownerEmailHash: emailSession?.emailHash,
+                ownerEmailHash: getEmailSession()?.emailHash,
                 emailLinkedAt: Date.now(),
                 ...(hostedResult.isDraft && { isDraft: true })
               };
@@ -620,7 +674,6 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
             setHostedUrl(buildHostedUrl(hostedResult.feedId));
             setPendingToken(null);
             setLegacyHostedInfo(null);
-            setTokenAcknowledged(false);
 
             if (isDraft) {
               setMessage({ type: 'success', text: 'Feed saved as draft! Podcast Index not notified.' });
@@ -1106,6 +1159,16 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                         ? 'Host your RSS feed on MSP — it will be linked to your Nostr identity, manageable from any device.'
                         : 'Host your RSS feed on MSP — get a permanent URL for any podcast app.'}
               </p>
+              {/* Updating an existing (e.g. imported token-owned or legacy) feed now requires signing in. */}
+              {(hostedInfo || legacyHostedInfo) && !isLoggedIn && !isEmailLoggedIn() && (
+                <SignInPrompt
+                  style={{ marginTop: '12px' }}
+                  title="Sign in to save changes"
+                  blurb="Saving updates to an MSP-hosted feed requires signing in. If this feed used an edit token, signing in claims it to your account so you won't need the token again."
+                  onEmail={() => setEmailModal({ mode: 'login' })}
+                  onNostr={() => setShowNostrConnect(true)}
+                />
+              )}
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.875rem', marginTop: '12px' }}>
                 <input
                   type="checkbox"
@@ -1130,36 +1193,20 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               )}
               {/* Logged-out users must sign in to host a NEW feed. Tokens are no longer offered for new feeds. */}
               {!hostedInfo && !legacyHostedInfo && !isEmailLoggedIn() && !isLoggedIn && !showRestore && (
-                <div style={{ marginTop: '16px', padding: '16px', backgroundColor: 'rgba(124, 58, 237, 0.08)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: 0, marginBottom: '4px' }}>
-                    Sign in to host your feed
-                  </p>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                    Sign in with your email or Nostr so this feed is owned by your account — manage it from any device, nothing to keep safe.
-                  </p>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button
-                      className="btn btn-primary"
-                      style={{ fontSize: '0.8rem' }}
-                      onClick={() => setEmailModal({ mode: 'login' })}
-                    >
-                      Sign in with email
-                    </button>
-                    <button
-                      className="btn btn-secondary"
-                      style={{ fontSize: '0.8rem' }}
-                      onClick={() => setShowNostrConnect(true)}
-                    >
-                      Sign in with Nostr
-                    </button>
-                  </div>
+                <SignInPrompt
+                  style={{ marginTop: '16px' }}
+                  title="Sign in to host your feed"
+                  blurb="Sign in with your email or Nostr so this feed is owned by your account — manage it from any device, nothing to keep safe."
+                  onEmail={() => setEmailModal({ mode: 'login' })}
+                  onNostr={() => setShowNostrConnect(true)}
+                >
                   <button
                     style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.7rem', textDecoration: 'underline', cursor: 'pointer', marginTop: '10px', padding: 0 }}
-                    onClick={() => { setPendingToken(null); setTokenAcknowledged(false); setShowRestore(true); }}
+                    onClick={() => { setPendingToken(null); setShowRestore(true); }}
                   >
                     Already have a feed with an edit token? Restore it
                   </button>
-                </div>
+                </SignInPrompt>
               )}
               {/* Calm "owned by your account" note for signed-in users — no token to manage. */}
               {pendingToken && !hostedInfo && !legacyHostedInfo && (isEmailLoggedIn() || isLoggedIn) && (
@@ -1557,7 +1604,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                 <li><strong>Local Storage</strong> - Save to your browser's local storage. Data persists until you clear browser data.</li>
                 <li><strong>Download XML</strong> - Download the RSS feed as an XML file to your computer.</li>
                 <li><strong>Copy to Clipboard</strong> - Copy the RSS XML to your clipboard for pasting elsewhere.</li>
-                <li><strong>Host on MSP</strong> - Host your feed on MSP servers. Get a permanent URL for your RSS feed to use in any app. Enable "Draft mode" to host without notifying Podcast Index or sending a podping.{isLoggedIn && ' You can link your Nostr identity to edit from any device without needing the token.'}</li>
+                <li><strong>Host on MSP</strong> - Host your feed on MSP servers. Get a permanent URL for your RSS feed to use in any app. Requires signing in with email or Nostr so the feed is owned by your account and editable from any device. Enable "Draft mode" to host without notifying Podcast Index or sending a podping.</li>
                 <li><strong>Submit to PodcastIndex</strong> - Submit a feed URL to Podcast Index so it gets indexed and becomes discoverable in apps like Fountain, Castamatic, and others.</li>
                 <li><strong>Publish to Nostr Music</strong> - Publishes each track (kind 36787) and the playlist (kind 34139) as Nostr events for Nostr-native music apps like Sunami. Audio files must already be hosted somewhere - these events just point to them. Not a podcast RSS feed.</li>
                 {showExperimental && <li><strong>Save RSS feed to Nostr 🧪</strong> - Stores the entire RSS XML inside a Nostr event (kind 30054) on your relays. Personal cross-device backup tied to your Nostr key. Not readable by podcast apps.</li>}

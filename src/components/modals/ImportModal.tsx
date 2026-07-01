@@ -6,6 +6,8 @@ import { type HostedFeedInfo, buildHostedUrl } from '../../utils/hostedFeed';
 import { fetchAdminFeeds, fetchEmailFeeds } from '../../utils/adminAuth';
 import { isEmailLoggedIn, getEmailSession } from '../../utils/emailSession';
 import { EmailLoginModal } from '../auth/EmailLoginModal';
+import { SignInPrompt } from '../auth/SignInPrompt';
+import { NostrConnectModal } from './NostrConnectModal';
 import { pendingHostedStorage } from '../../utils/storage';
 import { formatTimestamp } from '../../utils/dateUtils';
 import { checkSignerConnection } from '../../utils/nostrSigner';
@@ -54,6 +56,10 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templa
   const [hostedFeeds, setHostedFeeds] = useState<HostedFeedListItem[]>([]);
   const [loadingHostedFeeds, setLoadingHostedFeeds] = useState(false);
   const [showEmailLogin, setShowEmailLogin] = useState(false);
+  const [showNostrConnect, setShowNostrConnect] = useState(false);
+  // Manual Feed-ID / edit-token / backup entry is collapsed by default now that
+  // signing in is the primary way to find your feeds — this is the "I have a token" path.
+  const [showManualImport, setShowManualImport] = useState(false);
 
   // Reset mode if the current selection is an experimental option that just got hidden
   useEffect(() => {
@@ -61,6 +67,17 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templa
       setMode('file');
     }
   }, [showExperimental, mode]);
+
+  // Load the account's feeds when the MSP Hosted tab is active — fires on
+  // switching to the tab (any sign-in type) and on Nostr sign-in while on it.
+  // This is the single trigger for the tab switch; the select onChange must not
+  // also call fetchHostedFeeds or Nostr users get two signer prompts. Email
+  // sign-in while on the tab is handled by the EmailLoginModal onClose below
+  // (isEmailLoggedIn() reads localStorage, so it can't be an effect dep).
+  useEffect(() => {
+    if (mode === 'hosted' && canListFeeds) fetchHostedFeeds();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, isLoggedIn]);
 
   const fetchSavedAlbums = async () => {
     const pubkey = nostrState.user?.pubkey;
@@ -356,9 +373,11 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templa
                     {loadingHostedFeeds ? 'Loading...' : 'Refresh'}
                   </button>
                 )}
-                <button className="btn btn-primary" onClick={handleImportHosted} disabled={loading || !hostedFeedId.trim()}>
-                  {loading ? 'Importing...' : 'Import by ID'}
-                </button>
+                {showManualImport && (
+                  <button className="btn btn-primary" onClick={handleImportHosted} disabled={loading || !hostedFeedId.trim()}>
+                    {loading ? 'Importing...' : 'Import by ID'}
+                  </button>
+                )}
               </>
             ) : (
               <button className="btn btn-primary" onClick={handleImport} disabled={loading}>
@@ -393,7 +412,7 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templa
                 setMode(newMode);
                 if (newMode === 'nostr') fetchSavedAlbums();
                 if (newMode === 'nostrMusic') fetchMusicTracks();
-                if (newMode === 'hosted' && canListFeeds) fetchHostedFeeds();
+                // 'hosted' fetch happens in the mode/isLoggedIn effect above
               }}
             >
               <option value="file">Upload File</option>
@@ -585,31 +604,31 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templa
                       );
                     })}
                   </select>
-
-                  {/* Divider */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '16px 0' }}>
-                    <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>OR IMPORT BY BACKUP/ID</span>
-                    <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
-                  </div>
                 </div>
               )}
 
+              {/* Logged out: signing in is the primary way to find your hosted feeds. */}
               {!canListFeeds && (
-                <div style={{ marginBottom: '12px' }}>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '8px' }}>
-                    Import a feed hosted on MSP. Upload your backup file or enter details manually.
-                  </p>
-                  <button
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.75rem' }}
-                    onClick={() => setShowEmailLogin(true)}
-                  >
-                    Sign in with email to see your feeds
-                  </button>
-                </div>
+                <SignInPrompt
+                  style={{ marginBottom: '16px' }}
+                  title="Sign in to see your feeds"
+                  blurb="Sign in with email or Nostr to browse and import every feed you've hosted on MSP — no Feed ID needed."
+                  onEmail={() => setShowEmailLogin(true)}
+                  onNostr={() => setShowNostrConnect(true)}
+                />
               )}
 
+              {/* Advanced / token path: collapsed by default. */}
+              <button
+                type="button"
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', textDecoration: 'underline', cursor: 'pointer', padding: 0, marginBottom: showManualImport ? '12px' : 0 }}
+                onClick={() => setShowManualImport(v => !v)}
+              >
+                {showManualImport ? 'Hide manual import' : 'Have a Feed ID or edit token? Import manually'}
+              </button>
+
+              {showManualImport && (
+              <>
               {/* Upload backup file */}
               <label
                 style={{
@@ -689,8 +708,10 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templa
                 style={{ fontFamily: 'monospace' }}
               />
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '8px' }}>
-                If you have your edit token, enter it to enable editing after import.
+                If you have your edit token, enter it to enable editing after import. You'll still need to sign in to save changes.
               </p>
+              </>
+              )}
             </div>
           ) : (
             <div className="form-group">
@@ -727,7 +748,7 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templa
                 <li><strong>Upload File</strong> - Upload an RSS/XML feed file from your device</li>
                 <li><strong>Paste XML</strong> - Paste RSS/XML content directly</li>
                 <li><strong>From URL</strong> - Fetch a feed from any URL</li>
-                <li><strong>MSP Hosted</strong> - Load a feed hosted on MSP servers using its Feed ID</li>
+                <li><strong>MSP Hosted</strong> - Sign in with email or Nostr to browse and import your hosted feeds. If you have a saved Feed ID or edit token, you can still import manually.</li>
                 <li><strong>From Nostr Music</strong> - Import tracks from Nostr Music library (requires login)</li>
                 {showExperimental && <li><strong>Nostr Event 🧪</strong> - Import from a Nostr Event (kind 36787)</li>}
                 {showExperimental && <li><strong>From Nostr 🧪</strong> - Load your previously saved albums from Nostr (requires login)</li>}
@@ -736,7 +757,13 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templa
       )}
 
       {showEmailLogin && (
-        <EmailLoginModal onClose={() => setShowEmailLogin(false)} />
+        <EmailLoginModal onClose={() => {
+          setShowEmailLogin(false);
+          if (mode === 'hosted' && isEmailLoggedIn()) fetchHostedFeeds();
+        }} />
+      )}
+      {showNostrConnect && (
+        <NostrConnectModal onClose={() => setShowNostrConnect(false)} />
       )}
     </>
   );
