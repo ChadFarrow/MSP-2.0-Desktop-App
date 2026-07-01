@@ -31,6 +31,7 @@ import { useNostr } from '../../store/nostrStore';
 import { useExperimental } from '../../store/experimentalStore';
 import { checkSignerConnection } from '../../utils/nostrSigner';
 import { getFeedUrlError } from '../../utils/urlValidation';
+import { getValueRecipientErrors } from '../../utils/valueValidation';
 import { ModalWrapper } from './ModalWrapper';
 
 const DEFAULT_BLOSSOM_SERVER = 'https://blossom.primal.net/';
@@ -371,6 +372,8 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
         if (!publisherFeed.title?.trim()) errors.push('Catalog Title');
         if (!publisherFeed.description?.trim()) errors.push('Description');
         if (!publisherFeed.podcastGuid?.trim()) errors.push('Publisher GUID');
+        // Every value recipient needs a non-zero split or its sats silently redistribute.
+        errors.push(...getValueRecipientErrors(publisherFeed.value?.recipients, 'Value recipient'));
       } else {
         // Album validation
         // Nostr Music (kind 36787 / 34139) doesn't carry description, file size,
@@ -385,6 +388,9 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
         if (!album.language?.trim()) errors.push('Language');
         if (!album.podcastGuid?.trim()) errors.push('Podcast GUID');
 
+        // Feed-level value recipients: every one needs a non-zero split.
+        errors.push(...getValueRecipientErrors(album.value?.recipients, 'Value recipient'));
+
         const itemLabel = isVideoMode ? 'Video' : 'Track';
         const urlLabel = isVideoMode ? 'Video URL' : 'MP3 URL';
         album.tracks.forEach((track, i) => {
@@ -392,6 +398,8 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
           if (!isNostrMusicMode && !track.duration?.trim()) errors.push(`${itemLabel} ${i + 1} Duration`);
           if (!track.enclosureUrl?.trim()) errors.push(`${itemLabel} ${i + 1} ${urlLabel}`);
           if (!isNostrMusicMode && !track.enclosureLength?.trim()) errors.push(`${itemLabel} ${i + 1} File Size`);
+          // Per-track value recipients (optional block, but if present each needs a split).
+          errors.push(...getValueRecipientErrors(track.value?.recipients, `${itemLabel} ${i + 1} value recipient`));
         });
       }
 

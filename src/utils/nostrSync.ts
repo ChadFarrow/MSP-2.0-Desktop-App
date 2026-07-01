@@ -39,6 +39,8 @@ export interface NostrProfile {
   picture?: string;
   nip05?: string;
   about?: string;
+  lud16?: string; // Lightning address (user@domain)
+  lud06?: string; // LNURL
 }
 
 // Fetch user profile (kind 0) from relays

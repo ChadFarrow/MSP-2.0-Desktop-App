@@ -27,7 +27,7 @@ type NostrAction =
   | { type: 'SET_HAS_EXTENSION'; payload: boolean }
   | { type: 'SET_CONNECTION_METHOD'; payload: 'nip07' | 'nip46' | null }
   | { type: 'LOGIN_SUCCESS'; payload: { user: NostrUser; method: 'nip07' | 'nip46' } }
-  | { type: 'UPDATE_PROFILE'; payload: { displayName?: string; picture?: string; nip05?: string } }
+  | { type: 'UPDATE_PROFILE'; payload: { displayName?: string; picture?: string; nip05?: string; lud16?: string } }
   | { type: 'LOGOUT' }
   | { type: 'RESTORE_SESSION'; payload: { user: NostrUser; method: 'nip07' | 'nip46' } };
 
@@ -67,7 +67,8 @@ function nostrReducer(state: NostrAuthState, action: NostrAction): NostrAuthStat
         ...state.user,
         displayName: action.payload.displayName || state.user.displayName,
         picture: action.payload.picture || state.user.picture,
-        nip05: action.payload.nip05 || state.user.nip05
+        nip05: action.payload.nip05 || state.user.nip05,
+        lud16: action.payload.lud16 || state.user.lud16
       };
       saveUser(updatedUser);
       return { ...state, user: updatedUser };
@@ -115,7 +116,8 @@ export function NostrProvider({ children }: { children: ReactNode }) {
           payload: {
             displayName: profile.display_name || profile.name,
             picture: profile.picture,
-            nip05: profile.nip05
+            nip05: profile.nip05,
+            lud16: profile.lud16
           }
         });
       }
@@ -172,19 +174,8 @@ export function NostrProvider({ children }: { children: ReactNode }) {
             if (pubkey === storedUser.pubkey) {
               dispatch({ type: 'RESTORE_SESSION', payload: { user: storedUser, method: 'nip07' } });
 
-              // Refresh profile in background
-              fetchNostrProfile(pubkey).then((profile) => {
-                if (profile) {
-                  dispatch({
-                    type: 'UPDATE_PROFILE',
-                    payload: {
-                      displayName: profile.display_name || profile.name,
-                      picture: profile.picture,
-                      nip05: profile.nip05
-                    }
-                  });
-                }
-              });
+              // Refresh profile in background (single source of the profile→user mapping)
+              refreshProfile(pubkey);
               return;
             } else {
               // Different account, clear stored session
