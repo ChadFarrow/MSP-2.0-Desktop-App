@@ -24,6 +24,7 @@ import { AdminPage } from './components/admin/AdminPage';
 import { VerifyMagicLink } from './pages/VerifyMagicLink';
 import type { Album } from './types/feed';
 import mspLogo from './assets/msp-logo.png';
+import podcastIndexLogo from './assets/podcastindex-logo.png';
 import './App.css';
 
 // Main App Content (needs access to context)
@@ -43,6 +44,30 @@ function AppContent() {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { state: nostrState, logout: nostrLogout } = useNostr();
+
+  // Podcast Index page id for the current feed — populated only when the feed is
+  // actually in the index, so the toolbar button can show live vs not-yet-indexed.
+  const [piFeedId, setPiFeedId] = useState<number | null>(null);
+  const currentFeedGuid =
+    state.feedType === 'publisher' ? state.publisherFeed?.podcastGuid
+    : state.feedType === 'video' ? state.videoFeed?.podcastGuid
+    : state.album?.podcastGuid;
+
+  useEffect(() => {
+    setPiFeedId(null);
+    const guid = currentFeedGuid?.trim();
+    // Only look up well-formed GUIDs (avoids junk queries on empty/new feeds).
+    if (!guid || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(guid)) return;
+    let cancelled = false;
+    fetch(`/api/pisearch?q=${encodeURIComponent(guid)}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        const id = data?.feeds?.[0]?.id;
+        if (!cancelled && typeof id === 'number') setPiFeedId(id);
+      })
+      .catch(() => { /* offline / lookup failed — leave button in not-indexed state */ });
+    return () => { cancelled = true; };
+  }, [currentFeedGuid]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -302,6 +327,20 @@ function AppContent() {
           >
             <span className="bottom-toolbar-icon">📡</span>
             <span className="bottom-toolbar-label">Podping</span>
+          </button>
+          <button
+            className="bottom-toolbar-btn"
+            onClick={() => piFeedId && window.open(`https://podcastindex.org/podcast/${piFeedId}`, '_blank', 'noopener,noreferrer')}
+            disabled={!piFeedId}
+            title={piFeedId ? 'View this feed on Podcast Index' : "This feed isn't in Podcast Index yet"}
+            style={{
+              opacity: piFeedId ? 1 : 0.4,
+              cursor: piFeedId ? 'pointer' : 'default',
+              color: piFeedId ? 'var(--success, #10b981)' : undefined,
+            }}
+          >
+            <img className="bottom-toolbar-icon-img" src={podcastIndexLogo} alt="" />
+            <span className="bottom-toolbar-label">Podcast Index</span>
           </button>
           <button
             className="bottom-toolbar-btn"
