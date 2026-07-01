@@ -10,7 +10,8 @@ export const STORAGE_KEYS = {
   FEED_TYPE: 'msp2-feed-type',
   NOSTR_USER: 'msp2-nostr-user',
   HOSTED_PREFIX: 'msp2-hosted-',
-  PENDING_HOSTED: 'msp2-pending-hosted'
+  PENDING_HOSTED: 'msp2-pending-hosted',
+  EMAIL_SESSION: 'msp2-email-session'
 } as const;
 
 // Migration helper: convert old person format to new format
@@ -154,9 +155,11 @@ export interface HostedFeedInfo {
   editToken: string;
   createdAt: number;
   lastUpdated: number;
-  ownerPubkey?: string;  // Nostr pubkey if linked
-  linkedAt?: number;     // When Nostr was linked
-  isDraft?: boolean;     // True when hosted without PI/podping notification
+  ownerPubkey?: string;     // Nostr pubkey if linked
+  linkedAt?: number;        // When Nostr was linked
+  ownerEmailHash?: string;  // Keyed HMAC of owner email if claimed via email
+  emailLinkedAt?: number;   // When the email was linked
+  isDraft?: boolean;        // True when hosted without PI/podping notification
 }
 
 // Hosted feed storage operations
@@ -176,4 +179,18 @@ export const pendingHostedStorage = {
   load: (): HostedFeedInfo | null => getItem<HostedFeedInfo>(STORAGE_KEYS.PENDING_HOSTED),
   save: (info: HostedFeedInfo): boolean => setItem(STORAGE_KEYS.PENDING_HOSTED, info),
   clear: (): boolean => removeItem(STORAGE_KEYS.PENDING_HOSTED)
+};
+
+// Email auth session (magic-link). The session JWT is opaque; emailHash identifies the account.
+export interface EmailSessionInfo {
+  session: string;    // signed session JWT sent as X-Email-Session: Bearer <session>
+  emailHash: string;  // server-issued opaque account id
+  email?: string;     // the address the user typed, kept locally for display only
+  createdAt: number;
+}
+
+export const emailSessionStorage = {
+  load: (): EmailSessionInfo | null => getItem<EmailSessionInfo>(STORAGE_KEYS.EMAIL_SESSION),
+  save: (info: EmailSessionInfo): boolean => setItem(STORAGE_KEYS.EMAIL_SESSION, info),
+  clear: (): boolean => removeItem(STORAGE_KEYS.EMAIL_SESSION)
 };
