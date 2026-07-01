@@ -1267,7 +1267,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                     <a
                       className="btn btn-secondary"
                       style={{ fontSize: '0.75rem' }}
-                      href={`https://podcastindex.org/podcast/podcastguid:${currentFeedGuid}`}
+                      href={`https://podcastindex.org/podcast/${currentFeedGuid}`}
                       target="_blank"
                       rel="noopener noreferrer"
                     >

@@ -121,7 +121,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
                   <a
                     href={feed.podcastIndexId
                       ? `https://podcastindex.org/podcast/${feed.podcastIndexId}`
-                      : `https://podcastindex.org/podcast/podcastguid:${feed.feedId}`}
+                      : `https://podcastindex.org/podcast/${feed.feedId}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="rss-link"
@@ -185,7 +185,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
                     <a
                       href={feed.podcastIndexId
                         ? `https://podcastindex.org/podcast/${feed.podcastIndexId}`
-                        : `https://podcastindex.org/podcast/podcastguid:${feed.feedId}`}
+                        : `https://podcastindex.org/podcast/${feed.feedId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="rss-link"
