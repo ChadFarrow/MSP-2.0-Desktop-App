@@ -326,6 +326,52 @@ export const isCommunitySupport = (r: ValueRecipient): boolean =>
 export const hasUserRecipients = (recipients: ValueRecipient[]): boolean =>
   recipients.some(r => r.address && !isCommunitySupport(r));
 
+// Value blocks are kept at a 100% total, with the single personal recipient
+// absorbing whatever the community-support splits add up to.
+const SPLIT_TOTAL = 100;
+
+const sumSupportSplits = (recipients: ValueRecipient[]): number =>
+  recipients.filter(isCommunitySupport).reduce((sum, r) => sum + (r.split || 0), 0);
+
+const personalIndices = (recipients: ValueRecipient[]): number[] =>
+  recipients.reduce<number[]>((acc, r, i) => {
+    if (r.address && !isCommunitySupport(r)) acc.push(i);
+    return acc;
+  }, []);
+
+// Behavior 1: when a personal recipient's address is a Lightning address and its
+// split is still unset, default it to 100 minus the support splits (98 with the
+// standard MSP 1 + Podcast Index 1). Only fills a blank split, so a manually
+// entered value is never overwritten; node-pubkey recipients are left untouched.
+export const fillPersonalSplitDefault = (
+  recipients: ValueRecipient[],
+  editedIndex: number
+): ValueRecipient[] => {
+  const edited = recipients[editedIndex];
+  if (!edited || isCommunitySupport(edited)) return recipients;
+  if (edited.type !== 'lnaddress' || !edited.address) return recipients;
+  if (edited.split) return recipients; // don't clobber a value the user set
+  // Only default the split when this is the one and only personal recipient —
+  // with several, the musician is apportioning splits by hand.
+  const personal = personalIndices(recipients);
+  if (personal.length !== 1 || personal[0] !== editedIndex) return recipients;
+  const target = Math.max(0, SPLIT_TOTAL - sumSupportSplits(recipients));
+  return recipients.map((r, i) => (i === editedIndex ? { ...r, split: target } : r));
+};
+
+// Behavior 2: after a community-support split is edited or a support recipient is
+// removed, keep the total at 100 by pushing the remainder onto the personal
+// recipient — but only when there's exactly one, so manual multi-recipient
+// (e.g. band) splits are left alone.
+export const rebalancePersonalForSupport = (
+  recipients: ValueRecipient[]
+): ValueRecipient[] => {
+  const personal = personalIndices(recipients);
+  if (personal.length !== 1) return recipients;
+  const target = Math.max(0, SPLIT_TOTAL - sumSupportSplits(recipients));
+  return recipients.map((r, i) => (i === personal[0] ? { ...r, split: target } : r));
+};
+
 // Default empty album
 export const createEmptyAlbum = (): Album => ({
   title: '',
