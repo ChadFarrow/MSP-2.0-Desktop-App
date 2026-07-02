@@ -59,12 +59,15 @@ Push to `master` or PR triggers four parallel GitHub Actions jobs: unit tests, E
 
 Every push to `master` also triggers cross-platform release builds (macOS arm64/x86_64, Ubuntu, Windows) that auto-increment the version, sign artifacts, and publish a GitHub release. Multiple pushes in a day each produce a new release.
 
-A daily sync workflow (`sync-upstream.yml`) fetches changes from the [web repo](https://github.com/ChadFarrow/MSP-2.0) and opens a PR via `peter-evans/create-pull-request`. Runs once daily at 6 AM UTC or on manual dispatch (`gh workflow run sync-upstream.yml`).
+The sync workflow (`sync-upstream.yml`) fetches changes from the [web repo](https://github.com/ChadFarrow/MSP-2.0) and opens a PR via `peter-evans/create-pull-request`. It runs on a daily schedule (6 AM UTC), on manual dispatch (`gh workflow run sync-upstream.yml`), **and on every push to web `master`** (the web repo's `notify-desktop.yml` fires a `repository_dispatch: web-repo-updated`). So a web update auto-builds the desktop app end to end: web push → sync PR → CI → auto-merge → `release.yml` builds a release.
 
-**Conflict handling — important:** when an upstream change conflicts with desktop's version, the workflow auto-resolves by **keeping the desktop version** and silently drops the upstream change for that file. The PR description lists the conflicted files, but no porting happens automatically. After every sync merge:
-1. Read the "Merge conflicts were auto-resolved" list in the PR description
-2. For each file, run `git diff <merge-base>..upstream/master -- <file>` (find the merge-base with `git merge-base origin/master upstream/master` *before* merging the sync PR)
-3. Open a follow-up PR porting any features that were dropped (see PRs #13, #14, #15 for examples — Podping integration, bottom toolbar, NIP-71 naddr handler all had to be ported manually after a single sync)
+**Auto-merge policy:** every sync PR (clean *or* conflict) enables auto-merge, **gated on CI** (build + lint + unit + E2E). A green synced build merges and releases itself with no manual step; a build that goes **red holds for a human**. This means CI is the safety net — build-breaking drops are caught automatically (see below), but a conflict sync that drops a feature yet still **compiles** can merge without review.
+
+**Conflict handling — important:** when an upstream change conflicts with desktop's version, the workflow auto-resolves by **keeping the desktop version** and silently drops the upstream change for that file. The PR body lists the conflicted files under "Merge conflicts were auto-resolved". Two failure modes:
+- **Build-breaking drop** (CI catches it → PR stays unmerged): a non-conflicting file still imports something from the dropped code. Example: the June 2026 email magic-link auth sync (web PR #90) landed `ImportModal`'s `import { fetchEmailFeeds }` cleanly but dropped the export from the conflicted `adminAuth.ts`, so `vite build` failed and E2E never started. Unit tests still passed (they don't build the app), which is misleading — always check the E2E/build job. Fixed in desktop PR #20 by porting the email fns into the forked files (`adminAuth.ts`, `hostedFeed.ts`, `api/hosted/[feedId].ts`) so the fork *owns* a building version and future syncs auto-resolve green. See issue #21.
+- **Silent drop** (compiles → auto-merges, needs post-hoc audit): the dropped upstream code isn't referenced anywhere, so it builds but a feature is missing or half-wired (e.g. the `podcast:image` dead-code case, or Podping/bottom-toolbar/NIP-71 in PRs #13/#14/#15). To audit after a conflict sync: for each conflicted file run `git diff <merge-base>..upstream/master -- <file>` (merge-base via `git merge-base origin/master upstream/master`), and open a follow-up PR porting anything real.
+
+Recurring lint gotcha: desktop lints with `react-hooks/immutability` (which web tolerates), so a synced file that uses a `useEffect` before its declared callees breaks desktop's build on every sync. Fix these **upstream in the web repo** (a pure reorder is a no-op for web) so the clean file flows down and the fix doesn't need re-applying each sync.
 
 ## Deployment
 
@@ -115,6 +118,7 @@ For manual version control (optional):
 | Windows AV false positive (NSIS:MalwareX-gen) | NSIS `.exe` installers without Authenticode EV code signing trigger heuristic AV detections | Recommend `.msi` installer; long-term fix is purchasing an EV code signing certificate (~$400-600/yr) |
 | Tauri build fails with "version mismatched Tauri packages" | `npm update` bumped `@tauri-apps/*` past the Rust crates — Tauri requires matching major/minor across the NPM/crate boundary | Run `cargo update` in `src-tauri/` after any npm update that touches `@tauri-apps/*`, then commit both lockfiles |
 | Build fails: Missing "./utils" specifier in @noble/hashes | @noble/hashes 2.x (via nostr-tools) requires the `.js` suffix on subpath imports | Import from `@noble/hashes/utils.js`, not `@noble/hashes/utils` |
+| Sync PR: `vite build` fails "No matching export ... for import X" (E2E all "element not found", unit tests green) | A half-landed upstream feature: a non-conflicting file imports X, but the conflicted file that exports X auto-resolved to desktop's copy and dropped it | Port the dropped export into the forked file so the fork owns a building version (issue #21 / PR #20 email-auth). Check the E2E/build job, not just unit tests |
 
 ## Architecture
 
