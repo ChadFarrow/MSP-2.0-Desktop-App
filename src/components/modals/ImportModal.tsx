@@ -69,17 +69,6 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templa
     }
   }, [showExperimental, mode]);
 
-  // Load the account's feeds when the MSP Hosted tab is active — fires on
-  // switching to the tab (any sign-in type) and on Nostr sign-in while on it.
-  // This is the single trigger for the tab switch; the select onChange must not
-  // also call fetchHostedFeeds or Nostr users get two signer prompts. Email
-  // sign-in while on the tab is handled by the EmailLoginModal onClose below
-  // (isEmailLoggedIn() reads localStorage, so it can't be an effect dep).
-  useEffect(() => {
-    if (mode === 'hosted' && canListFeeds) fetchHostedFeeds();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, isLoggedIn]);
-
   const fetchSavedAlbums = async () => {
     const pubkey = nostrState.user?.pubkey;
     if (!pubkey) {
@@ -137,6 +126,17 @@ export function ImportModal({ onClose, onImport, onLoadAlbum, isLoggedIn, templa
       setLoadingHostedFeeds(false);
     }
   };
+
+  // Load the account's feeds when the MSP Hosted tab is active — fires on
+  // switching to the tab (any sign-in type) and on Nostr sign-in while on it.
+  // This is the single trigger for the tab switch; the select onChange must not
+  // also call fetchHostedFeeds or Nostr users get two signer prompts. Email
+  // sign-in while on the tab is handled by the EmailLoginModal onClose below
+  // (isEmailLoggedIn() reads localStorage, so it can't be an effect dep).
+  useEffect(() => {
+    if (mode === 'hosted' && canListFeeds) fetchHostedFeeds();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, isLoggedIn]);
 
   const handleLoadFromNostr = async (dTag: string) => {
     const pubkey = nostrState.user?.pubkey;
