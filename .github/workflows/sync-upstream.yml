@@ -100,12 +100,15 @@ jobs:
           labels: automated
 
       - name: Enable auto-merge on the sync PR
-        # Only auto-merge clean syncs. If the merge had conflicts that were
-        # auto-resolved by keeping desktop's version, a human should review
-        # whether upstream changes need manual reconciliation.
+        # Auto-merge every sync PR, gated on CI (build + lint + unit + E2E).
+        # A green synced build merges and releases itself so web updates
+        # auto-build; a red build (e.g. an upstream change that conflicts and
+        # drops build-breaking code, like the email-auth sync) holds for a human.
+        # Caveat: conflict syncs auto-resolve to desktop's version, so a silent
+        # drop that still COMPILES can merge without review — the PR body lists
+        # the conflicted files for post-hoc audit.
         if: |
           steps.check.outputs.new_commits != '0'
-          && steps.merge.outputs.conflicts != 'true'
           && steps.create_pr.outputs.pull-request-number != ''
         env:
           GH_TOKEN: ${{ secrets.SYNC_PAT }}
