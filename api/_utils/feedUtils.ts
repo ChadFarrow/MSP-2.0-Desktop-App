@@ -127,9 +127,17 @@ export async function notifyPodcastIndex(
         if (data.feed?.id) {
           return data.feed.id;
         }
+        // No feed id returned — surface why (PI sends status/description explaining
+        // rejections: unauthorized key, feed unreachable, duplicate guid, etc.)
+        console.warn(
+          `PI add/byfeedurl did not register ${feedUrl} — HTTP ${response.status}, ` +
+          `status=${data.status}, description=${data.description ?? '(none)'}`
+        );
       } catch {
-        // JSON parse failed
+        console.warn(`PI add/byfeedurl returned non-JSON for ${feedUrl} — HTTP ${response.status}: ${text.slice(0, 200)}`);
       }
+    } else {
+      console.warn(`PI add/byfeedurl returned empty body for ${feedUrl} — HTTP ${response.status}`);
     }
   } catch (err) {
     console.warn('Failed to add feed to Podcast Index:', err instanceof Error ? err.message : err);

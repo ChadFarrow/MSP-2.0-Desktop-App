@@ -24,8 +24,13 @@ export function ExperimentalProvider({ children }: { children: ReactNode }) {
     setShowExperimental(prev => !prev);
   };
 
+  // Experimental features are only reachable in the local test environment.
+  // import.meta.env.DEV is true only under `npm run dev` and statically false in
+  // production builds, so the stored toggle can never expose them in production.
+  const effectiveShowExperimental = import.meta.env.DEV && showExperimental;
+
   return (
-    <ExperimentalContext.Provider value={{ showExperimental, toggleExperimental, setShowExperimental }}>
+    <ExperimentalContext.Provider value={{ showExperimental: effectiveShowExperimental, toggleExperimental, setShowExperimental }}>
       {children}
     </ExperimentalContext.Provider>
   );

@@ -78,6 +78,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Try GUID lookup first (more reliable), fall back to URL lookup
     let podcastIndexId: number | null = null;
     let podcastIndexPageUrl: string | null = null;
+    // Diagnostic detail for when add/byfeedurl fails to register the feed.
+    let addResult: Record<string, unknown> | null = null;
 
     const authHeaders = getAuthHeaders();
     if (authHeaders) {
@@ -128,12 +130,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (addData.feed?.id) {
               podcastIndexId = addData.feed.id;
               podcastIndexPageUrl = `https://podcastindex.org/podcast/${podcastIndexId}`;
+            } else {
+              // PI accepted the request but didn't register the feed — capture why.
+              addResult = { httpStatus: addResponse.status, status: addData.status, description: addData.description ?? null };
+              console.warn(`PI add/byfeedurl did not register ${url} — HTTP ${addResponse.status}, status=${addData.status}, description=${addData.description ?? '(none)'}`);
             }
           } catch {
-            // JSON parse failed
+            addResult = { httpStatus: addResponse.status, description: `non-JSON: ${addText.slice(0, 200)}` };
+            console.warn(`PI add/byfeedurl returned non-JSON for ${url} — HTTP ${addResponse.status}`);
           }
+        } else {
+          addResult = { httpStatus: addResponse.status, description: 'empty response body' };
+          console.warn(`PI add/byfeedurl returned empty body for ${url} — HTTP ${addResponse.status}`);
         }
       } catch (addErr) {
+        addResult = { error: addErr instanceof Error ? addErr.message : String(addErr) };
         console.warn('Failed to add feed to Podcast Index:', addErr);
       }
     }
@@ -143,6 +154,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: 'Feed submitted to Podcast Index',
       podcastIndexId,
       podcastIndexUrl: podcastIndexPageUrl,
+      // Present only when the add did NOT return a feed id — explains the failure.
+      ...(podcastIndexId ? {} : { addResult }),
       details: notifyData
     });
   } catch (error) {

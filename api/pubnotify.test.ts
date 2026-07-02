@@ -266,6 +266,30 @@ describe('pubnotify API', () => {
     }));
   });
 
+  it('surfaces the PI add/byfeedurl rejection reason when the feed is not registered', async () => {
+    const { default: handler } = await import('./pubnotify');
+
+    // pubnotify success
+    mockFetch.mockResolvedValueOnce({ ok: true, text: vi.fn().mockResolvedValue(JSON.stringify({ success: true })) });
+    // URL lookup: not found
+    mockFetch.mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue({ feed: null }) });
+    // add/byfeedurl: PI rejects with a description and no feed id
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: vi.fn().mockResolvedValue(JSON.stringify({ status: false, description: 'Unable to add feed to the index.' }))
+    });
+
+    const { req, res } = createMockReqRes({ url: 'https://example.com/new-feed.xml' });
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      podcastIndexId: null,
+      addResult: expect.objectContaining({ description: 'Unable to add feed to the index.' })
+    }));
+  });
+
   it('returns error when pubnotify fails', async () => {
     const { default: handler } = await import('./pubnotify');
 
