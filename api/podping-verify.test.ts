@@ -174,6 +174,93 @@ describe('/api/podping-verify', () => {
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ trxId: 'newer' }));
   });
 
+  // Regression: without a `since` cutoff the first poll matched a podping for the same
+  // feed from an hour earlier, reported success, and stopped before the real op landed.
+  it('ignores an op older than since', async () => {
+    process.env.PODPING_HIVE_ACCOUNT = 'mspaccount';
+    mockFetch.mockResolvedValueOnce(
+      mockRpcResult([
+        historyEntry(1, 'pp_music_update', podpingJson(FEED_URL), {
+          timestamp: '2026-07-25T14:23:00'
+        })
+      ])
+    );
+
+    const { default: handler } = await import('./podping-verify');
+    const { req, res } = createMockReqRes('GET', {
+      url: FEED_URL,
+      since: String(Date.parse('2026-07-25T15:17:00Z'))
+    });
+
+    await handler(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({ landed: false, account: 'mspaccount' });
+  });
+
+  it('matches an op at or after since', async () => {
+    process.env.PODPING_HIVE_ACCOUNT = 'mspaccount';
+    mockFetch.mockResolvedValueOnce(
+      mockRpcResult([
+        historyEntry(1, 'pp_music_update', podpingJson(FEED_URL), {
+          timestamp: '2026-07-25T14:23:00',
+          trx_id: 'stale'
+        }),
+        historyEntry(2, 'pp_music_update', podpingJson(FEED_URL), {
+          timestamp: '2026-07-25T15:17:24',
+          trx_id: 'fresh'
+        })
+      ])
+    );
+
+    const { default: handler } = await import('./podping-verify');
+    const { req, res } = createMockReqRes('GET', {
+      url: FEED_URL,
+      since: String(Date.parse('2026-07-25T15:17:00Z'))
+    });
+
+    await handler(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ landed: true, trxId: 'fresh' })
+    );
+  });
+
+  it('tolerates modest clock skew between the browser and Hive', async () => {
+    process.env.PODPING_HIVE_ACCOUNT = 'mspaccount';
+    mockFetch.mockResolvedValueOnce(
+      mockRpcResult([
+        historyEntry(1, 'pp_music_update', podpingJson(FEED_URL), {
+          timestamp: '2026-07-25T15:17:00'
+        })
+      ])
+    );
+
+    const { default: handler } = await import('./podping-verify');
+    // Browser clock runs 30s fast — inside the 60s skew allowance.
+    const { req, res } = createMockReqRes('GET', {
+      url: FEED_URL,
+      since: String(Date.parse('2026-07-25T15:17:30Z'))
+    });
+
+    await handler(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ landed: true }));
+  });
+
+  it('ignores an unparseable since rather than rejecting the request', async () => {
+    process.env.PODPING_HIVE_ACCOUNT = 'mspaccount';
+    mockFetch.mockResolvedValueOnce(
+      mockRpcResult([historyEntry(1, 'pp_music_update', podpingJson(FEED_URL))])
+    );
+
+    const { default: handler } = await import('./podping-verify');
+    const { req, res } = createMockReqRes('GET', { url: FEED_URL, since: 'yesterday' });
+
+    await handler(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ landed: true }));
+  });
+
   it('returns landed:false when no op carries the feed URL', async () => {
     process.env.PODPING_HIVE_ACCOUNT = 'mspaccount';
     mockFetch.mockResolvedValueOnce(
