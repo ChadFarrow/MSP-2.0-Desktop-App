@@ -9,8 +9,12 @@ import { getFeedUrlError } from './_utils/urlValidation.js';
  * queue — hivepinger broadcasts to Hive asynchronously. This endpoint closes that gap
  * by scanning the MSP Hive account's recent custom_json ops for the feed URL.
  *
- * GET /api/podping-verify?url=<feedUrl>
+ * GET /api/podping-verify?url=<feedUrl>&since=<epochMs>
  * → { landed: boolean, account, trxId?, block?, timestamp? }
+ *
+ * `since` is what makes this answer "did the ping I just sent land?" rather than the
+ * far weaker "has this feed ever been podpinged?". Without it, a feed pinged an hour
+ * (or a month) ago reports landed:true on the first poll and stops looking.
  */
 
 const RATE_LIMIT = { limit: 60, windowMs: 3600_000 };
@@ -22,8 +26,12 @@ const RATE_LIMIT_PREFIX = 'podping-verify:';
 
 const DEFAULT_RPC_NODES = ['https://api.hive.blog', 'https://api.deathwing.me'];
 
-// Podpings are the MSP account's only regular activity, so a shallow window is plenty.
+// Podpings are the MSP account's only regular activity, so a shallow window is plenty
+// — 100 ops currently reaches back about two months.
 const HISTORY_LIMIT = 100;
+
+// Tolerance between the browser's clock (which stamps `since`) and Hive block times.
+const SINCE_SKEW_MS = 60_000;
 
 interface CustomJsonPayload {
   id?: string;
@@ -92,6 +100,20 @@ function isPodpingOpId(id: unknown): boolean {
   return typeof id === 'string' && (id === 'podping' || id.startsWith('pp_'));
 }
 
+/** `since` is epoch ms from the browser. Anything unparseable is treated as absent. */
+function parseSince(raw: unknown): number | null {
+  if (typeof raw !== 'string' || !raw) return null;
+  const ms = Number(raw);
+  return Number.isFinite(ms) && ms > 0 ? ms : null;
+}
+
+/** Hive timestamps are UTC but carry no zone marker, so append one before parsing. */
+function opTimeMs(timestamp: string | undefined): number | null {
+  if (!timestamp) return null;
+  const ms = Date.parse(`${timestamp}Z`);
+  return Number.isFinite(ms) ? ms : null;
+}
+
 /**
  * Find the newest podping op whose payload mentions the feed URL.
  *
@@ -99,8 +121,15 @@ function isPodpingOpId(id: unknown): boolean {
  * to the `iris` (v1.1) vs legacy `urls` key, and it still matches when hivepinger
  * batches several feed URLs into a single op. JSON encoders don't escape `/`, so the
  * URL appears verbatim.
+ *
+ * `minTimeMs` (when set) rejects ops older than the caller's send time, so a previous
+ * ping for the same feed can't be mistaken for the current one.
  */
-function findLanding(entries: unknown[], feedUrl: string): Landing | null {
+function findLanding(
+  entries: unknown[],
+  feedUrl: string,
+  minTimeMs: number | null
+): Landing | null {
   // condenser_api returns history oldest-first — walk backwards for the newest match.
   for (let i = entries.length - 1; i >= 0; i--) {
     const entry = entries[i];
@@ -114,6 +143,11 @@ function findLanding(entries: unknown[], feedUrl: string): Landing | null {
     if (!payload || !isPodpingOpId(payload.id)) continue;
     if (typeof payload.json !== 'string' || !payload.json.includes(feedUrl)) continue;
 
+    if (minTimeMs !== null) {
+      const opMs = opTimeMs(value?.timestamp);
+      if (opMs === null || opMs < minTimeMs) continue;
+    }
+
     return { trxId: value?.trx_id, block: value?.block, timestamp: value?.timestamp };
   }
 
@@ -125,7 +159,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { url } = req.query as { url?: string };
+  const { url, since } = req.query as { url?: string; since?: string };
 
   if (!url || typeof url !== 'string') {
     return res.status(400).json({ error: 'Missing url parameter' });
@@ -154,11 +188,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(501).json({ error: 'Hive verification not configured' });
   }
 
+  const sinceMs = parseSince(since);
+  const minTimeMs = sinceMs === null ? null : sinceMs - SINCE_SKEW_MS;
+
   let lastError: Error | null = null;
   for (const node of getRpcNodes()) {
     try {
       const entries = await fetchAccountHistory(node, account);
-      const landing = findLanding(entries, url);
+      const landing = findLanding(entries, url, minTimeMs);
 
       if (!landing) {
         return res.status(200).json({ landed: false, account });
