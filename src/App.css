@@ -1082,6 +1082,9 @@ body {
   border-radius: var(--radius-lg);
   width: 90%;
   max-width: 600px;
+  /* The modal, not its content, owns the height cap — content below flexes to fit,
+     so a scrollbar only appears once the whole dialog would overflow the viewport. */
+  max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1185,8 +1188,11 @@ body {
 .modal-content {
   padding: 20px;
   overflow-y: auto;
-  min-height: auto;
-  max-height: 60vh;
+  /* Grow with the content rather than scrolling at a fixed 60vh regardless of how
+     much room the viewport actually has. min-height: 0 is load-bearing — without it
+     a flex item refuses to shrink below its content and the cap above can't apply. */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .modal-footer {
