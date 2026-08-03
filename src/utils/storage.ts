@@ -160,6 +160,10 @@ export interface HostedFeedInfo {
   ownerEmailHash?: string;  // Keyed HMAC of owner email if claimed via email
   emailLinkedAt?: number;   // When the email was linked
   isDraft?: boolean;        // True when hosted without PI/podping notification
+  // Podcast Index feed id, as reported by /api/hosted on the last non-draft save.
+  // Cached here because PI can only be searched by podcastGuid *after* it crawls
+  // the feed, so a just-registered feed is otherwise unfindable until then.
+  podcastIndexId?: number;
 }
 
 // Hosted feed storage operations

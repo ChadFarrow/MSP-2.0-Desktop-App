@@ -191,7 +191,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const medium = extractPodcastMedium(xml);
 
     // Only notify Podcast Index if not a draft
-    const podcastIndexId = (isDraft === true) ? undefined : await notifyPodcastIndex(stableUrl, { medium });
+    const piResult = (isDraft === true) ? null : await notifyPodcastIndex(stableUrl, { medium });
+    const podcastIndexId = piResult ? piResult.podcastIndexId : undefined;
 
     // Store metadata separately (Vercel Blob doesn't support custom metadata)
     await put(`feeds/${feedId}.meta.json`, JSON.stringify({
@@ -215,6 +216,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       url: stableUrl,
       blobUrl: blob.url,
       podcastIndexId,
+      // Present only when PI declined to register the feed — lets the UI say why.
+      ...(piResult?.addResult ? { addResult: piResult.addResult } : {}),
       isDraft: isDraft === true
     });
   } catch (error) {

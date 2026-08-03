@@ -815,3 +815,33 @@ describe('podcast:image on publisher feeds', () => {
     expect(reparsed.podcastImages).toEqual(publisher.podcastImages);
   });
 });
+
+describe('enclosure length normalization on import', () => {
+  const feedWithLength = (length: string) => `<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+  <channel>
+    <title>Test Feed</title>
+    <description>A test feed</description>
+    <podcast:medium>music</podcast:medium>
+    <item>
+      <title>Track 1</title>
+      <guid isPermaLink="false">track-guid-1</guid>
+      <enclosure url="https://example.com/track.mp3" length="${length}" type="audio/mpeg"/>
+    </item>
+  </channel>
+</rss>`;
+
+  it('keeps a plausible file size', () => {
+    expect(parseRssFeed(feedWithLength('74784')).tracks[0].enclosureLength).toBe('74784');
+  });
+
+  it("drops MSP's legacy 33-byte placeholder so it gets re-measured", () => {
+    expect(parseRssFeed(feedWithLength('33')).tracks[0].enclosureLength).toBe('');
+  });
+
+  it('drops zero and non-numeric lengths', () => {
+    expect(parseRssFeed(feedWithLength('0')).tracks[0].enclosureLength).toBe('');
+    expect(parseRssFeed(feedWithLength('')).tracks[0].enclosureLength).toBe('');
+    expect(parseRssFeed(feedWithLength('unknown')).tracks[0].enclosureLength).toBe('');
+  });
+});

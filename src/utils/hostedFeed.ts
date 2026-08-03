@@ -69,12 +69,33 @@ export async function hydrateHostedCredentials(): Promise<number> {
   return restored;
 }
 
+/**
+ * Why Podcast Index declined to register the feed. Mirror of `PodcastIndexAddResult`
+ * in `api/_utils/feedUtils.ts` — the frontend can't import from `api/`, so the shape
+ * is intentionally duplicated (same arrangement as `urlValidation.ts`). Keep in sync.
+ */
+export interface PodcastIndexAddResult {
+  httpStatus?: number;
+  status?: unknown;
+  description?: string | null;
+  error?: string;
+}
+
+/** Human-readable reason from an `addResult`, or null when it carries nothing useful. */
+export function describeAddResult(result?: PodcastIndexAddResult | null): string | null {
+  if (!result) return null;
+  const detail = result.description || result.error;
+  return detail ? String(detail) : null;
+}
+
 interface CreateFeedResponse {
   feedId: string;
   editToken: string;
   url: string;
   blobUrl: string;
   podcastIndexId?: number;
+  /** Present only when `podcastIndexId` is absent — explains why. */
+  addResult?: PodcastIndexAddResult;
   isDraft?: boolean;
 }
 
@@ -116,6 +137,8 @@ export async function createHostedFeed(
 interface UpdateFeedResponse {
   success: boolean;
   podcastIndexId?: number;
+  /** Present only when `podcastIndexId` is absent — explains why. */
+  addResult?: PodcastIndexAddResult;
   isDraft?: boolean;
 }
 

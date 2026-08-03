@@ -62,7 +62,7 @@ export const FIELD_INFO = {
   trackSeason: "Season number for grouping tracks (e.g., 1 for first album). Optional.",
   trackEpisode: "Episode number for this track. Defaults to track order if not set.",
   enclosureUrl: "Direct link to the audio file. MP3 is preferred — smaller file size saves bandwidth for listeners. Other formats (flac, wav, m4a, aac, ogg, opus, aiff) are also supported. Ensure CORS policy allows access.",
-  enclosureLength: "File size in MB. Important for podcast apps to show download size.",
+  enclosureLength: "File size in bytes. Filled in automatically from the audio file when its host allows it; podcast apps use it to show download size.",
   trackArtUrl: "Optional track-specific artwork. If empty, album art is used.",
   transcriptUrl: "Link to an SRT file with time-coded lyrics for display during playback.",
   trackGuid: "Unique identifier for this track. Auto-generated, or use guidgenerator.com to create one.",
