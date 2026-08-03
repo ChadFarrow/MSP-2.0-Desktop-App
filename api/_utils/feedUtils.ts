@@ -83,13 +83,38 @@ function getPodcastIndexHeaders(): Record<string, string> {
 }
 
 /**
- * Submit feed to Podcast Index and return PI ID if available
- * Uses pubnotify to trigger re-crawl, then add/byfeedurl for new feeds
+ * Why PI's add/byfeedurl didn't hand back a feed id. Same shape `/api/pubnotify`
+ * already returns, so both submission paths explain failures identically.
+ */
+export interface PodcastIndexAddResult {
+  /** HTTP status from add/byfeedurl, when a response came back at all. */
+  httpStatus?: number;
+  /** PI's own `status` field — usually the string `"false"` on a rejection. */
+  status?: unknown;
+  /** PI's reason for the rejection, or a locally-composed one. */
+  description?: string | null;
+  /** Set when the request itself threw (network failure, PI unreachable). */
+  error?: string;
+}
+
+export interface PodcastIndexNotifyResult {
+  podcastIndexId: number | null;
+  /** Present only when no feed id came back — explains why registration didn't happen. */
+  addResult?: PodcastIndexAddResult;
+}
+
+/**
+ * Submit feed to Podcast Index and return the PI ID if available.
+ * Uses pubnotify to trigger re-crawl, then add/byfeedurl for new feeds.
+ *
+ * A missing id is not the same as a failure to try — `addResult` carries PI's
+ * explanation so callers can tell the user why the feed isn't indexed instead
+ * of leaving the reason buried in function logs.
  */
 export async function notifyPodcastIndex(
   feedUrl: string,
   options: { medium?: string } = {}
-): Promise<number | null> {
+): Promise<PodcastIndexNotifyResult> {
   // First, send pubnotify to trigger re-crawl (works for updates, no auth required)
   try {
     await fetch(
@@ -111,7 +136,9 @@ export async function notifyPodcastIndex(
   });
 
   // Then try to get PI ID via add/byfeedurl (for new feeds) or lookup
-  if (!PI_API_KEY || !PI_API_SECRET) return null;
+  if (!PI_API_KEY || !PI_API_SECRET) {
+    return { podcastIndexId: null, addResult: { description: 'Podcast Index API credentials not configured' } };
+  }
 
   try {
     const headers = getPodcastIndexHeaders();
@@ -125,7 +152,7 @@ export async function notifyPodcastIndex(
       try {
         const data = JSON.parse(text);
         if (data.feed?.id) {
-          return data.feed.id;
+          return { podcastIndexId: data.feed.id };
         }
         // No feed id returned — surface why (PI sends status/description explaining
         // rejections: unauthorized key, feed unreachable, duplicate guid, etc.)
@@ -133,16 +160,28 @@ export async function notifyPodcastIndex(
           `PI add/byfeedurl did not register ${feedUrl} — HTTP ${response.status}, ` +
           `status=${data.status}, description=${data.description ?? '(none)'}`
         );
+        return {
+          podcastIndexId: null,
+          addResult: { httpStatus: response.status, status: data.status, description: data.description ?? null }
+        };
       } catch {
         console.warn(`PI add/byfeedurl returned non-JSON for ${feedUrl} — HTTP ${response.status}: ${text.slice(0, 200)}`);
+        return {
+          podcastIndexId: null,
+          addResult: { httpStatus: response.status, description: `non-JSON: ${text.slice(0, 200)}` }
+        };
       }
-    } else {
-      console.warn(`PI add/byfeedurl returned empty body for ${feedUrl} — HTTP ${response.status}`);
     }
+    console.warn(`PI add/byfeedurl returned empty body for ${feedUrl} — HTTP ${response.status}`);
+    return {
+      podcastIndexId: null,
+      addResult: { httpStatus: response.status, description: 'empty response body' }
+    };
   } catch (err) {
-    console.warn('Failed to add feed to Podcast Index:', err instanceof Error ? err.message : err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('Failed to add feed to Podcast Index:', message);
+    return { podcastIndexId: null, addResult: { error: message } };
   }
-  return null;
 }
 
 /**

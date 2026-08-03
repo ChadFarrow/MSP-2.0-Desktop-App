@@ -73,6 +73,72 @@ export function getAudioDuration(url: string): Promise<number | null> {
 }
 
 /**
+ * Smallest byte count we'll believe for a real audio/video file. Anything under this
+ * is a placeholder from some generator rather than a measurement — MSP itself used to
+ * write a literal `33` for every track — so it's treated as "unknown" on import.
+ */
+export const MIN_PLAUSIBLE_MEDIA_BYTES = 1024;
+
+/** Bytes per second of a 128 kbps encode, used to estimate an unmeasurable file. */
+const ESTIMATED_BYTES_PER_SECOND = 16000;
+
+/** Last-resort enclosure size (~5 MB) when neither the host nor a duration will tell us. */
+const FALLBACK_MEDIA_BYTES = 5_000_000;
+
+/**
+ * Read a media file's real byte size with a HEAD request.
+ *
+ * `Content-Length` is a CORS-safelisted response header, so this works on any host
+ * that sends `Access-Control-Allow-Origin` — the host does NOT need to list it in
+ * `Access-Control-Expose-Headers`. Hosts that send no CORS headers fail the fetch.
+ * Like getAudioDuration and detectImageMetadata this never rejects; it resolves null
+ * so callers can fall back.
+ */
+export async function detectMediaSize(url: string, timeoutMs = 10000): Promise<number | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { method: 'HEAD', signal: controller.signal });
+    if (!response.ok) return null;
+    const header = response.headers.get('content-length');
+    if (!header) return null;
+    const bytes = parseInt(header, 10);
+    return Number.isFinite(bytes) && bytes >= MIN_PLAUSIBLE_MEDIA_BYTES ? bytes : null;
+  } catch {
+    return null; // CORS-blocked, offline, or timed out — caller estimates instead
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Best-effort enclosure size in bytes. Prefers the host's real Content-Length; falls
+ * back to a duration-based estimate, then to a generic value. Always returns a number
+ * because RSS requires the enclosure `length` attribute — but only the first branch is
+ * a measurement, so prefer it wherever the host allows.
+ */
+export async function resolveMediaSize(url: string, durationSeconds?: number | null): Promise<number> {
+  const measured = await detectMediaSize(url);
+  if (measured !== null) return measured;
+  if (durationSeconds && durationSeconds > 0) {
+    return Math.round(durationSeconds * ESTIMATED_BYTES_PER_SECOND);
+  }
+  return FALLBACK_MEDIA_BYTES;
+}
+
+/**
+ * Parse an HH:MM:SS (or MM:SS / SS) duration back into seconds. Returns null when the
+ * value is empty or unparseable.
+ */
+export function hhmmssToSeconds(value: string | undefined): number | null {
+  if (!value) return null;
+  const parts = value.split(':').map(p => parseInt(p, 10));
+  if (parts.some(p => !Number.isFinite(p))) return null;
+  const seconds = parts.reduce((total, part) => total * 60 + part, 0);
+  return seconds > 0 ? seconds : null;
+}
+
+/**
  * Convert seconds to HH:MM:SS format
  */
 export function secondsToHHMMSS(totalSeconds: number): string {

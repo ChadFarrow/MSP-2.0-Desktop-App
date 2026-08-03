@@ -99,6 +99,103 @@ describe('notifyPodping', () => {
   });
 });
 
+describe('notifyPodcastIndex', () => {
+  // fetch #1 is the pubnotify ping (fire-and-forget, response ignored);
+  // fetch #2 is add/byfeedurl, whose outcome is what we assert on.
+  const PUBNOTIFY_OK = { ok: true, status: 200, text: async () => '' };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    // Keep podping out of the fetch sequence so call #2 is always add/byfeedurl.
+    delete process.env.PODPING_ENDPOINT_URL;
+    delete process.env.PODPING_BEARER_TOKEN;
+    process.env.PODCASTINDEX_API_KEY = 'test-key';
+    process.env.PODCASTINDEX_API_SECRET = 'test-secret';
+  });
+
+  it('returns the feed id and no addResult when PI registers the feed', async () => {
+    mockFetch
+      .mockResolvedValueOnce(PUBNOTIFY_OK)
+      .mockResolvedValueOnce({ status: 200, text: async () => JSON.stringify({ status: true, feed: { id: 6590182 } }) });
+
+    const { notifyPodcastIndex } = await import('./feedUtils');
+    const result = await notifyPodcastIndex('https://example.com/feed.xml');
+
+    expect(result).toEqual({ podcastIndexId: 6590182 });
+    expect(mockFetch.mock.calls[1][0]).toContain('add/byfeedurl');
+  });
+
+  it("surfaces PI's rejection reason when no feed id comes back", async () => {
+    mockFetch
+      .mockResolvedValueOnce(PUBNOTIFY_OK)
+      .mockResolvedValueOnce({
+        status: 400,
+        text: async () => JSON.stringify({ status: 'false', description: 'Feed is not a podcast feed' })
+      });
+
+    const { notifyPodcastIndex } = await import('./feedUtils');
+    const result = await notifyPodcastIndex('https://example.com/feed.xml');
+
+    expect(result.podcastIndexId).toBeNull();
+    expect(result.addResult).toEqual({
+      httpStatus: 400,
+      status: 'false',
+      description: 'Feed is not a podcast feed'
+    });
+  });
+
+  it('reports a non-JSON body as the reason', async () => {
+    mockFetch
+      .mockResolvedValueOnce(PUBNOTIFY_OK)
+      .mockResolvedValueOnce({ status: 502, text: async () => '<html>Bad Gateway</html>' });
+
+    const { notifyPodcastIndex } = await import('./feedUtils');
+    const result = await notifyPodcastIndex('https://example.com/feed.xml');
+
+    expect(result.podcastIndexId).toBeNull();
+    expect(result.addResult?.httpStatus).toBe(502);
+    expect(result.addResult?.description).toContain('non-JSON');
+  });
+
+  it('reports an empty body as the reason', async () => {
+    mockFetch
+      .mockResolvedValueOnce(PUBNOTIFY_OK)
+      .mockResolvedValueOnce({ status: 204, text: async () => '' });
+
+    const { notifyPodcastIndex } = await import('./feedUtils');
+    const result = await notifyPodcastIndex('https://example.com/feed.xml');
+
+    expect(result.podcastIndexId).toBeNull();
+    expect(result.addResult).toEqual({ httpStatus: 204, description: 'empty response body' });
+  });
+
+  it('reports a network failure as the reason', async () => {
+    mockFetch
+      .mockResolvedValueOnce(PUBNOTIFY_OK)
+      .mockRejectedValueOnce(new Error('ECONNREFUSED'));
+
+    const { notifyPodcastIndex } = await import('./feedUtils');
+    const result = await notifyPodcastIndex('https://example.com/feed.xml');
+
+    expect(result).toEqual({ podcastIndexId: null, addResult: { error: 'ECONNREFUSED' } });
+  });
+
+  it('skips add/byfeedurl and explains why when PI credentials are unset', async () => {
+    delete process.env.PODCASTINDEX_API_KEY;
+    delete process.env.PODCASTINDEX_API_SECRET;
+    mockFetch.mockResolvedValueOnce(PUBNOTIFY_OK);
+
+    const { notifyPodcastIndex } = await import('./feedUtils');
+    const result = await notifyPodcastIndex('https://example.com/feed.xml');
+
+    expect(result.podcastIndexId).toBeNull();
+    expect(result.addResult?.description).toMatch(/credentials/i);
+    // Only the pubnotify ping went out — no add attempt.
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('timingSafeEqualHex', () => {
   it('returns true for identical hex strings', async () => {
     const { timingSafeEqualHex, hashToken } = await import('./feedUtils');

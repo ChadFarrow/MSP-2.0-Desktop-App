@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getAudioMimeType, isKnownAudioFormat } from './audioUtils';
+import { getAudioMimeType, isKnownAudioFormat, hhmmssToSeconds, detectMediaSize, resolveMediaSize } from './audioUtils';
 
 describe('getAudioMimeType', () => {
   it('detects mp3 as audio/mpeg', () => {
@@ -72,5 +72,93 @@ describe('isKnownAudioFormat', () => {
   it('handles query strings and fragments', () => {
     expect(isKnownAudioFormat('https://example.com/a.mp3?x=1')).toBe(true);
     expect(isKnownAudioFormat('https://example.com/a.mp4?x=1')).toBe(false);
+  });
+});
+
+describe('hhmmssToSeconds', () => {
+  it('parses HH:MM:SS', () => {
+    expect(hhmmssToSeconds('01:02:03')).toBe(3723);
+  });
+
+  it('parses MM:SS and bare seconds', () => {
+    expect(hhmmssToSeconds('04:20')).toBe(260);
+    expect(hhmmssToSeconds('45')).toBe(45);
+  });
+
+  it('returns null for empty, zero, or unparseable input', () => {
+    expect(hhmmssToSeconds('')).toBeNull();
+    expect(hhmmssToSeconds(undefined)).toBeNull();
+    expect(hhmmssToSeconds('00:00:00')).toBeNull();
+    expect(hhmmssToSeconds('not a duration')).toBeNull();
+  });
+});
+
+describe('detectMediaSize', () => {
+  const withFetch = async (impl: unknown, run: () => Promise<void>) => {
+    const original = globalThis.fetch;
+    globalThis.fetch = impl as typeof fetch;
+    try { await run(); } finally { globalThis.fetch = original; }
+  };
+
+  const headResponse = (ok: boolean, contentLength: string | null) => async () => ({
+    ok,
+    headers: { get: (name: string) => (name === 'content-length' ? contentLength : null) }
+  });
+
+  it('reads Content-Length from a HEAD response', async () => {
+    await withFetch(headResponse(true, '74784'), async () => {
+      expect(await detectMediaSize('https://example.com/a.mp3')).toBe(74784);
+    });
+  });
+
+  it('rejects implausibly small sizes rather than trusting them', async () => {
+    await withFetch(headResponse(true, '33'), async () => {
+      expect(await detectMediaSize('https://example.com/a.mp3')).toBeNull();
+    });
+  });
+
+  it('returns null when the header is absent or the response is not ok', async () => {
+    await withFetch(headResponse(true, null), async () => {
+      expect(await detectMediaSize('https://example.com/a.mp3')).toBeNull();
+    });
+    await withFetch(headResponse(false, '74784'), async () => {
+      expect(await detectMediaSize('https://example.com/a.mp3')).toBeNull();
+    });
+  });
+
+  it('never rejects when the host blocks the request', async () => {
+    await withFetch(async () => { throw new TypeError('Failed to fetch'); }, async () => {
+      await expect(detectMediaSize('https://example.com/a.mp3')).resolves.toBeNull();
+    });
+  });
+});
+
+describe('resolveMediaSize', () => {
+  const withFetch = async (impl: unknown, run: () => Promise<void>) => {
+    const original = globalThis.fetch;
+    globalThis.fetch = impl as typeof fetch;
+    try { await run(); } finally { globalThis.fetch = original; }
+  };
+
+  it('prefers the measured size over any estimate', async () => {
+    const ok = async () => ({ ok: true, headers: { get: () => '74784' } });
+    await withFetch(ok, async () => {
+      expect(await resolveMediaSize('https://example.com/a.mp3', 240)).toBe(74784);
+    });
+  });
+
+  it('estimates from duration when the host blocks the HEAD', async () => {
+    const blocked = async () => { throw new TypeError('Failed to fetch'); };
+    await withFetch(blocked, async () => {
+      // 240s at 128 kbps => 240 * 16000 bytes
+      expect(await resolveMediaSize('https://example.com/a.mp3', 240)).toBe(3_840_000);
+    });
+  });
+
+  it('falls back to a generic size when neither host nor duration is available', async () => {
+    const blocked = async () => { throw new TypeError('Failed to fetch'); };
+    await withFetch(blocked, async () => {
+      expect(await resolveMediaSize('https://example.com/a.mp3', null)).toBe(5_000_000);
+    });
   });
 });
