@@ -229,6 +229,22 @@ function getAttr(node: unknown, attr: string): string {
   return '';
 }
 
+// Read <atom:link rel="self" href="..."> — the URL a feed claims to live at.
+// Not added to KNOWN_CHANNEL_KEYS on purpose: the element still round-trips
+// through unknownChannelElements, this only reads it.
+function parseSelfLink(channel: unknown): string {
+  if (!channel || typeof channel !== 'object') return '';
+  const raw = (channel as Record<string, unknown>)['atom:link'];
+  if (!raw) return '';
+  const links = Array.isArray(raw) ? raw : [raw];
+  for (const link of links) {
+    if (getAttr(link, 'rel') !== 'self') continue;
+    const href = getAttr(link, 'href');
+    if (href.startsWith('http')) return href;
+  }
+  return '';
+}
+
 // Parse all <podcast:image> elements under a channel or item node into PodcastImage[].
 function parsePodcastImages(parent: unknown): PodcastImage[] {
   if (!parent || typeof parent !== 'object') return [];
@@ -789,6 +805,14 @@ export const parsePublisherRssFeed = (xmlString: string): PublisherFeed => {
     unknownChannelElements: captureUnknownElements(channel, KNOWN_CHANNEL_KEYS),
     remoteItems: []
   };
+
+  // A feed imported from a file/paste has no import URL, so fall back to the URL
+  // the feed claims for itself. Overridden by the real import URL in handleImport
+  // when there is one.
+  const selfLink = parseSelfLink(channel);
+  if (selfLink) {
+    feed.sourceUrl = selfLink;
+  }
 
   // Remote items (the feeds this publisher owns)
   const remoteItems = channel['podcast:remoteItem'];

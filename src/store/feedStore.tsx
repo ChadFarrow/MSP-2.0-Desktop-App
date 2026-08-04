@@ -65,6 +65,11 @@ export interface FeedState {
   videoFeed: Album | null;
   publisherFeed: PublisherFeed | null;
   isDirty: boolean;
+  // Bumped every time a whole publisher feed is swapped in (import, new, publish
+  // rewrite). Editor sections that keep feed-scoped local state watch this to
+  // know they're looking at a different feed — the podcastGuid can't serve as
+  // that signal because the user can type into the GUID field.
+  publisherFeedInstance: number;
 }
 
 
@@ -74,7 +79,8 @@ export const initialState: FeedState = {
   album: albumStorage.load() || createEmptyAlbum(),
   videoFeed: videoStorage.load() || null,
   publisherFeed: publisherStorage.load() || null,
-  isDirty: false
+  isDirty: false,
+  publisherFeedInstance: 0
 };
 
 // Helper to get the current active album (album or videoFeed based on feedType)
@@ -476,7 +482,13 @@ export function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
     case 'SET_PUBLISHER_FEED':
       feedTypeStorage.save('publisher');
-      return { ...state, publisherFeed: action.payload, feedType: 'publisher', isDirty: false };
+      return {
+        ...state,
+        publisherFeed: action.payload,
+        feedType: 'publisher',
+        isDirty: false,
+        publisherFeedInstance: state.publisherFeedInstance + 1
+      };
 
     case 'UPDATE_PUBLISHER_FEED':
       if (!state.publisherFeed) return state;
@@ -543,7 +555,8 @@ export function feedReducer(state: FeedState, action: FeedAction): FeedState {
         ...state,
         publisherFeed: createEmptyPublisherFeed(),
         feedType: 'publisher',
-        isDirty: true
+        isDirty: true,
+        publisherFeedInstance: state.publisherFeedInstance + 1
       };
 
     case 'ADD_PUBLISHER_RECIPIENT': {

@@ -11,7 +11,7 @@ import { getCatalogFeedsStatus } from '../../../utils/publisherPublish';
 
 export function PublisherEditor() {
   const { state, dispatch } = useFeed();
-  const { publisherFeed } = state;
+  const { publisherFeed, publisherFeedInstance } = state;
 
   if (!publisherFeed) {
     return (
@@ -37,8 +37,8 @@ export function PublisherEditor() {
         <CatalogFeedsSection publisherFeed={publisherFeed} dispatch={dispatch} />
         <PublisherValueSection publisherFeed={publisherFeed} dispatch={dispatch} />
         <PublisherFundingSection publisherFeed={publisherFeed} dispatch={dispatch} />
-        <PublisherFeedReminderSection publisherFeed={publisherFeed} />
-        <DownloadCatalogSection publisherFeed={publisherFeed} />
+        <PublisherFeedReminderSection publisherFeed={publisherFeed} feedInstance={publisherFeedInstance} />
+        <DownloadCatalogSection publisherFeed={publisherFeed} feedInstance={publisherFeedInstance} />
         {allFeedsHosted && <PublishSection publisherFeed={publisherFeed} />}
       </div>
     </div>

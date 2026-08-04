@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { PublisherFeed } from '../../../types/feed';
 import { Section } from '../../Section';
 import { fetchFeedFromUrl, parseRssFeed } from '../../../utils/xmlParser';
@@ -8,15 +8,30 @@ import { apiFetch } from '../../../utils/api';
 
 interface DownloadCatalogSectionProps {
   publisherFeed: PublisherFeed;
+  /** Store-level counter, bumped whenever a different publisher feed is loaded. */
+  feedInstance: number;
 }
 
-export function DownloadCatalogSection({ publisherFeed }: DownloadCatalogSectionProps) {
+export function DownloadCatalogSection({ publisherFeed, feedInstance }: DownloadCatalogSectionProps) {
   const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null);
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [publisherFeedUrl, setPublisherFeedUrl] = useState('');
   const [urlValidation, setUrlValidation] = useState<'idle' | 'checking' | 'found' | 'not-found'>('idle');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
+  const loadedInstance = useRef(feedInstance);
+
+  // This section stays mounted across an import, so without this the URL resolved
+  // for the *previous* publisher feed would survive and get stamped into the new
+  // feed's <podcast:publisher> tags. Clearing it lets the effect below re-resolve
+  // from the feed that's actually loaded now.
+  useEffect(() => {
+    if (loadedInstance.current === feedInstance) return;
+    loadedInstance.current = feedInstance;
+    setPublisherFeedUrl('');
+    setUrlValidation('idle');
+    setSubmitResult(null);
+  }, [feedInstance]);
 
   // Auto-populate URL from sourceUrl (imported URL) or MSP hosted URL
   // Check periodically in case user hosts from the reminder section above

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { PublisherFeed } from '../../../types/feed';
 import { getFeedUrlError } from '../../../utils/urlValidation';
 import { Section } from '../../Section';
@@ -17,15 +17,29 @@ import { apiFetch } from '../../../utils/api';
 
 interface PublisherFeedReminderSectionProps {
   publisherFeed: PublisherFeed;
+  /** Store-level counter, bumped whenever a different publisher feed is loaded. */
+  feedInstance: number;
 }
 
-export function PublisherFeedReminderSection({ publisherFeed }: PublisherFeedReminderSectionProps) {
+export function PublisherFeedReminderSection({ publisherFeed, feedInstance }: PublisherFeedReminderSectionProps) {
   const { state: nostrState } = useNostr();
   const [isHosting, setIsHosting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string; url?: string } | null>(null);
   const [selfHostedUrl, setSelfHostedUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [piResult, setPiResult] = useState<{ success: boolean; message: string } | null>(null);
+  const loadedInstance = useRef(feedInstance);
+
+  // Same reason as DownloadCatalogSection: this section survives an import, so the
+  // URL and result banners from the previous feed have to be dropped or they read
+  // as belonging to the feed that was just loaded.
+  useEffect(() => {
+    if (loadedInstance.current === feedInstance) return;
+    loadedInstance.current = feedInstance;
+    setSelfHostedUrl('');
+    setResult(null);
+    setPiResult(null);
+  }, [feedInstance]);
 
   const podcastGuid = publisherFeed.podcastGuid;
   const existingInfo = podcastGuid ? getHostedFeedInfo(podcastGuid) : null;

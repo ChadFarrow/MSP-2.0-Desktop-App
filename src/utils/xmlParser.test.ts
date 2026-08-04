@@ -845,3 +845,49 @@ describe('enclosure length normalization on import', () => {
     expect(parseRssFeed(feedWithLength('unknown')).tracks[0].enclosureLength).toBe('');
   });
 });
+
+describe('publisher feed sourceUrl from atom:link rel="self"', () => {
+  const publisherXml = (links: string) => `<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+  <channel>
+    <title>Horseheads</title>
+    <description>A label</description>
+    <podcast:medium>publisher</podcast:medium>
+    <podcast:guid>d1f4a0f6-0000-4000-8000-000000000001</podcast:guid>
+    ${links}
+    <podcast:remoteItem feedGuid="a1" feedUrl="https://example.com/album.xml" medium="music"/>
+  </channel>
+</rss>`;
+
+  it('populates sourceUrl from the self link so a file import knows its own URL', () => {
+    const feed = parsePublisherRssFeed(publisherXml(
+      '<atom:link href="https://example.com/horseheads.xml" rel="self" type="application/rss+xml"/>'
+    ));
+    expect(feed.sourceUrl).toBe('https://example.com/horseheads.xml');
+  });
+
+  it('ignores non-self links', () => {
+    const feed = parsePublisherRssFeed(publisherXml(
+      '<atom:link href="https://example.com/hub" rel="hub"/>'
+    ));
+    expect(feed.sourceUrl).toBeUndefined();
+  });
+
+  it('picks the self link out of a list of links', () => {
+    const feed = parsePublisherRssFeed(publisherXml(
+      '<atom:link href="https://example.com/hub" rel="hub"/><atom:link href="https://example.com/horseheads.xml" rel="self"/>'
+    ));
+    expect(feed.sourceUrl).toBe('https://example.com/horseheads.xml');
+  });
+
+  it('leaves sourceUrl unset when there is no atom:link at all', () => {
+    expect(parsePublisherRssFeed(publisherXml('')).sourceUrl).toBeUndefined();
+  });
+
+  it('still preserves the atom:link element for round-trip output', () => {
+    const feed = parsePublisherRssFeed(publisherXml(
+      '<atom:link href="https://example.com/horseheads.xml" rel="self"/>'
+    ));
+    expect(generatePublisherRssFeed(feed)).toContain('https://example.com/horseheads.xml');
+  });
+});
