@@ -1,6 +1,7 @@
 // Shared API utilities for hosted feed endpoints
 import { createHash, timingSafeEqual } from 'crypto';
 import { getAuthHeaders } from './podcastIndex.js';
+import { normalizeFeedUrl } from './urlValidation.js';
 
 const PI_API_KEY = process.env.PODCASTINDEX_API_KEY;
 const PI_API_SECRET = process.env.PODCASTINDEX_API_SECRET;
@@ -31,9 +32,12 @@ export function isPodpingConfigured(): boolean {
  * so callers can fire-and-forget.
  */
 export async function notifyPodping(
-  feedUrl: string,
+  rawFeedUrl: string,
   options: PodpingOptions = {}
 ): Promise<PodpingResult> {
+  // Last choke point before the URL leaves MSP. Also covers the hosted POST/PUT
+  // paths, which reach here without passing through an /api handler's guard.
+  const feedUrl = normalizeFeedUrl(rawFeedUrl);
   const endpoint = process.env.PODPING_ENDPOINT_URL;
   if (!endpoint) {
     return { ok: false, error: 'PODPING_ENDPOINT_URL not configured' };
@@ -112,9 +116,12 @@ export interface PodcastIndexNotifyResult {
  * of leaving the reason buried in function logs.
  */
 export async function notifyPodcastIndex(
-  feedUrl: string,
+  rawFeedUrl: string,
   options: { medium?: string } = {}
 ): Promise<PodcastIndexNotifyResult> {
+  // Same choke point as notifyPodping — hosted POST/PUT reaches here directly.
+  const feedUrl = normalizeFeedUrl(rawFeedUrl);
+
   // First, send pubnotify to trigger re-crawl (works for updates, no auth required)
   try {
     await fetch(
