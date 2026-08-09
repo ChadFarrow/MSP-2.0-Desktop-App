@@ -55,6 +55,21 @@ describe('notifyPodping', () => {
     expect(calledInit.headers.Authorization).toBe('Bearer secret-123');
   });
 
+  it('trims paste whitespace off the feed URL before sending', async () => {
+    process.env.PODPING_ENDPOINT_URL = 'https://podping.example/';
+    process.env.PODPING_BEARER_TOKEN = 'secret-123';
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, text: async () => '' });
+
+    const { notifyPodping } = await import('./feedUtils');
+    await notifyPodping('  https://example.com/feed.xml\n');
+
+    const [calledUrl] = mockFetch.mock.calls[0];
+    expect(calledUrl).toContain('url=https%3A%2F%2Fexample.com%2Ffeed.xml');
+    // A leading space would encode as %20 and reach Hive as a different feed.
+    expect(calledUrl).not.toContain('%20');
+    expect(calledUrl).not.toContain('%0A');
+  });
+
   it('omits reason and medium params when not provided', async () => {
     process.env.PODPING_ENDPOINT_URL = 'https://podping.example/';
     process.env.PODPING_BEARER_TOKEN = 'secret-123';

@@ -3,6 +3,7 @@
 
 import type { PublisherFeed, RemoteItem } from '../types/feed';
 import { generatePublisherRssFeed } from './xmlGenerator';
+import { normalizeFeedUrl } from './urlValidation';
 import {
   getHostedFeedInfo,
   saveHostedFeedInfo,
@@ -98,7 +99,7 @@ async function notifyPodcastIndex(
   guid?: string
 ): Promise<{ status: 'indexed' | 'pending' | 'failed'; pageUrl?: string }> {
   try {
-    const params = new URLSearchParams({ url: feedUrl });
+    const params = new URLSearchParams({ url: normalizeFeedUrl(feedUrl) });
     if (medium) params.set('medium', medium);
     if (guid) params.set('guid', guid);
     const res = await apiFetch(`/api/pubnotify?${params}`);

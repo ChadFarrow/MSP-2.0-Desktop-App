@@ -817,14 +817,6 @@ body {
   transform: translateY(-1px);
 }
 
-.btn-primary:disabled,
-.btn-primary:disabled:hover {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-  background: var(--bg-tertiary);
-}
-
 .btn-secondary {
   background: var(--bg-tertiary);
   color: var(--text-primary);
@@ -859,6 +851,28 @@ body {
 
 .btn-danger {
   background: var(--error);
+  color: white;
+}
+
+/* Disabled state for every button variant.
+   Only .btn-primary had one, so a disabled .btn-secondary — which is what the
+   "Submit to Podcast Index" buttons use — looked identical to an enabled one and
+   still lit up on hover. A submit button that is blocked by a validation error
+   has to *look* blocked, or the user just keeps clicking it.
+   Placed after the variant rules, and :disabled:hover outranks .btn-x:hover, so
+   the hover styles can't paint over it. */
+.btn:disabled,
+.btn:disabled:hover {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.btn-primary:disabled,
+.btn-primary:disabled:hover {
   color: white;
 }
 

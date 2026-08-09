@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { checkRateLimit } from './_utils/rateLimiter.js';
-import { getFeedUrlError } from './_utils/urlValidation.js';
+import { getFeedUrlError, normalizeFeedUrl } from './_utils/urlValidation.js';
+import { getClientIp } from './_utils/urlSafety.js';
 
 /**
  * Check whether a podping for a feed URL actually landed on the Hive blockchain.
@@ -49,17 +50,6 @@ interface Landing {
   trxId?: string;
   block?: number;
   timestamp?: string;
-}
-
-function getClientIp(req: VercelRequest): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string') {
-    return forwarded.split(',')[0].trim();
-  }
-  if (Array.isArray(forwarded) && forwarded.length > 0) {
-    return forwarded[0].split(',')[0].trim();
-  }
-  return 'unknown';
 }
 
 function getRpcNodes(): string[] {
@@ -159,9 +149,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { url, since } = req.query as { url?: string; since?: string };
+  const { url: rawUrl, since } = req.query as { url?: string; since?: string };
 
-  if (!url || typeof url !== 'string') {
+  if (!rawUrl || typeof rawUrl !== 'string') {
+    return res.status(400).json({ error: 'Missing url parameter' });
+  }
+
+  // Strip paste whitespace before validating — see the note in pubnotify.ts. This
+  // also keeps the Hive payload match below comparing the same string the
+  // podping was sent with.
+  const url = normalizeFeedUrl(rawUrl);
+  if (!url) {
     return res.status(400).json({ error: 'Missing url parameter' });
   }
 
