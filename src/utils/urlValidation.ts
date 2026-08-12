@@ -51,8 +51,26 @@ const CHECKS: Array<{ test: (url: string) => boolean; label: string; detail: str
       'Spaces, tabs and line breaks are not valid in URLs. Rename the file at your host to remove them, then submit the new URL.',
   },
   {
-    test: (url) => url.includes("'"),
-    label: "apostrophes (')",
+    // Every apostrophe-shaped character, not just the ASCII U+0027. A filename
+    // copied out of a word processor or a smart-quoting CMS carries U+2019, and
+    // U+2018 is what those same tools produce for a *leading* elision — 'Round
+    // Midnight, 'Til Dawn. U+02BC and U+02BB are letters in Uzbek, Cherokee and
+    // Hawaiian orthography (Hawaiʻi); U+FF07 comes out of a CJK IME.
+    //
+    // None of these changes whether a URL is refused: they are all non-ASCII, so
+    // the last rule already caught them. What changes is *which* message the user
+    // reads — this rule comes first, so they now get the duplicate-feed
+    // explanation instead of the generic "may cause indexing issues".
+    //
+    // A pre-encoded %27 is deliberately NOT matched. It is the form Podcast Index
+    // itself stores and hands back, it is a correctly encoded URL that fetches
+    // fine, and this rule table is a hard 400 on /api/pisubmit, /api/pubnotify,
+    // /api/podping, /api/podping-verify and /api/verify-feed-url — so matching it
+    // would refuse working feeds outright and leave the user unable to even run a
+    // reachability check. Warn about the character the user can still fix by
+    // renaming; don't block the URL that already works.
+    test: (url) => /['’‘ʼʻ＇]/.test(url),
+    label: "apostrophes (' or ’)",
     detail:
       "Podcast Index may encode apostrophes as %27, creating a duplicate feed entry. Rename the file to remove them.",
   },

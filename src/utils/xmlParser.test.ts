@@ -891,3 +891,166 @@ describe('publisher feed sourceUrl from atom:link rel="self"', () => {
     expect(generatePublisherRssFeed(feed)).toContain('https://example.com/horseheads.xml');
   });
 });
+
+describe('podcast:remoteItem title attribute', () => {
+  const pubWrap = (items: string) => `<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+  <channel>
+    <title>James Goulding</title>
+    <description>d</description>
+    <podcast:medium>publisher</podcast:medium>
+    <podcast:guid>ff83e8b5-7648-44d0-aa3c-4912f491066a</podcast:guid>
+    ${items}
+  </channel>
+</rss>`;
+
+  const ALBUM_GUID = '048d73a2-5ca3-4593-8d8d-bca7d9e72d4a';
+  const ALBUM_URL = 'https://headstarts.uk/msp/James-Goulding/Please-Stand-By/Please_Stand_By.xml';
+
+  it('reads title from the attribute, as the spec defines it', () => {
+    // The shape Fountain emits. Reading only element text meant every
+    // conforming publisher feed imported with no album titles at all.
+    const feed = parsePublisherRssFeed(pubWrap(
+      `<podcast:remoteItem feedGuid="${ALBUM_GUID}" feedUrl="${ALBUM_URL}" medium="music" title="Please Stand By"/>`
+    ));
+    expect(feed.remoteItems[0].title).toBe('Please Stand By');
+  });
+
+  it('still reads a title written as element text (feeds MSP wrote before this)', () => {
+    const feed = parsePublisherRssFeed(pubWrap(
+      `<podcast:remoteItem feedGuid="${ALBUM_GUID}" feedUrl="${ALBUM_URL}" medium="music">Please Stand By</podcast:remoteItem>`
+    ));
+    expect(feed.remoteItems[0].title).toBe('Please Stand By');
+  });
+
+  it('prefers the attribute when a feed carries both', () => {
+    const feed = parsePublisherRssFeed(pubWrap(
+      `<podcast:remoteItem feedGuid="${ALBUM_GUID}" medium="music" title="From attribute">From text</podcast:remoteItem>`
+    ));
+    expect(feed.remoteItems[0].title).toBe('From attribute');
+  });
+
+  it('emits title as a self-closing attribute, never as element text', () => {
+    const feed = parsePublisherRssFeed(pubWrap(
+      `<podcast:remoteItem feedGuid="${ALBUM_GUID}" feedUrl="${ALBUM_URL}" medium="music">Please Stand By</podcast:remoteItem>`
+    ));
+    const xml = generatePublisherRssFeed(feed);
+
+    expect(xml).toContain('title="Please Stand By"');
+    expect(xml).not.toContain('>Please Stand By</podcast:remoteItem>');
+    expect(xml).toMatch(/<podcast:remoteItem [^>]*\/>/);
+  });
+
+  it('round-trips the legacy text form into the spec form without losing feedImg', () => {
+    const IMG = 'https://headstarts.uk/msp/James-Goulding/Please-Stand-By/psb.jpeg';
+    const feed = parsePublisherRssFeed(pubWrap(
+      `<podcast:remoteItem feedGuid="${ALBUM_GUID}" feedUrl="${ALBUM_URL}" medium="music" feedImg="${IMG}">Please Stand By</podcast:remoteItem>`
+    ));
+    const reparsed = parsePublisherRssFeed(generatePublisherRssFeed(feed));
+
+    expect(reparsed.remoteItems[0]).toEqual({
+      feedGuid: ALBUM_GUID,
+      feedUrl: ALBUM_URL,
+      medium: 'music',
+      title: 'Please Stand By',
+      image: IMG
+    });
+  });
+});
+
+describe('podcast:publisher parsing', () => {
+  const wrap = (publisherXml: string) => `<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+  <channel>
+    <title>Album</title>
+    <description>d</description>
+    <podcast:medium>music</podcast:medium>
+    ${publisherXml}
+  </channel>
+</rss>`;
+
+  const GUID = 'ff83e8b5-7648-44d0-aa3c-4912f491066a';
+  const URL = 'https://headstarts.uk/msp/publisher-feeds/James_Goulding.xml';
+
+  it('reads the canonical nested form', () => {
+    const album = parseRssFeed(wrap(
+      `<podcast:publisher><podcast:remoteItem medium="publisher" feedGuid="${GUID}" feedUrl="${URL}"/></podcast:publisher>`
+    ));
+    expect(album.publisher).toEqual({ feedGuid: GUID, feedUrl: URL });
+  });
+
+  it('reads attributes written directly on podcast:publisher', () => {
+    // Out of spec, but it occurs in the wild. This used to return undefined, and
+    // because 'podcast:publisher' is a known channel key it was excluded from
+    // unknownChannelElements too — so a parse/regenerate deleted it outright.
+    const album = parseRssFeed(wrap(
+      `<podcast:publisher medium="publisher" feedGuid="${GUID}" feedUrl="${URL}"/>`
+    ));
+    expect(album.publisher).toEqual({ feedGuid: GUID, feedUrl: URL });
+  });
+
+  it('survives more than one nested remoteItem', () => {
+    // fast-xml-parser returns an array here, and getAttr yields '' for an array,
+    // so this used to drop the publisher entirely rather than take the first.
+    const album = parseRssFeed(wrap(
+      `<podcast:publisher>
+         <podcast:remoteItem medium="publisher" feedGuid="${GUID}" feedUrl="${URL}"/>
+         <podcast:remoteItem medium="publisher" feedGuid="second-guid" feedUrl="https://example.com/other.xml"/>
+       </podcast:publisher>`
+    ));
+    expect(album.publisher).toEqual({ feedGuid: GUID, feedUrl: URL });
+  });
+
+  it('normalizes a malformed publisher to the canonical nested form on output', () => {
+    const album = parseRssFeed(wrap(
+      `<podcast:publisher medium="publisher" feedGuid="${GUID}" feedUrl="${URL}"/>`
+    ));
+    expect(generateRssFeed(album)).toContain(
+      `<podcast:publisher>\n            <podcast:remoteItem medium="publisher" feedGuid="${GUID}" feedUrl="${URL}" />\n        </podcast:publisher>`
+    );
+  });
+
+  it('leaves publisher undefined when there is nothing to read', () => {
+    const album = parseRssFeed(wrap('<podcast:publisher></podcast:publisher>'));
+    expect(album.publisher).toBeUndefined();
+  });
+
+  it('reads a bare channel-level remoteItem with medium="publisher"', () => {
+    const album = parseRssFeed(wrap(
+      `<podcast:remoteItem medium="publisher" feedGuid="${GUID}" feedUrl="${URL}"/>`
+    ));
+    expect(album.publisher).toEqual({ feedGuid: GUID, feedUrl: URL });
+  });
+
+  it('emits exactly one publisher reference for a bare remoteItem, even after an overwrite', () => {
+    // The Download Catalog flows set album.publisher unconditionally after
+    // parsing. If the bare remoteItem had merely been passed through as an
+    // unknown element it would be re-emitted next to the generated
+    // <podcast:publisher> block, and Download Feed rewrites somebody else's
+    // file — so this is corruption, not just noise.
+    const album = parseRssFeed(wrap(
+      `<podcast:remoteItem medium="publisher" feedGuid="${GUID}" feedUrl="${URL}"/>`
+    ));
+    album.publisher = { feedGuid: 'new-guid', feedUrl: 'https://example.com/pub.xml' };
+
+    const xml = generateRssFeed(album);
+    expect(xml.match(/medium="publisher"/g)).toHaveLength(1);
+    expect(xml).toContain('new-guid');
+    expect(xml).not.toContain(GUID);
+  });
+
+  it('still round-trips a podroll alongside a bare publisher remoteItem', () => {
+    // Only the publisher-medium entry is consumed; other mediums are podroll and
+    // must survive untouched.
+    const album = parseRssFeed(wrap(
+      `<podcast:remoteItem medium="publisher" feedGuid="${GUID}" feedUrl="${URL}"/>
+    <podcast:remoteItem feedGuid="aaaaaaaa-0000-0000-0000-000000000001" medium="music"/>
+    <podcast:remoteItem feedGuid="aaaaaaaa-0000-0000-0000-000000000002" medium="music"/>`
+    ));
+
+    const xml = generateRssFeed(album);
+    expect(xml.match(/medium="publisher"/g)).toHaveLength(1);
+    expect(xml).toContain('aaaaaaaa-0000-0000-0000-000000000001');
+    expect(xml).toContain('aaaaaaaa-0000-0000-0000-000000000002');
+  });
+});

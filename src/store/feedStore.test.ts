@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { feedReducer } from './feedStore';
 import type { FeedState, FeedAction } from './feedStore';
+import type { Album } from '../types/feed';
 import {
   createEmptyAlbum,
   createEmptyTrack,
@@ -561,5 +562,166 @@ describe('feedReducer', () => {
       const next = feedReducer(state, { type: 'UNKNOWN_ACTION' } as unknown as FeedAction);
       expect(next).toBe(state);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Track order / pub-date suites, ported from the web repo. `stateWithAlbum` is
+// its makeState, renamed so it doesn't shadow this file's own.
+// ---------------------------------------------------------------------------
+const ALBUM_PUB_DATE = 'Sat, 01 Feb 2025 00:00:00 GMT';
+
+const stateWithAlbum = (album: Album): FeedState => ({
+  feedType: 'album',
+  album,
+  videoFeed: null,
+  publisherFeed: null,
+  isDirty: false,
+  publisherFeedInstance: 0
+});
+
+const albumWith = (pubDates: string[]): Album => {
+  const album = createEmptyAlbum();
+  album.pubDate = ALBUM_PUB_DATE;
+  album.tracks = pubDates.map((pubDate, i) => ({
+    ...createEmptyTrack(i + 1),
+    title: `Track ${i + 1}`,
+    pubDate
+  }));
+  return album;
+};
+
+const trackDates = (state: FeedState): string[] => state.album.tracks.map(t => t.pubDate);
+const trackTimes = (state: FeedState): number[] => state.album.tracks.map(t => Date.parse(t.pubDate));
+const descends = (times: number[]) => times.every((t, i) => i === 0 || t < times[i - 1]);
+
+describe('feedReducer ADD_TRACK', () => {
+  it('overrides the payload pubDate so added tracks descend', () => {
+    // Editor.tsx dispatches a fully-built createEmptyTrack payload, whose pubDate is "now" —
+    // the exact thing that made albums come out backwards. The reducer must win.
+    let state = stateWithAlbum(albumWith([]));
+    for (let i = 0; i < 4; i++) {
+      state = feedReducer(state, { type: 'ADD_TRACK', payload: createEmptyTrack(i + 1) });
+    }
+    expect(state.album.tracks).toHaveLength(4);
+    expect(descends(trackTimes(state))).toBe(true);
+  });
+
+  it('starts the first track at the album pubDate', () => {
+    const state = feedReducer(stateWithAlbum(albumWith([])), {
+      type: 'ADD_TRACK',
+      payload: createEmptyTrack(1)
+    });
+    expect(state.album.tracks[0].pubDate).toBe(ALBUM_PUB_DATE);
+  });
+
+  it('appends below the existing tracks even when they carry real dates', () => {
+    const state = feedReducer(stateWithAlbum(albumWith(['Mon, 20 Jan 2025 00:00:00 GMT'])), {
+      type: 'ADD_TRACK',
+      payload: createEmptyTrack(2)
+    });
+    expect(descends(trackTimes(state))).toBe(true);
+  });
+});
+
+describe('feedReducer REORDER_TRACKS', () => {
+  it('moves the dates with the tracks', () => {
+    const state = feedReducer(
+      stateWithAlbum(albumWith([
+        'Sat, 01 Feb 2025 00:02:00 GMT',
+        'Sat, 01 Feb 2025 00:01:00 GMT',
+        'Sat, 01 Feb 2025 00:00:00 GMT'
+      ])),
+      { type: 'REORDER_TRACKS', payload: { fromIndex: 2, toIndex: 0 } }
+    );
+    expect(state.album.tracks.map(t => t.title)).toEqual(['Track 3', 'Track 1', 'Track 2']);
+    expect(descends(trackTimes(state))).toBe(true);
+  });
+
+  it('still renumbers trackNumber and episode', () => {
+    const state = feedReducer(
+      stateWithAlbum(albumWith([
+        'Sat, 01 Feb 2025 00:02:00 GMT',
+        'Sat, 01 Feb 2025 00:01:00 GMT',
+        'Sat, 01 Feb 2025 00:00:00 GMT'
+      ])),
+      { type: 'REORDER_TRACKS', payload: { fromIndex: 2, toIndex: 0 } }
+    );
+    expect(state.album.tracks.map(t => t.trackNumber)).toEqual([1, 2, 3]);
+    expect(state.album.tracks.map(t => t.episode)).toEqual([1, 2, 3]);
+  });
+});
+
+describe('feedReducer FIX_TRACK_ORDER', () => {
+  it('repairs an album whose tracks carry ascending creation timestamps', () => {
+    // Exactly what issue #94 reported: built in MSP before this fix.
+    const state = feedReducer(
+      stateWithAlbum(albumWith([
+        'Sat, 01 Feb 2025 00:00:00 GMT',
+        'Sat, 01 Feb 2025 00:01:00 GMT',
+        'Sat, 01 Feb 2025 00:02:00 GMT'
+      ])),
+      { type: 'FIX_TRACK_ORDER' }
+    );
+    expect(state.album.tracks.map(t => t.title)).toEqual(['Track 1', 'Track 2', 'Track 3']);
+    expect(trackDates(state)).toEqual([
+      'Sat, 01 Feb 2025 00:02:00 GMT',
+      'Sat, 01 Feb 2025 00:01:00 GMT',
+      'Sat, 01 Feb 2025 00:00:00 GMT'
+    ]);
+  });
+
+  it('flips an imported newest-first feed and then fixes its dates', () => {
+    const album = albumWith([
+      'Mon, 20 Jan 2025 00:00:00 GMT',
+      'Mon, 13 Jan 2025 00:00:00 GMT',
+      'Mon, 06 Jan 2025 00:00:00 GMT'
+    ]);
+    album.tracks.forEach((track, i) => { track.episode = album.tracks.length - i; });
+
+    const state = feedReducer(stateWithAlbum(album), { type: 'FIX_TRACK_ORDER' });
+
+    expect(state.album.tracks.map(t => t.title)).toEqual(['Track 3', 'Track 2', 'Track 1']);
+    expect(state.album.tracks.map(t => t.episode)).toEqual([1, 2, 3]);
+    expect(descends(trackTimes(state))).toBe(true);
+  });
+
+  it('spreads an import whose tracks all share one date', () => {
+    const state = feedReducer(
+      stateWithAlbum(albumWith([ALBUM_PUB_DATE, ALBUM_PUB_DATE, ALBUM_PUB_DATE])),
+      { type: 'FIX_TRACK_ORDER' }
+    );
+    expect(descends(trackTimes(state))).toBe(true);
+  });
+
+  it('leaves an already-correct album alone', () => {
+    const album = albumWith([
+      'Sat, 01 Feb 2025 00:02:00 GMT',
+      'Sat, 01 Feb 2025 00:01:00 GMT',
+      'Sat, 01 Feb 2025 00:00:00 GMT'
+    ]);
+    const state = feedReducer(stateWithAlbum(album), { type: 'FIX_TRACK_ORDER' });
+    expect(state.album.tracks.map(t => t.title)).toEqual(['Track 1', 'Track 2', 'Track 3']);
+    expect(trackDates(state)).toEqual(album.tracks.map(t => t.pubDate));
+  });
+
+  it('marks the feed dirty so the fix gets saved', () => {
+    const state = feedReducer(
+      stateWithAlbum(albumWith([ALBUM_PUB_DATE, ALBUM_PUB_DATE])),
+      { type: 'FIX_TRACK_ORDER' }
+    );
+    expect(state.isDirty).toBe(true);
+  });
+});
+
+describe('feedReducer video feeds', () => {
+  it('applies the same date ordering to the video feed', () => {
+    const video = albumWith([]);
+    video.medium = 'video';
+    const state = feedReducer(
+      { ...stateWithAlbum(createEmptyAlbum()), feedType: 'video', videoFeed: video },
+      { type: 'ADD_TRACK', payload: createEmptyTrack(1, 'video/mp4') }
+    );
+    expect(state.videoFeed!.tracks[0].pubDate).toBe(ALBUM_PUB_DATE);
   });
 });

@@ -1,6 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuthHeaders } from './_utils/podcastIndex.js';
-import { getFeedUrlError } from './_utils/urlValidation.js';
+import { getFeedUrlError, normalizeFeedUrl } from './_utils/urlValidation.js';
+import { guardFeedSubmission, wantsForce } from './_utils/feedReachability.js';
+import { getClientIp } from './_utils/urlSafety.js';
 import { applyCors } from './_utils/cors.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -12,9 +14,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { url } = req.body;
+  const { url: rawUrl, force } = req.body;
 
-  if (!url || typeof url !== 'string') {
+  if (!rawUrl || typeof rawUrl !== 'string') {
+    return res.status(400).json({ error: 'Missing url parameter' });
+  }
+
+  // Strip paste whitespace before validating — see the note in pubnotify.ts.
+  const url = normalizeFeedUrl(rawUrl);
+  if (!url) {
     return res.status(400).json({ error: 'Missing url parameter' });
   }
 
@@ -27,6 +35,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const urlError = getFeedUrlError(url);
   if (urlError) {
     return res.status(400).json({ error: urlError });
+  }
+
+  // See /api/pubnotify — same guard, so no client path can register an
+  // unreachable feed regardless of which endpoint it goes through. Checked
+  // before the credentials error below: a refusal is about the user's feed and
+  // tells them something they can act on, where a missing key is our problem.
+  const refusal = await guardFeedSubmission(url, { force: wantsForce(force), clientIp: getClientIp(req) });
+  if (refusal) {
+    return res.status(400).json(refusal);
   }
 
   const authHeaders = getAuthHeaders();

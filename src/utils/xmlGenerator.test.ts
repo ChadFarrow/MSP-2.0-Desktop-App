@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { generateRssFeed } from './xmlGenerator';
+import { generateRssFeed, generatePublisherRssFeed } from './xmlGenerator';
 import { parseRssFeed } from './xmlParser';
-import { createEmptyAlbum } from '../types/feed';
+import { createEmptyAlbum, createEmptyPublisherFeed, createEmptyTrack } from '../types/feed';
 
 describe('xmlGenerator publisher reference', () => {
   it('includes podcast:publisher tag when publisher is set', () => {
@@ -16,11 +16,52 @@ describe('xmlGenerator publisher reference', () => {
 
     const xml = generateRssFeed(album);
 
-    expect(xml).toContain('<podcast:publisher>');
-    expect(xml).toContain('</podcast:publisher>');
-    expect(xml).toContain('feedGuid="abc123-guid"');
-    expect(xml).toContain('feedUrl="https://example.com/publisher-feed.xml"');
-    expect(xml).toContain('medium="publisher"');
+    // Asserted as one block, not as independent substrings. The spec requires
+    // <podcast:publisher> to CONTAIN exactly one <podcast:remoteItem
+    // medium="publisher">, and separate toContain checks would pass just as
+    // happily with an empty publisher element and the remoteItem emitted as a
+    // sibling somewhere else in the channel — which is precisely the shape a
+    // reviewer once claimed MSP was producing.
+    expect(xml).toContain(
+      '<podcast:publisher>\n' +
+      '            <podcast:remoteItem medium="publisher" feedGuid="abc123-guid" feedUrl="https://example.com/publisher-feed.xml" />\n' +
+      '        </podcast:publisher>'
+    );
+  });
+
+  it('round-trips a publisher reference through the parser', () => {
+    const album = createEmptyAlbum();
+    album.title = 'Test Album';
+    album.author = 'Test Artist';
+    album.description = 'Test description';
+    album.publisher = {
+      feedGuid: 'ff83e8b5-7648-44d0-aa3c-4912f491066a',
+      feedUrl: 'https://headstarts.uk/msp/publisher-feeds/James_Goulding.xml'
+    };
+
+    const reparsed = parseRssFeed(generateRssFeed(album));
+
+    expect(reparsed.publisher).toEqual(album.publisher);
+  });
+
+  it('keeps a channel-level podroll remoteItem through a parse/regenerate cycle', () => {
+    // The Download Feed flow is parse→regenerate. Album feeds don't model a
+    // podroll, so it has to survive as an unknown channel element or MSP eats
+    // the publisher's tag on their behalf.
+    const source = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>Album</title>
+    <description>d</description>
+    <podcast:medium>music</podcast:medium>
+    <podcast:remoteItem feedGuid="roll-1" feedUrl="https://example.com/friend.xml" medium="music"/>
+  </channel>
+</rss>`;
+
+    const regenerated = generateRssFeed(parseRssFeed(source));
+
+    expect(regenerated).toContain('feedGuid="roll-1"');
+    expect(regenerated).toContain('https://example.com/friend.xml');
   });
 
   it('does not include podcast:publisher tag when publisher is not set', () => {
@@ -282,5 +323,164 @@ describe('podcast:image generation', () => {
     album.tracks[0].trackArtWidth = 3000;
     const xml = generateRssFeed(album);
     expect(xml).not.toContain('<podcast:images');
+  });
+});
+
+describe('xmlGenerator track order', () => {
+  const threeTrackAlbum = () => {
+    const album = createEmptyAlbum();
+    album.title = 'Ordered Album';
+    album.tracks = ['One', 'Two', 'Three'].map((title, i) => ({
+      ...album.tracks[0],
+      id: `id-${i}`,
+      guid: `guid-${i}`,
+      trackNumber: i + 1,
+      title,
+      // Descending, as the store now stamps them.
+      pubDate: new Date(Date.parse('2025-02-01T00:02:00Z') - i * 60_000).toUTCString()
+    }));
+    return album;
+  };
+
+  it('emits items in list order', () => {
+    const xml = generateRssFeed(threeTrackAlbum());
+    const titles = [...xml.matchAll(/<item>[\s\S]*?<title>(.*?)<\/title>/g)].map(m => m[1]);
+    expect(titles).toEqual(['One', 'Two', 'Three']);
+  });
+
+  it('emits item pubDates in descending order so newest-first apps play track 1 first', () => {
+    const xml = generateRssFeed(threeTrackAlbum());
+    const items = xml.split('<item>').slice(1);
+    const times = items.map(item => Date.parse(/<pubDate>(.*?)<\/pubDate>/.exec(item)![1]));
+    expect(times).toHaveLength(3);
+    expect(times.every((t, i) => i === 0 || t < times[i - 1])).toBe(true);
+  });
+
+  it('emits ascending podcast:episode numbers alongside descending dates', () => {
+    const xml = generateRssFeed(threeTrackAlbum());
+    const episodes = [...xml.matchAll(/<podcast:episode>(\d+)<\/podcast:episode>/g)].map(m => Number(m[1]));
+    expect(episodes).toEqual([1, 2, 3]);
+  });
+});
+
+describe('RSS validity: image link and atom self-link', () => {
+  it('emits <link> inside <image>, falling back to the channel link', () => {
+    // RSS 2.0 requires url + title + link. Omitting it made every MSP feed fail
+    // the W3C validator with an *error*, not a warning.
+    const album = createEmptyAlbum();
+    album.title = 'Please Stand By';
+    album.link = 'https://jamesgoulding.bandcamp.com/';
+    album.imageUrl = 'https://example.com/cover.jpg';
+    album.imageLink = '';
+
+    const xml = generateRssFeed(album);
+    expect(xml).toContain('<link>https://jamesgoulding.bandcamp.com/</link>');
+    expect(xml).toMatch(/<image>[\s\S]*<link>[\s\S]*<\/image>/);
+  });
+
+  it('prefers an explicit imageLink over the channel link', () => {
+    const album = createEmptyAlbum();
+    album.link = 'https://example.com/site';
+    album.imageUrl = 'https://example.com/cover.jpg';
+    album.imageLink = 'https://example.com/art-page';
+
+    expect(generateRssFeed(album)).toContain('<link>https://example.com/art-page</link>');
+  });
+
+  it('emits atom:link rel="self" from a publisher sourceUrl, with the namespace declared', () => {
+    const feed = createEmptyPublisherFeed();
+    feed.title = 'James Goulding';
+    feed.sourceUrl = 'https://headstarts.uk/msp/publisher-feeds/James_Goulding.xml';
+
+    const xml = generatePublisherRssFeed(feed);
+    expect(xml).toContain('xmlns:atom="http://www.w3.org/2005/Atom"');
+    expect(xml).toContain(
+      '<atom:link href="https://headstarts.uk/msp/publisher-feeds/James_Goulding.xml" rel="self" type="application/rss+xml" />'
+    );
+  });
+
+  it('never guesses a self-link when sourceUrl is unknown', () => {
+    const feed = createEmptyPublisherFeed();
+    feed.title = 'No source';
+    expect(generatePublisherRssFeed(feed)).not.toContain('rel="self"');
+  });
+
+  it('does not emit a second self-link when the imported one round-trips', () => {
+    // atom:link is deliberately absent from KNOWN_CHANNEL_KEYS, so an imported
+    // self-link is re-emitted from unknownChannelElements. Generating another
+    // from sourceUrl would duplicate the element.
+    const feed = createEmptyPublisherFeed();
+    feed.sourceUrl = 'https://example.com/pub.xml';
+    feed.unknownChannelElements = {
+      'atom:link': {
+        '@_href': 'https://example.com/pub.xml',
+        '@_rel': 'self',
+        '@_type': 'application/rss+xml'
+      }
+    };
+
+    const xml = generatePublisherRssFeed(feed);
+    expect(xml.match(/rel="self"/g)).toHaveLength(1);
+  });
+
+  it('still emits its own self-link when the passthrough only has other rels', () => {
+    const feed = createEmptyPublisherFeed();
+    feed.sourceUrl = 'https://example.com/pub.xml';
+    feed.unknownChannelElements = {
+      'atom:link': { '@_href': 'https://example.com/hub', '@_rel': 'hub' }
+    };
+
+    const xml = generatePublisherRssFeed(feed);
+    expect(xml.match(/rel="self"/g)).toHaveLength(1);
+    expect(xml).toContain('rel="hub"');
+  });
+});
+
+describe('XML escaping at every interpolation site', () => {
+  // Each of these fields reaches the generator from a third-party feed via
+  // Import-from-URL or the publisher Download Feed, and MSP then *hosts* the
+  // regenerated result — so an unescaped one means MSP emits a malformed or
+  // structurally altered document over its own name. A bare & is enough.
+  const raw = 'a & b';
+
+  it('escapes <language>', () => {
+    const album = createEmptyAlbum();
+    album.language = raw;
+    const xml = generateRssFeed(album);
+    expect(xml).toContain('<language>a &amp; b</language>');
+    expect(xml).not.toContain('<language>a & b</language>');
+  });
+
+  it('escapes <podcast:medium>', () => {
+    const album = createEmptyAlbum();
+    // medium is typed as a union but the parser produces it with a cast, not a
+    // validation (`getText(...) as 'music' | 'video'`), so any text can land here.
+    album.medium = raw as unknown as 'music';
+    expect(generateRssFeed(album)).toContain('<podcast:medium>a &amp; b</podcast:medium>');
+  });
+
+  it('escapes the suggested= attribute of podcast:value', () => {
+    const album = createEmptyAlbum();
+    album.value.suggested = '0.1" onload="x';
+    album.value.recipients = [
+      { name: 'A', address: 'a@b.com', split: 100, type: 'lnaddress' }
+    ];
+    const xml = generateRssFeed(album);
+    expect(xml).toContain('suggested="0.1&quot; onload=&quot;x"');
+  });
+
+  it('escapes the enclosure length= attribute and itunes:duration', () => {
+    const album = createEmptyAlbum();
+    album.tracks = [
+      {
+        ...createEmptyTrack(1),
+        enclosureUrl: 'https://example.com/a.mp3',
+        enclosureLength: '123" x="y',
+        duration: '00:03:00 & more'
+      }
+    ];
+    const xml = generateRssFeed(album);
+    expect(xml).toContain('length="123&quot; x=&quot;y"');
+    expect(xml).toContain('<itunes:duration>00:03:00 &amp; more</itunes:duration>');
   });
 });

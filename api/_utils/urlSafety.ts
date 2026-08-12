@@ -81,6 +81,24 @@ function isBlockedHostname(hostname: string): boolean {
   );
 }
 
+/**
+ * True when a literal hostname points at a private, loopback, link-local or
+ * otherwise reserved address — the targets an SSRF attacker aims at (cloud
+ * metadata, internal services). Hostnames that resolve to a private IP via DNS
+ * are not caught here; use assertPublicHttpUrl or getDnsSafetyError, which resolve.
+ *
+ * The IPv6 checks run only when the host is actually an IPv6 literal. fc00::/7 and
+ * fe80::/10 are matched by string prefix, and a bare hostname starting with those
+ * same letters is an ordinary public domain — fdrecords.com, fcmusic.net, fcc.gov.
+ * A hostname can never contain a colon (URL.hostname excludes the port), so the
+ * colon is a safe discriminator.
+ */
+export function isPrivateHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, ''); // strip IPv6 brackets
+  if (isBlockedHostname(host)) return true;
+  return host.includes(':') ? isBlockedIpv6(host) : isBlockedIpv4(host);
+}
+
 /** Strip the brackets URL.hostname keeps around IPv6 literals. */
 function bareHostname(url: URL): string {
   return url.hostname.replace(/^\[|\]$/g, '');
@@ -103,13 +121,7 @@ export function getExternalUrlError(rawUrl: string): string | null {
   if (url.username || url.password) {
     return 'URLs with embedded credentials are not allowed';
   }
-  const hostname = bareHostname(url);
-  if (isBlockedHostname(hostname)) {
-    return 'Host not allowed';
-  }
-  if (hostname.includes(':')) {
-    if (isBlockedIpv6(hostname)) return 'Host not allowed';
-  } else if (isBlockedIpv4(hostname)) {
+  if (isPrivateHost(bareHostname(url))) {
     return 'Host not allowed';
   }
   return null;
@@ -172,11 +184,7 @@ export async function assertPublicHttpUrl(rawUrl: string): Promise<UrlSafetyResu
     return { ok: false, status: 403, error: 'Address not allowed' };
   }
 
-  const hostname = bareHostname(url);
-  const blockedLiteral = hostname.includes(':')
-    ? isBlockedIpv6(hostname)
-    : isBlockedIpv4(hostname);
-  if (isBlockedHostname(hostname) || blockedLiteral) {
+  if (isPrivateHost(bareHostname(url))) {
     return { ok: false, status: 403, error: 'Address not allowed' };
   }
 

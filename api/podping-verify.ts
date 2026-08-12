@@ -21,8 +21,8 @@ import { getClientIp } from './_utils/urlSafety.js';
 const RATE_LIMIT = { limit: 60, windowMs: 3600_000 };
 
 // The frontend polls this endpoint several times per send, so it gets its own
-// (higher) budget. The rate limiter is keyed by string, and /api/podping keys on the
-// bare IP — prefixing keeps the two endpoints from sharing a bucket.
+// (higher) budget. The rate limiter is one shared Map keyed by plain strings, so
+// every endpoint namespaces its own or two of them share a bucket.
 const RATE_LIMIT_PREFIX = 'podping-verify:';
 
 const DEFAULT_RPC_NODES = ['https://api.hive.blog', 'https://api.deathwing.me'];

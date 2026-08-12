@@ -1,0 +1,48 @@
+# Runs the checks that Vercel doesn't.
+#
+# Vercel's build posts a green check on every PR, which reads like "CI passed" but
+# only means `npm run build` succeeded. Nothing ran the 475 unit tests or ESLint, so
+# a PR could break every test and still merge green. That's what this fixes.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+# A new push to a PR makes the previous run irrelevant; don't pay for it.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # tsc -b covers src, vite.config.ts AND api (tsconfig.api.json), then vite build.
+      # Deliberately `npm run build` rather than `tsc --noEmit`: the root tsconfig is
+      # references-only, so --noEmit against it checks zero files and always passes.
+      - name: Build (typecheck + bundle)
+        run: npm run build
+
+      - name: Test
+        run: npm run test
+
+      # Non-blocking for now: master carries 29 pre-existing problems, and failing
+      # every PR on them would just train people to ignore this job. Flip to blocking
+      # once the backlog is cleared.
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true

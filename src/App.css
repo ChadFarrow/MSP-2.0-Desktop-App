@@ -2064,6 +2064,21 @@ body {
   font-size: 0.875rem;
 }
 
+.track-order-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning, #f59e0b);
+  border-radius: var(--radius-md);
+  color: var(--warning, #f59e0b);
+  font-size: 0.875rem;
+}
+
 .connect-option {
   padding: 16px;
   background: var(--bg-tertiary);
