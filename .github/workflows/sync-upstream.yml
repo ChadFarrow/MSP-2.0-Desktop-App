@@ -49,8 +49,28 @@ jobs:
             echo "EOF" >> $GITHUB_OUTPUT
             echo "conflicts=true" >> $GITHUB_OUTPUT
 
-            # Resolve conflicts by keeping our (desktop) version
-            echo "$CONFLICTING" | xargs git checkout --ours --
+            # Resolve conflicts by keeping our (desktop) version.
+            #
+            # Per-path, not `xargs git checkout --ours --` over the whole list: a
+            # path we DELETED that upstream modified is a modify/delete conflict
+            # with no stage-2 ("ours") blob, so checkout fails with "does not have
+            # our version". Under `bash -e` that one error aborted the entire pass
+            # before any real conflict was resolved, and the sync produced no PR at
+            # all. That is not hypothetical — it is exactly what ci.yml did once
+            # upstream edited a file this fork deletes (see "Remove web-only
+            # workflows" below), taking 10 other resolvable conflicts down with it.
+            #
+            # Stage 2 is "ours" during a merge, so `git show :2:<path>` is the test
+            # for whether there is an our-side version to restore at all.
+            echo "$CONFLICTING" | while read -r f; do
+              [ -n "$f" ] || continue
+              if git show ":2:$f" >/dev/null 2>&1; then
+                git checkout --ours -- "$f"
+              else
+                # Deleted on our side. Keep it deleted — that IS our version.
+                git rm -f -- "$f" >/dev/null
+              fi
+            done
             git add -A
             git -c core.editor=true merge --continue
           fi
