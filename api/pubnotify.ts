@@ -76,7 +76,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!notifyResponse.ok) {
       return res.status(notifyResponse.status).json({
-        error: notifyData.description || 'Failed to notify Podcast Index',
+        error: typeof notifyData.description === 'string' && notifyData.description
+          ? notifyData.description
+          : 'Failed to notify Podcast Index',
         details: notifyData
       });
     }
