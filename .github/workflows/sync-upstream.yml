@@ -55,10 +55,16 @@ jobs:
             git -c core.editor=true merge --continue
           fi
 
+      # notify-desktop.yml is the web repo's dispatcher — it would fire this very
+      # workflow at itself. ci.yml is the web repo's own build+test+lint job; test.yml
+      # here already runs all of it, split into the separately-named checks that
+      # master's branch protection requires, plus E2E and the dependency audit. Keeping
+      # both would run every test twice under a `verify` check nothing gates on.
       - name: Remove web-only workflows
         if: steps.check.outputs.new_commits != '0'
         run: |
           rm -f .github/workflows/notify-desktop.yml
+          rm -f .github/workflows/ci.yml
           git add -A
 
       - name: Build PR body
@@ -100,13 +106,19 @@ jobs:
           labels: automated
 
       - name: Enable auto-merge on the sync PR
-        # Auto-merge every sync PR, gated on CI (build + lint + unit + E2E).
-        # A green synced build merges and releases itself so web updates
-        # auto-build; a red build (e.g. an upstream change that conflicts and
-        # drops build-breaking code, like the email-auth sync) holds for a human.
-        # Caveat: conflict syncs auto-resolve to desktop's version, so a silent
-        # drop that still COMPILES can merge without review — the PR body lists
-        # the conflicted files for post-hoc audit.
+        # Auto-merge every sync PR. What actually gates the merge is master's
+        # required status checks, NOT this workflow — and for a long time that list
+        # was just ["Lint"], so PR #34 merged 28 seconds after Lint went green while
+        # the unit tests were still failing, and master stayed red for three days
+        # with no release. The list is now Lint + Unit Tests + E2E Tests +
+        # Dependency Audit + Build; if you add a job to test.yml, add it there too
+        # (gh api repos/:owner/:repo/branches/master/protection/required_status_checks)
+        # or it gates nothing.
+        #
+        # A green synced build merges and releases itself so web updates auto-build;
+        # a red one holds for a human. Caveat: conflict syncs auto-resolve to
+        # desktop's version, so a silent drop that still COMPILES can merge without
+        # review — the PR body lists the conflicted files for post-hoc audit.
         if: |
           steps.check.outputs.new_commits != '0'
           && steps.create_pr.outputs.pull-request-number != ''
