@@ -47,13 +47,14 @@ export function PublishSection({ publisherFeed }: PublishSectionProps) {
   const [tokenAcknowledged, setTokenAcknowledged] = useState(false);
   const [pendingHostedInfo, setPendingHostedInfo] = useState<HostedFeedInfo | null>(null);
 
-  // Current status
-  const [status, setStatus] = useState(() => getPublishStatus(publisherFeed.podcastGuid));
-
-  // Refresh status when podcastGuid changes
-  useEffect(() => {
-    setStatus(getPublishStatus(publisherFeed.podcastGuid));
-  }, [publisherFeed.podcastGuid]);
+  // Current status — a synchronous localStorage read keyed on the guid, so it is
+  // computed during render rather than mirrored into state by an effect. A
+  // successful publish writes localStorage and then sets publishResult/isPublishing,
+  // and that re-render re-reads it here; no explicit refresh is needed.
+  // Deliberately not a remount `key` on this component either: podcastGuid is an
+  // editable text input, so keying on it would tear down mid-publish state
+  // (tokenAcknowledged, isPublishing, progress) on every keystroke.
+  const status = getPublishStatus(publisherFeed.podcastGuid);
 
   const isPublished = status.isPublished;
   const feedUrl = status.feedUrl;
@@ -63,10 +64,14 @@ export function PublishSection({ publisherFeed }: PublishSectionProps) {
   // Check if we have enough info to publish
   const canPublish = publisherFeed.podcastGuid && publisherFeed.title;
 
-  // Update step states based on progress
+  // Update step states based on progress.
   useEffect(() => {
     if (!progress) return;
 
+    // Genuinely an accumulator over a progress event stream, not derived state:
+    // the 'error' branch below deliberately preserves whatever the previous steps
+    // reached, so this cannot be recomputed from the current `progress` alone.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStepStates(prev => {
       const newState = { ...prev };
 
@@ -126,9 +131,6 @@ export function PublishSection({ publisherFeed }: PublishSectionProps) {
     setIsPublishing(false);
 
     if (result.success) {
-      // Refresh status
-      setStatus(getPublishStatus(publisherFeed.podcastGuid));
-
       // If this was a first-time publish, store the hosted info for token display
       if (!isPublished && result.hostedInfo) {
         setPendingHostedInfo(result.hostedInfo);

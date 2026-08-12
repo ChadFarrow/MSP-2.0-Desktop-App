@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 interface InfoIconProps {
@@ -25,10 +25,16 @@ export function InfoIcon({ text }: InfoIconProps) {
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  // Auto-detect tooltip side when shown
-  useEffect(() => {
+  // Auto-detect tooltip side when shown. useLayoutEffect rather than useEffect so
+  // the flip happens before paint — with useEffect a right-edge tooltip renders on
+  // the wrong side for one frame.
+  useLayoutEffect(() => {
     if (!show || !wrapperRef.current) return;
     const rect = wrapperRef.current.getBoundingClientRect();
+    // A post-layout measurement: which side the tooltip fits on depends on where
+    // the icon actually landed, which is unknowable until after layout. There is
+    // no render-time value to derive this from.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSide(rect.right + 300 > window.innerWidth ? 'left' : 'right');
   }, [show]);
 
