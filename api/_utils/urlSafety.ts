@@ -10,6 +10,14 @@ import { lookup } from 'node:dns/promises';
  * private address. Redirects are re-validated hop by hop in fetchPublicUrl.
  */
 
+/**
+ * Re-exported so upstream handlers keep working unchanged: the web repo defines
+ * getClientIp here, while this fork keeps it next to the rate limiter that is its
+ * only consumer (and hardens it to prefer the proxy headers a client can't spoof).
+ * Importing it from either module resolves.
+ */
+export { getClientIp } from './rateLimiter.js';
+
 /** Thrown by fetchPublicUrl when a URL or redirect target is unsafe. */
 export class UrlSafetyError extends Error {}
 
@@ -129,6 +137,59 @@ export async function getDnsSafetyError(rawUrl: string): Promise<string | null> 
     if (family === 6 && isBlockedIpv6(address)) return 'Host resolves to a private address';
   }
   return null;
+}
+
+export type UrlSafetyResult =
+  | { ok: true; url: URL }
+  | { ok: false; status: 400 | 403; error: string };
+
+/**
+ * Full pre-flight for fetching a user-supplied URL, as a result object rather than
+ * an error message: protocol, literal host, and the addresses the hostname actually
+ * resolves to. Same checks as getExternalUrlError + getDnsSafetyError above — this
+ * is the shape the web repo's handlers (verify-feed-url, safeFetch, feedProbe) call,
+ * and the status split is the part that carries meaning. 403 means MSP refused the
+ * address; 400 means the URL itself is unusable, which callers report as a verdict
+ * about the user's input rather than a refusal.
+ *
+ * Call this on every redirect hop too, not only the first URL.
+ */
+export async function assertPublicHttpUrl(rawUrl: string): Promise<UrlSafetyResult> {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return { ok: false, status: 400, error: 'Invalid URL' };
+  }
+
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return { ok: false, status: 400, error: 'Unsupported URL protocol' };
+  }
+
+  // Credentials are a refusal, not a malformed URL: http://user:pass@host is a
+  // well-formed URL asking us to authenticate somewhere on the caller's behalf.
+  if (url.username || url.password) {
+    return { ok: false, status: 403, error: 'Address not allowed' };
+  }
+
+  const hostname = bareHostname(url);
+  const blockedLiteral = hostname.includes(':')
+    ? isBlockedIpv6(hostname)
+    : isBlockedIpv4(hostname);
+  if (isBlockedHostname(hostname) || blockedLiteral) {
+    return { ok: false, status: 403, error: 'Address not allowed' };
+  }
+
+  const dnsError = await getDnsSafetyError(url.toString());
+  if (dnsError) {
+    // A name that doesn't resolve is unreachable, not unsafe — the caller turns
+    // that into "that URL didn't load", which is what it means.
+    return dnsError === 'Could not resolve host'
+      ? { ok: false, status: 400, error: dnsError }
+      : { ok: false, status: 403, error: 'Address not allowed' };
+  }
+
+  return { ok: true, url };
 }
 
 /**

@@ -1,0 +1,42 @@
+{
+  /*
+   * Vercel serverless functions. Split from tsconfig.node.json (which covers only
+   * vite.config.ts) because api/ needs DOM lib for the Web fetch/Response/AbortSignal
+   * types the handlers use, while running under Node types.
+   *
+   * Before this file existed, api/ was typechecked by NOTHING: tsconfig.app.json
+   * includes only "src", tsconfig.node.json only "vite.config.ts", and Vercel's
+   * builder transpiles without checking. That left the auth, SSRF-guard and feed-CRUD
+   * code — the highest-consequence code in the repo — with no type gate at all.
+   */
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.api.tsbuildinfo",
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    /* Handlers import siblings with a .js specifier that resolves to .ts */
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Same strictness as the app project */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["api"],
+  /*
+   * Tests are excluded on purpose. They pass vi.fn() mocks where a full
+   * VercelResponse is expected, which is the normal shape of a handler test and
+   * would otherwise produce ~30 errors that say nothing about the shipped code.
+   * The point of this project is a gate on the handlers.
+   */
+  "exclude": ["api/**/*.test.ts"]
+}

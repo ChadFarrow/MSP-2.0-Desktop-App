@@ -4,6 +4,7 @@ import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Fun
 import { createEmptyTrack, LEGACY_MSP_NODE_PUBKEY, MSP_SUPPORT_RECIPIENT } from '../types/feed';
 import { areValueBlocksStrictEqual, arePersonsEqual } from './comparison';
 import { detectAddressType } from './addressUtils';
+import { MIN_PLAUSIBLE_MEDIA_BYTES } from './audioUtils';
 import { apiFetch } from './api';
 
 // OP3 prefix pattern: https://op3.dev/e/ or https://op3.dev/e,pg=GUID/
@@ -575,8 +576,11 @@ function parseTrack(node: unknown, trackNumber: number, albumValue: ValueBlock, 
   const enclosure = item.enclosure;
   if (enclosure) {
     track.enclosureUrl = getAttr(enclosure, 'url') || '';
-    const length = getAttr(enclosure, 'length');
-    track.enclosureLength = (length && length !== '0') ? length : '';
+    // Only keep a length that could plausibly be a real file. `0` and generator
+    // placeholders (MSP itself long wrote a literal `33` for every track) are dropped
+    // so the size gets re-measured from the host instead of propagating a wrong number.
+    const length = parseInt(getAttr(enclosure, 'length') || '', 10);
+    track.enclosureLength = Number.isFinite(length) && length >= MIN_PLAUSIBLE_MEDIA_BYTES ? String(length) : '';
     track.enclosureType = getAttr(enclosure, 'type') || 'audio/mpeg';
   }
 

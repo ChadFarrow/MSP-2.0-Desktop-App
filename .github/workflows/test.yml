@@ -61,6 +61,28 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Nothing else here typechecks: E2E boots `npm run dev`, which skips tsc, so a
+      # type error used to surface only in release.yml — after merge, in the job that
+      # builds the app. `tsc -b` covers src, vite.config.ts and api (tsconfig.api.json).
+      - name: Build (typecheck + bundle)
+        run: npm run build
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

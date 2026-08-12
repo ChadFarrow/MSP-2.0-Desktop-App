@@ -47,6 +47,7 @@ function makeState(overrides?: Partial<FeedState>): FeedState {
     videoFeed: null,
     publisherFeed: null,
     isDirty: false,
+    publisherFeedInstance: 0,
     ...overrides,
   };
 }
