@@ -83,3 +83,46 @@ export async function verifyFeedUrl(url: string): Promise<VerifyFeedUrlResult> {
 
   return OK;
 }
+
+/* -------------------------------------------------------------------------- */
+/* The server-side half: /api/pubnotify, /api/pisubmit and /api/podping run the */
+/* same check inline and refuse a confirmed block, because the advisory above   */
+/* only covers the URL fields a user types into — not the automatic submits.    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Mirrors GuardRefusal in api/_utils/feedReachability.ts. The frontend can't
+ * import from api/ (same arrangement as urlValidation.ts) — keep in sync.
+ */
+export interface GuardRefusal {
+  error: string;
+  reachability: {
+    ok: boolean;
+    status: number | null;
+    looksLikeFeed: boolean;
+    reason: string | null;
+  };
+}
+
+/**
+ * True when a failed submit was the reachability guard rather than some other
+ * error. Structural rather than string-matching, so rewording the message on the
+ * server can't silently turn a refusal into a generic failure.
+ */
+export function isGuardRefusal(body: unknown): body is GuardRefusal {
+  if (!body || typeof body !== 'object') return false;
+  const candidate = body as Partial<GuardRefusal>;
+  return (
+    typeof candidate.error === 'string' &&
+    !!candidate.reachability &&
+    candidate.reachability.reason === 'blocked'
+  );
+}
+
+/**
+ * Appended to the success message when the user overrode a warning or refusal.
+ * An overridden submit must never report a clean ✅ — that would recreate the
+ * exact false positive this whole feature exists to stop.
+ */
+export const FORCED_SUBMIT_NOTE =
+  ' Note: the feed was unreachable when we checked, so Podcast Index may not be able to crawl it.';

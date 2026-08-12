@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { PublisherFeed } from '../../../types/feed';
 import { getFeedUrlError, normalizeFeedUrl } from '../../../utils/urlValidation';
-import { verifyFeedUrl } from '../../../utils/verifyFeedUrl';
+import { verifyFeedUrl, isGuardRefusal, FORCED_SUBMIT_NOTE } from '../../../utils/verifyFeedUrl';
 import { Section } from '../../Section';
 import { generatePublisherRssFeed, downloadXml } from '../../../utils/xmlGenerator';
 import {
@@ -97,7 +97,8 @@ export function PublisherFeedReminderSection({ publisherFeed, feedInstance }: Pu
 
       const feedUrl = response.url;
 
-      // Auto-submit to Podcast Index
+      // Auto-submit to Podcast Index. feedUrl came back from createHostedFeed, so
+      // it's MSP-hosted and the reachability guard skips it — no refusal to handle.
       try {
         const piParams = new URLSearchParams({ url: feedUrl });
         if (publisherFeed.medium) piParams.set('medium', publisherFeed.medium);
@@ -148,7 +149,10 @@ export function PublisherFeedReminderSection({ publisherFeed, feedInstance }: Pu
 
     try {
       // Confirm the self-hosted URL resolves before registering it in PI.
-      if (!bypassVerify) {
+      // The latch doubles as the override: set by this check or by a server
+      // refusal, and cleared whenever the URL changes.
+      const force = bypassVerify;
+      if (!force) {
         const check = await verifyFeedUrl(feedUrl);
         if (!check.ok) {
           setPiResult({ success: false, message: `${check.warning} Click again to submit anyway.` });
@@ -159,14 +163,23 @@ export function PublisherFeedReminderSection({ publisherFeed, feedInstance }: Pu
 
       const params = new URLSearchParams({ url: feedUrl });
       if (publisherFeed.medium) params.set('medium', publisherFeed.medium);
+      if (force) params.set('force', '1');
       const response = await fetch(`/api/pubnotify?${params}`);
       const data = await response.json();
 
       if (!response.ok) {
+        if (isGuardRefusal(data)) {
+          setPiResult({ success: false, message: `${data.error} Click again to submit anyway.` });
+          setBypassVerify(true);
+          return;
+        }
         throw new Error(data.error || 'Failed to submit to Podcast Index');
       }
 
-      setPiResult({ success: true, message: 'Feed submitted to Podcast Index! It may take a moment to appear.' });
+      setPiResult({
+        success: true,
+        message: `Feed submitted to Podcast Index! It may take a moment to appear.${force ? FORCED_SUBMIT_NOTE : ''}`
+      });
     } catch (err) {
       setPiResult({ success: false, message: err instanceof Error ? err.message : 'Failed to submit' });
     } finally {

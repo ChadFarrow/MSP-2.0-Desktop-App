@@ -123,6 +123,46 @@ describe('getFeedUrlError', () => {
     expect(err).toMatch(/%27/);
   });
 
+  it('flags a curly apostrophe with the duplicate-feed explanation, not the generic one', () => {
+    // U+2019 also trips the non-ASCII rule, but that rule is listed after this
+    // one, so the duplicate-feed detail is the one the user actually reads.
+    const err = getFeedUrlError('https://example.com/o’malley.xml');
+    expect(err).toMatch(/apostrophes/);
+    expect(err).toMatch(/duplicate feed entry/);
+  });
+
+  it('flags the apostrophe variants a smart-quoting CMS produces', () => {
+    // All non-ASCII, so the last rule already refused them — what this pins is
+    // that the *apostrophe* rule matches first, so the user reads the
+    // duplicate-feed explanation rather than "may cause indexing issues".
+    // U+2018 is the one that matters most: it is what a leading elision becomes
+    // ('Round Midnight), which the U+2019-only version missed.
+    for (const url of [
+      'https://example.com/‘round-midnight.xml', // U+2018
+      'https://example.com/oʼmalley.xml', // U+02BC, Uzbek/Cherokee
+      'https://example.com/hawaiʻi.xml', // U+02BB, Hawaiian okina
+      'https://example.com/o＇malley.xml' // U+FF07, CJK IME
+    ]) {
+      const err = getFeedUrlError(url);
+      expect(err, url).toMatch(/apostrophes/);
+      expect(err, url).toMatch(/duplicate feed entry/);
+    }
+  });
+
+  it('does NOT block an already percent-encoded apostrophe', () => {
+    // %27 is the form Podcast Index itself stores and hands back, and the URL
+    // fetches fine. This rule table is a hard 400 on /api/pisubmit,
+    // /api/pubnotify, /api/podping, /api/podping-verify and
+    // /api/verify-feed-url, so matching it would refuse a working feed and
+    // leave the user unable to run even a reachability check.
+    expect(getFeedUrlError('https://example.com/o%27malley.xml')).toBeNull();
+  });
+
+  it('leaves ordinary percent-encoding alone', () => {
+    expect(getFeedUrlError('https://example.com/my%20feed.xml')).toBeNull();
+    expect(getFeedUrlError('https://example.com/a%2Fb.xml')).toBeNull();
+  });
+
   it('flags special characters that require percent-encoding', () => {
     expect(getFeedUrlError('https://example.com/<feed>.xml')).toMatch(/special characters/);
     expect(getFeedUrlError('https://example.com/feed|x.xml')).toMatch(/special characters/);

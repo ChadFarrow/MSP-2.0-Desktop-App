@@ -4,6 +4,13 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
+// Neutralize the reachability guard — see the note in pubnotify.test.ts.
+const { mockGuard } = vi.hoisted(() => ({ mockGuard: vi.fn() }));
+vi.mock('./_utils/feedReachability.js', () => ({
+  guardFeedSubmission: mockGuard,
+  wantsForce: (v: unknown) => v === true || v === '1' || v === 'true'
+}));
+
 function createMockReqRes(
   method: string,
   query: Record<string, string | undefined>,
@@ -29,6 +36,7 @@ describe('/api/podping', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     vi.resetModules();
+    mockGuard.mockResolvedValue(null);
     delete process.env.PODPING_ENDPOINT_URL;
     delete process.env.PODPING_BEARER_TOKEN;
 
@@ -159,5 +167,71 @@ describe('/api/podping', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  // The limiter is one shared Map. If this endpoint ever drops its key prefix it
+  // starts sharing a bucket with any other unprefixed caller, and the symptom —
+  // podping refusing because of traffic somewhere else — looks nothing like the
+  // cause. Exhausting the bare-IP key must leave podping untouched.
+  it('namespaces its rate-limit key rather than using the bare IP', async () => {
+    process.env.PODPING_ENDPOINT_URL = 'https://podping.example/';
+    process.env.PODPING_BEARER_TOKEN = 'secret';
+    mockFetch.mockResolvedValue({ ok: true, status: 200, text: async () => '' });
+
+    const { checkRateLimit } = await import('./_utils/rateLimiter');
+    for (let i = 0; i < 10; i++) {
+      checkRateLimit('9.9.9.9', { limit: 10, windowMs: 3600_000 });
+    }
+
+    const { default: handler } = await import('./podping');
+    const { req, res } = createMockReqRes('GET', { url: 'https://example.com/feed.xml' }, '9.9.9.9');
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  describe('reachability guard', () => {
+    it('refuses to podping a feed whose host blocks crawlers', async () => {
+      process.env.PODPING_ENDPOINT_URL = 'https://podping.example/';
+      process.env.PODPING_BEARER_TOKEN = 'secret';
+      mockGuard.mockResolvedValue({
+        error: "This feed can't be reached — your host returned 403 to our crawler.",
+        reachability: { ok: false, status: 403, looksLikeFeed: false, reason: 'blocked' }
+      });
+
+      const { default: handler } = await import('./podping');
+      const { req, res } = createMockReqRes('GET', { url: 'https://blocked.example.com/feed.xml' });
+      await handler(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].reachability).toMatchObject({ reason: 'blocked' });
+      // No ping was queued, so nothing tells indexers to crawl a feed they can't read.
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('forwards force so "Send anyway" can get through', async () => {
+      process.env.PODPING_ENDPOINT_URL = 'https://podping.example/';
+      process.env.PODPING_BEARER_TOKEN = 'secret';
+      mockFetch.mockResolvedValue({ ok: true, status: 200, text: async () => '' });
+
+      const { default: handler } = await import('./podping');
+      const { req, res } = createMockReqRes('GET', { url: 'https://blocked.example.com/feed.xml', force: '1' });
+      await handler(req, res);
+
+      expect(mockGuard).toHaveBeenCalledWith(
+        'https://blocked.example.com/feed.xml',
+        expect.objectContaining({ force: true })
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('does not probe when the deployment has no podping configured', async () => {
+      const { default: handler } = await import('./podping');
+      const { req, res } = createMockReqRes('GET', { url: 'https://example.com/feed.xml' });
+      await handler(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(501);
+      expect(mockGuard).not.toHaveBeenCalled();
+    });
   });
 });

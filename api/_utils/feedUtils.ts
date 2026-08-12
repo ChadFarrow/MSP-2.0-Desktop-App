@@ -240,6 +240,22 @@ export function hashToken(token: string): string {
 }
 
 /**
+ * Constant-time comparison of two arbitrary strings.
+ *
+ * timingSafeEqualHex below can't be used for these: it does Buffer.from(x, 'hex'),
+ * which silently truncates anything that isn't hex. Secrets like MSP_ADMIN_KEY are
+ * free-form, so hash both sides first — that also removes the length side-channel,
+ * since two SHA-256 digests are always the same size.
+ */
+export function timingSafeEqualString(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  return timingSafeEqual(
+    createHash('sha256').update(a).digest(),
+    createHash('sha256').update(b).digest()
+  );
+}
+
+/**
  * Constant-time comparison of two hex strings (e.g. token hashes).
  * Returns false on any length mismatch without leaking timing on the contents.
  */

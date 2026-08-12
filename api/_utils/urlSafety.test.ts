@@ -73,6 +73,31 @@ describe('getExternalUrlError', () => {
     expect(getExternalUrlError('http://[fe80::1]/')).toBe('Host not allowed');
     expect(getExternalUrlError('http://[::ffff:127.0.0.1]/')).toBe('Host not allowed');
   });
+
+  it('flags IPv6 unique-local and link-local literals', async () => {
+    const { isPrivateHost } = await import('./urlSafety');
+    expect(isPrivateHost('::1')).toBe(true);
+    expect(isPrivateHost('[::1]')).toBe(true); // URL.hostname keeps the brackets
+    expect(isPrivateHost('::')).toBe(true);
+    expect(isPrivateHost('fd00::1')).toBe(true);
+    expect(isPrivateHost('fc00::1')).toBe(true);
+    expect(isPrivateHost('fe80::1')).toBe(true);
+  });
+
+  it('does not mistake a hostname beginning "fc"/"fd" for an IPv6 literal', async () => {
+    // fc00::/7 and fe80::/10 are matched by string prefix, so before this was
+    // gated on the host being an actual IPv6 literal every one of these public
+    // domains was refused with "Address not allowed". Harmless while proxy-feed
+    // still had its allowlist; a live false positive once self-hosted domains
+    // became the whole point of the endpoint.
+    const { isPrivateHost } = await import('./urlSafety');
+    expect(isPrivateHost('fdrecords.com')).toBe(false);
+    expect(isPrivateHost('fcmusic.net')).toBe(false);
+    expect(isPrivateHost('fc-barcelona.com')).toBe(false);
+    expect(isPrivateHost('fcc.gov')).toBe(false);
+    expect(isPrivateHost('fdic.gov')).toBe(false);
+    expect(isPrivateHost('fe80music.example')).toBe(false);
+  });
 });
 
 describe('getDnsSafetyError', () => {
