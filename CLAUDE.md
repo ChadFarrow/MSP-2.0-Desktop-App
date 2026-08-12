@@ -27,7 +27,7 @@ No `.env.example` exists - request credentials from the team.
 
 ### Commands
 ```bash
-npm run dev          # Start Vite dev server (proxies /api to msp.podtards.com)
+npm run dev          # Start Vite dev server (proxies /api to musicsideproject.com)
 npm run build        # TypeScript compile + Vite build
 npm run lint         # ESLint
 npm run preview      # Preview production build
@@ -44,7 +44,7 @@ npm run test:e2e     # Run Playwright E2E tests (starts dev server automatically
 npm run test:e2e:ui  # Playwright interactive UI mode
 ```
 
-Unit tests use Vitest with jsdom, configured in `vitest.config.ts`. Test files live alongside source as `*.test.{ts,tsx}` in **both `src/` and `api/`** (the vitest include covers `api/**/*.test.ts` — api tests existed but never ran until June 2026). Key test files:
+Unit tests use Vitest, configured in `vitest.config.ts` as **two projects**: `src` runs under jsdom with `src/test/setup.ts`, `api` runs under **node** with `src/test/setup.node.ts`. That split is deliberate — api tests are authored in the web repo, which has no vitest config and therefore runs them in node, so forcing jsdom on them broke synced tests for reasons unrelated to their code (`import.meta.url` stops being a `file:` URL; node builtin mocks need a `default` key). Run one side with `npx vitest run --project api`. Test files live alongside source as `*.test.{ts,tsx}` in **both `src/` and `api/`** (api tests existed but never ran until June 2026). Key test files:
 - `feedStore.test.ts` - Reducer unit tests (all action types, community support auto-add logic)
 - `feedStorePersistence.test.tsx` - Provider-level debounced auto-save + pagehide flush
 - `xmlParser.test.ts` - Parser tests (parseRssFeed, parsePublisherRssFeed, feed type detection, recipient type detection/migration)
@@ -55,13 +55,24 @@ Unit tests use Vitest with jsdom, configured in `vitest.config.ts`. Test files l
 E2E tests are in `e2e/` and run Playwright against Chrome at multiple viewports (desktop, tablet 1024px, mobile 768px, mobile 480px). Config in `playwright.config.ts`.
 
 ### CI/CD
-Push to `master` or PR triggers four parallel GitHub Actions jobs: unit tests, E2E tests, lint, and a blocking dependency audit (`npm audit --omit=dev --audit-level=high` — dev-only transitives don't gate CI, shipped deps do).
+Push to `master` or PR triggers five parallel GitHub Actions jobs: unit tests, E2E tests, lint, a blocking dependency audit (`npm audit --omit=dev --audit-level=high` — dev-only transitives don't gate CI, shipped deps do), and **Build**.
+
+`Build` runs `npm run build` (`tsc -b` + vite). Nothing else in CI typechecks — E2E boots `npm run dev`, which skips tsc — so before this job existed a type error only surfaced in `release.yml`, after merge, in the job that builds the app. `tsc -b` covers three projects: `tsconfig.app.json` (src), `tsconfig.node.json` (vite.config.ts) and `tsconfig.api.json` (api/, excluding its tests). **`api/` was typechecked by nothing before August 2026** — that gap hid a live bug where `api/hosted/[feedId].ts` assigned the whole `PodcastIndexNotifyResult` object to a `number` field and wrote it into every updated feed's `.meta.json`, and an `/api/verify-feed-url` that could not run at all because `assertPublicHttpUrl` didn't exist in this fork.
+
+**Required status checks are what actually gate a merge**, not the workflow files: `Lint`, `Unit Tests`, `E2E Tests`, `Dependency Audit`, `Build`. Add a job to `test.yml` and it gates nothing until you also add it there:
+```bash
+gh api repos/ChadFarrow/MSP-2.0-Desktop-App/branches/master/protection/required_status_checks
+```
 
 Every push to `master` also triggers cross-platform release builds (macOS arm64/x86_64, Ubuntu, Windows) that auto-increment the version, sign artifacts, and publish a GitHub release. Multiple pushes in a day each produce a new release.
 
 The sync workflow (`sync-upstream.yml`) fetches changes from the [web repo](https://github.com/ChadFarrow/MSP-2.0) and opens a PR via `peter-evans/create-pull-request`. It runs on a daily schedule (6 AM UTC), on manual dispatch (`gh workflow run sync-upstream.yml`), **and on every push to web `master`** (the web repo's `notify-desktop.yml` fires a `repository_dispatch: web-repo-updated`). So a web update auto-builds the desktop app end to end: web push → sync PR → CI → auto-merge → `release.yml` builds a release.
 
-**Auto-merge policy:** every sync PR (clean *or* conflict) enables auto-merge, **gated on CI** (build + lint + unit + E2E). A green synced build merges and releases itself with no manual step; a build that goes **red holds for a human**. This means CI is the safety net — build-breaking drops are caught automatically (see below), but a conflict sync that drops a feature yet still **compiles** can merge without review.
+The sync workflow also deletes the web repo's own workflows from the merge: `notify-desktop.yml` (it would fire this sync at itself) and `ci.yml` (its `verify` job duplicates `test.yml`, under a check name branch protection doesn't gate on).
+
+**Auto-merge policy:** every sync PR (clean *or* conflict) enables auto-merge, gated on the required status checks listed above. A green synced build merges and releases itself with no manual step; a red one **holds for a human**. This means CI is the safety net — build-breaking drops are caught automatically (see below), but a conflict sync that drops a feature yet still **compiles** can merge without review.
+
+That gate is only as good as the required-checks list. It was `["Lint"]` alone until August 2026, so sync PR #34 auto-merged 28 seconds after Lint went green while its unit tests were still failing — master stayed red for three days and shipped no release. If a sync PR ever merges red again, check that list first.
 
 **Conflict handling — important:** when an upstream change conflicts with desktop's version, the workflow auto-resolves by **keeping the desktop version** and silently drops the upstream change for that file. The PR body lists the conflicted files under "Merge conflicts were auto-resolved". Two failure modes:
 - **Build-breaking drop** (CI catches it → PR stays unmerged): a non-conflicting file still imports something from the dropped code. Example: the June 2026 email magic-link auth sync (web PR #90) landed `ImportModal`'s `import { fetchEmailFeeds }` cleanly but dropped the export from the conflicted `adminAuth.ts`, so `vite build` failed and E2E never started. Unit tests still passed (they don't build the app), which is misleading — always check the E2E/build job. Fixed in desktop PR #20 by porting the email fns into the forked files (`adminAuth.ts`, `hostedFeed.ts`, `api/hosted/[feedId].ts`) so the fork *owns* a building version and future syncs auto-resolve green. See issue #21.
@@ -72,7 +83,7 @@ Recurring lint gotcha: desktop lints with `react-hooks/immutability` (which web 
 ## Deployment
 
 ### Web Version
-- Hosted on Vercel at msp.podtards.com
+- Hosted on Vercel; **musicsideproject.com** is the canonical domain. `msp.podtards.com` is a legacy alias that still resolves but must never appear in newly generated URLs — `getBaseUrl()` in `api/_utils/feedUtils.ts` enforces this
 - API functions in `/api/` directory are Vercel serverless functions
 - Dev server proxies `/api/*` to production via Vite config
 - Build: `npm run build` (tsc + vite)
@@ -187,7 +198,7 @@ Factory functions: `createEmptyRecipient()` (defaults to `lnaddress`), `createSu
 - Artist Npub is stored via `podcast:txt purpose="npub"` in XML output
 
 ### API Layer (api/)
-Vercel serverless functions (the desktop dev server proxies `/api/*` to `msp.podtards.com`, so the desktop client never runs these locally):
+Vercel serverless functions (the desktop dev server proxies `/api/*` to `musicsideproject.com`, so the desktop client never runs these locally):
 - `pisearch.ts` - Podcast Index search
 - `pisubmit.ts` - Submit feed to Podcast Index
 - `pubnotify.ts` - Podcast Index pub-notify + add/byfeedurl + optional Podping pass-through
@@ -238,7 +249,7 @@ The Save Modal destination dropdown in `SaveModal.tsx` exposes these options. Su
 | Save to Computer / Local Storage | App data folder (Tauri) or browser localStorage | No | Per-machine only; fronts the desktop sidebar |
 | Download XML | User filesystem | No | One-shot file export |
 | Copy to Clipboard | Clipboard | No | One-shot text copy |
-| Host on MSP | Vercel Blob via `/api/hosted/*` | Yes (`msp.podtards.com/feeds/{id}.xml`) | Triggers `pubnotify` and Podping (unless "Draft mode" is checked); can link a Nostr identity for token-free edits |
+| Host on MSP | Vercel Blob via `/api/hosted/*` | Yes (`musicsideproject.com/api/hosted/{id}.xml`) | Triggers `pubnotify` and Podping (unless "Draft mode" is checked); can link a Nostr identity for token-free edits |
 | Submit to Podcast Index | n/a (POST `/api/pubnotify`) | n/a | Notifies an already-published URL so PI re-crawls it |
 | Send Podping | n/a (POST `/api/podping`) | n/a | Self-hosted hivepinger broadcast; rate-limited |
 | Save RSS feed to Nostr | Kind 30054 event | No (sync only) | Personal cross-device load; requires login |
