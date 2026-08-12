@@ -25,6 +25,8 @@ import { saveFeedLocal, hasLocalStorage } from '../../utils/localFeedStorage';
 import { useNostr } from '../../store/nostrStore';
 import { ModalWrapper } from './ModalWrapper';
 import { apiFetch, isTauri } from '../../utils/api';
+import { getFeedUrlError, normalizeFeedUrl } from '../../utils/urlValidation';
+import { verifyFeedUrl, isGuardRefusal, FORCED_SUBMIT_NOTE } from '../../utils/verifyFeedUrl';
 
 const DEFAULT_BLOSSOM_SERVER = 'https://blossom.primal.net/';
 
@@ -102,6 +104,10 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   const [tokenAcknowledged, setTokenAcknowledged] = useState(false);
   const [linkingNostr, setLinkingNostr] = useState(false);
   const [podcastIndexUrl, setPodcastIndexUrl] = useState('');
+  // Latch: set when the reachability check (or the server guard) warns, so a
+  // second click submits anyway. Cleared whenever the URL changes.
+  const [podcastIndexBypassVerify, setPodcastIndexBypassVerify] = useState(false);
+  const [podcastIndexVerifyWarning, setPodcastIndexVerifyWarning] = useState<string | null>(null);
   const [submittingToIndex, setSubmittingToIndex] = useState(false);
   const [podcastIndexPageUrl, setPodcastIndexPageUrl] = useState<string | null>(null);
   const [podcastIndexPending, setPodcastIndexPending] = useState(false); // True when PI notified but not yet indexed
@@ -656,21 +662,54 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
       return;
     }
 
+    const submitUrl = normalizeFeedUrl(podcastIndexUrl);
+    const urlError = getFeedUrlError(submitUrl);
+    if (urlError) {
+      setMessage({ type: 'error', text: urlError });
+      return;
+    }
+
     setSubmittingToIndex(true);
     setMessage(null);
 
     try {
-      const response = await apiFetch(`/api/pubnotify?url=${encodeURIComponent(podcastIndexUrl.trim())}`);
+      // Confirm the URL actually resolves before handing it to PI — a broken entry
+      // there sticks around as a permanently blank record while we report success.
+      // Advisory, not a block: the latch makes a second click submit anyway.
+      const force = podcastIndexBypassVerify;
+      if (!force) {
+        const check = await verifyFeedUrl(submitUrl);
+        if (!check.ok) {
+          setPodcastIndexVerifyWarning(check.warning);
+          setPodcastIndexBypassVerify(true);
+          return;
+        }
+      }
+      setPodcastIndexVerifyWarning(null);
+
+      const params = new URLSearchParams({ url: submitUrl });
+      if (force) params.set('force', '1');
+      const response = await apiFetch(`/api/pubnotify?${params}`);
       const data = await response.json();
 
       if (!response.ok) {
+        // The server saw a block our own check missed. Arm the latch so the
+        // button becomes "Submit anyway" rather than a dead end.
+        if (isGuardRefusal(data)) {
+          setPodcastIndexVerifyWarning(data.error);
+          setPodcastIndexBypassVerify(true);
+          return;
+        }
         throw new Error(data.error || 'Failed to submit to Podcast Index');
       }
 
       // Generate search URL so user can view their feed on Podcast Index
-      const searchUrl = `https://podcastindex.org/search?q=${encodeURIComponent(podcastIndexUrl.trim())}`;
+      const searchUrl = `https://podcastindex.org/search?q=${encodeURIComponent(submitUrl)}`;
       setPodcastIndexPageUrl(data.podcastIndexUrl || searchUrl);
-      setMessage({ type: 'success', text: 'Feed submitted! It may take a moment to appear in the index.' });
+      setMessage({
+        type: 'success',
+        text: `Feed submitted! It may take a moment to appear in the index.${force ? FORCED_SUBMIT_NOTE : ''}`
+      });
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to submit to Podcast Index' });
     } finally {
@@ -1328,7 +1367,11 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                 <input
                   type="text"
                   value={podcastIndexUrl}
-                  onChange={(e) => setPodcastIndexUrl(e.target.value)}
+                  onChange={(e) => {
+                    setPodcastIndexUrl(normalizeFeedUrl(e.target.value));
+                    setPodcastIndexBypassVerify(false);
+                    setPodcastIndexVerifyWarning(null);
+                  }}
                   placeholder="https://example.com/feed.xml"
                   style={{
                     width: '100%',
@@ -1345,6 +1388,11 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '12px' }}>
                 Use this to submit a new feed or notify Podcast Index that an existing feed has been updated.
               </p>
+              {podcastIndexVerifyWarning && (
+                <p style={{ color: 'var(--warning-color, #f59e0b)', fontSize: '0.75rem', marginBottom: '12px' }}>
+                  {podcastIndexVerifyWarning} Click Submit again to submit anyway.
+                </p>
+              )}
               {podcastIndexPageUrl && (
                 <div style={{
                   marginBottom: '12px',

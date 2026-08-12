@@ -23,7 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
-.env
+# All env files, not just .env — .env.production/.development/.test were not
+# covered by the bare rule and would have been committed silently.
+.env*
+!.env.example
 Keys/
 
 # Tauri

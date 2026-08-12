@@ -2,13 +2,35 @@
   "redirects": [
     {
       "source": "/((?!api/).*)",
-      "has": [{ "type": "host", "value": "msp.podtards.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "msp.podtards.com"
+        }
+      ],
       "destination": "https://musicsideproject.com/$1",
       "permanent": true
     }
   ],
   "rewrites": [
-    { "source": "/admin", "destination": "/" },
-    { "source": "/auth/verify", "destination": "/" }
+    {
+      "source": "/admin",
+      "destination": "/"
+    },
+    {
+      "source": "/auth/verify",
+      "destination": "/"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
   ]
 }

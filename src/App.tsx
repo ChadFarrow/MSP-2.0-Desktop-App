@@ -34,7 +34,11 @@ import {
 } from './utils/tauriNostr';
 import { FeedSidebar } from './components/FeedSidebar';
 import { hasLocalStorage } from './utils/localFeedStorage';
-import mspLogo from './assets/msp-logo.png';
+// The 40px header logo. Points at the 192px file in public/ rather than importing
+// assets/msp-logo.png, which is a 1024x1024 PNG weighing ~1.8 MB — the same file
+// public/ already serves as the favicon, so importing it shipped a second
+// byte-identical copy through the bundle to paint a 40px image.
+const mspLogo = '/msp-logo-192.png';
 import './App.css';
 
 // Main App Content (needs access to context)

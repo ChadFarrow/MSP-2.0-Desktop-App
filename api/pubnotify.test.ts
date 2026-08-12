@@ -5,6 +5,15 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
+// Neutralize the reachability guard so these tests exercise Podcast Index logic.
+// Left real, it would consume entries from the mocked fetch queues below and make
+// live DNS calls. Its own behaviour is covered in _utils/feedReachability.test.ts.
+const { mockGuard } = vi.hoisted(() => ({ mockGuard: vi.fn() }));
+vi.mock('./_utils/feedReachability.js', () => ({
+  guardFeedSubmission: mockGuard,
+  wantsForce: (v: unknown) => v === true || v === '1' || v === 'true'
+}));
+
 // Mock crypto for auth header generation
 vi.mock('crypto', () => ({
   default: {
@@ -37,6 +46,7 @@ describe('pubnotify API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
+    mockGuard.mockResolvedValue(null);
     // Set env vars before each test
     process.env.PODCASTINDEX_API_KEY = 'test-api-key';
     process.env.PODCASTINDEX_API_SECRET = 'test-api-secret';
@@ -347,5 +357,38 @@ describe('pubnotify API', () => {
     // Ensure it's NOT a search URL
     const jsonCall = res.json.mock.calls[0][0];
     expect(jsonCall.podcastIndexUrl).not.toContain('search?q=');
+  });
+
+  describe('reachability guard', () => {
+    it('refuses to register a feed whose host blocks crawlers', async () => {
+      mockGuard.mockResolvedValue({
+        error: "This feed can't be reached — your host returned 403 to our crawler.",
+        reachability: { ok: false, status: 403, looksLikeFeed: false, reason: 'blocked' }
+      });
+
+      const { default: handler } = await import('./pubnotify');
+      const { req, res } = createMockReqRes({ url: 'https://blocked.example.com/feed.xml' });
+      await handler(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].reachability).toMatchObject({ reason: 'blocked', status: 403 });
+      // Nothing reached Podcast Index — that's the point.
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('forwards force=1 so "Submit anyway" can get through', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, text: vi.fn().mockResolvedValue('{}') });
+      mockFetch.mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue({}), text: vi.fn().mockResolvedValue('{}') });
+
+      const { default: handler } = await import('./pubnotify');
+      const { req, res } = createMockReqRes({ url: 'https://blocked.example.com/feed.xml', force: '1' });
+      await handler(req, res);
+
+      expect(mockGuard).toHaveBeenCalledWith(
+        'https://blocked.example.com/feed.xml',
+        expect.objectContaining({ force: true })
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
   });
 });

@@ -1,11 +1,18 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 /**
- * Origins allowed to call state-changing endpoints: the hosted web app,
- * the Tauri desktop webview (tauri://localhost on macOS, http://tauri.localhost
- * on Windows), and the local Vite dev server.
+ * Origins allowed to call state-changing endpoints: the hosted web app on its
+ * canonical domain and aliases, the Tauri desktop webview (tauri://localhost on
+ * macOS, http://tauri.localhost on Windows), and the local Vite dev server.
+ *
+ * The tauri:// entries are load-bearing — the Windows webview enforces CORS, so
+ * dropping them breaks the desktop app. musicsideproject.com is canonical;
+ * msp.podtards.com is a legacy alias that still resolves and still calls here.
  */
 const ALLOWED_ORIGINS = new Set([
+  'https://musicsideproject.com',
+  'https://www.musicsideproject.com',
+  'https://new.musicsideproject.com',
   'https://msp.podtards.com',
   'tauri://localhost',
   'http://tauri.localhost',

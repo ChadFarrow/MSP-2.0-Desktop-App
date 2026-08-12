@@ -21,8 +21,8 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
         <link>https://musicsideproject.com</link>
         <language>en</language>
         <generator>MSP 2.0 - Music Side Project Studio</generator>
-        <pubDate>Sat, 01 Feb 2025 00:00:00 GMT</pubDate>
-        <lastBuildDate>Sat, 01 Feb 2025 00:00:00 GMT</lastBuildDate>
+        <pubDate>Sat, 01 Feb 2025 00:02:00 GMT</pubDate>
+        <lastBuildDate>Sat, 01 Feb 2025 00:02:00 GMT</lastBuildDate>
         <podcast:guid>550e8400-e29b-41d4-a716-446655440000</podcast:guid>
         <itunes:category text="Music" />
         <itunes:keywords>example, demo, msp, podcasting2.0, value4value</itunes:keywords>
@@ -52,7 +52,7 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
         <item>
             <title>First Track</title>
             <description>The opening track of the album. Uses the album-level value block and person credits.</description>
-            <pubDate>Sat, 01 Feb 2025 00:00:00 GMT</pubDate>
+            <pubDate>Sat, 01 Feb 2025 00:02:00 GMT</pubDate>
             <guid isPermaLink="false">a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d</guid>
             <itunes:image href="https://musicsideproject.com/msp-logo.png" />
             <podcast:images srcset="https://musicsideproject.com/msp-logo.png" />
@@ -97,7 +97,7 @@ const EXAMPLE_FEED = `<?xml version="1.0" encoding="UTF-8"?>
         <item>
             <title>Featured Collaboration</title>
             <description>This track features a guest artist with their own value split. The track-level value block overrides the album default.</description>
-            <pubDate>Sat, 01 Feb 2025 00:02:00 GMT</pubDate>
+            <pubDate>Sat, 01 Feb 2025 00:00:00 GMT</pubDate>
             <guid isPermaLink="false">c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f</guid>
             <itunes:image href="https://musicsideproject.com/msp-logo.png" />
             <podcast:images srcset="https://musicsideproject.com/msp-logo.png" />

@@ -2,7 +2,16 @@ import { useState, useEffect } from 'react';
 import { useNostr } from '../../store/nostrStore';
 import { FeedList } from './FeedList';
 import { isTauri } from '../../utils/api';
-import mspLogo from '../../assets/msp-logo.png';
+// The 40px header logo. Points at the 192px file in public/ rather than importing
+// assets/msp-logo.png, which is a 1024x1024 PNG weighing 1,810,143 bytes — the
+// same file public/ already serves as the favicon, so importing it shipped a
+// second byte-identical copy through the bundle and a first visit pulled ~3.6 MB
+// of logo against ~180 kB of compressed JS, all to paint a 40px image.
+//
+// assets/msp-logo.png is deliberately left in the repo: the Desktop App is a fork
+// with its own App.tsx, and deleting an asset upstream breaks its build when the
+// sync PR lands (see the fork-divergence note in CLAUDE.md).
+const mspLogo = '/msp-logo-192.png';
 
 type AuthState = 'checking' | 'no-extension' | 'not-logged-in' | 'ready';
 

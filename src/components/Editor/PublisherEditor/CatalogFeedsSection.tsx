@@ -5,7 +5,8 @@ import type { FeedAction } from '../../../store/feedStore';
 import { useNostr } from '../../../store/nostrStore';
 import { createAdminAuthHeader } from '../../../utils/adminAuth';
 import { checkSignerConnection } from '../../../utils/nostrSigner';
-import { getFeedUrlError } from '../../../utils/urlValidation';
+import { getFeedUrlError, normalizeFeedUrl } from '../../../utils/urlValidation';
+import { verifyFeedUrl, isGuardRefusal, FORCED_SUBMIT_NOTE } from '../../../utils/verifyFeedUrl';
 import { InfoIcon } from '../../InfoIcon';
 import { Section } from '../../Section';
 import { apiFetch, resolveApiUrl } from '../../../utils/api';
@@ -59,7 +60,9 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
   const [submitUrl, setSubmitUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
-  const submitUrlError = getFeedUrlError(submitUrl.trim());
+  // Latch: set when the reachability check warns, so a second click submits anyway.
+  const [bypassVerify, setBypassVerify] = useState(false);
+  const submitUrlError = getFeedUrlError(submitUrl);
 
   // Refresh feed info from Podcast Index by GUID
   const handleRefreshArtwork = async (index: number) => {
@@ -220,31 +223,44 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
   };
 
   const handleSubmitToPI = async () => {
-    if (!submitUrl.trim()) return;
+    const feedUrl = normalizeFeedUrl(submitUrl);
+    if (!feedUrl) return;
     setIsSubmitting(true);
     setSubmitResult(null);
     try {
-      // First validate it's an actual RSS feed
-      const proxyRes = await apiFetch(`/api/proxy-feed?url=${encodeURIComponent(submitUrl)}`);
-      if (!proxyRes.ok) {
-        setSubmitResult({ success: false, message: 'Could not fetch URL - check the address' });
-        return;
-      }
-      const content = await proxyRes.text();
-      if (!content.includes('<rss') && !content.includes('<feed') && !content.includes('<channel')) {
-        setSubmitResult({ success: false, message: 'URL does not appear to be an RSS feed' });
-        return;
+      // Check the feed actually resolves, via /api/verify-feed-url rather than
+      // /api/proxy-feed: this needs a verdict, not the bytes, and a verdict is
+      // cheaper and safer to ask for.
+      // The latch doubles as the override: set by this check or by a server
+      // refusal, and cleared whenever the URL changes.
+      const force = bypassVerify;
+      if (!force) {
+        const check = await verifyFeedUrl(feedUrl);
+        if (!check.ok) {
+          setSubmitResult({
+            success: false,
+            message: `${check.warning} Click again to submit anyway.`
+          });
+          setBypassVerify(true);
+          return;
+        }
       }
 
       // Submit to Podcast Index
       const response = await apiFetch('/api/pisubmit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: submitUrl })
+        body: JSON.stringify({ url: feedUrl, ...(force ? { force: true } : {}) })
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        setSubmitResult({ success: true, message: data.message || 'Feed submitted! It may take a few minutes to be indexed.' });
+        setSubmitResult({
+          success: true,
+          message: `${data.message || 'Feed submitted! It may take a few minutes to be indexed.'}${force ? FORCED_SUBMIT_NOTE : ''}`
+        });
+      } else if (isGuardRefusal(data)) {
+        setSubmitResult({ success: false, message: `${data.error} Click again to submit anyway.` });
+        setBypassVerify(true);
       } else {
         setSubmitResult({ success: false, message: data.error || data.details?.description || 'Failed to submit feed' });
       }
@@ -367,15 +383,21 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
                 className="form-input"
                 placeholder="https://example.com/feed.xml"
                 value={submitUrl}
-                onChange={e => setSubmitUrl(e.target.value)}
+                onChange={e => {
+                  setSubmitUrl(normalizeFeedUrl(e.target.value));
+                  setBypassVerify(false);
+                  setSubmitResult(null);
+                }}
                 style={{ flex: 1, borderColor: submitUrlError ? 'var(--error, #ef4444)' : undefined }}
               />
               <button
                 className="btn btn-secondary"
                 onClick={handleSubmitToPI}
-                disabled={isSubmitting || !submitUrl.trim() || !!submitUrlError}
+                disabled={isSubmitting || !submitUrl || !!submitUrlError}
               >
-                {isSubmitting ? 'Submitting...' : 'Submit to Podcast Index'}
+                {isSubmitting
+                  ? 'Submitting...'
+                  : bypassVerify ? 'Submit anyway' : 'Submit to Podcast Index'}
               </button>
             </div>
             {submitUrlError && (

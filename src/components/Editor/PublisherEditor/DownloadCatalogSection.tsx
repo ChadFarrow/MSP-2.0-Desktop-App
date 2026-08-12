@@ -4,7 +4,9 @@ import { Section } from '../../Section';
 import { fetchFeedFromUrl, parseRssFeed } from '../../../utils/xmlParser';
 import { generateRssFeed, downloadXml } from '../../../utils/xmlGenerator';
 import { getHostedFeedInfo, buildHostedUrl } from '../../../utils/hostedFeed';
+import { getFeedUrlError, normalizeFeedUrl } from '../../../utils/urlValidation';
 import { apiFetch } from '../../../utils/api';
+import { verifyFeedUrl, isGuardRefusal, FORCED_SUBMIT_NOTE } from '../../../utils/verifyFeedUrl';
 
 interface DownloadCatalogSectionProps {
   publisherFeed: PublisherFeed;
@@ -19,7 +21,15 @@ export function DownloadCatalogSection({ publisherFeed, feedInstance }: Download
   const [urlValidation, setUrlValidation] = useState<'idle' | 'checking' | 'found' | 'not-found'>('idle');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
+  // Bumped to re-run the Podcast Index lookup below without touching the URL.
+  // This used to be done by appending a space to publisherFeedUrl and trimming it
+  // back — that string is stamped into every catalog feed's <podcast:publisher>,
+  // so it must never carry whitespace even momentarily.
+  const [piCheckNonce, setPiCheckNonce] = useState(0);
+  // Latch: set when the reachability check warns, so a second click submits anyway.
+  const [bypassVerify, setBypassVerify] = useState(false);
   const loadedInstance = useRef(feedInstance);
+  const publisherFeedUrlError = getFeedUrlError(publisherFeedUrl);
 
   // This section stays mounted across an import, so without this the URL resolved
   // for the *previous* publisher feed would survive and get stamped into the new
@@ -31,6 +41,7 @@ export function DownloadCatalogSection({ publisherFeed, feedInstance }: Download
     setPublisherFeedUrl('');
     setUrlValidation('idle');
     setSubmitResult(null);
+    setBypassVerify(false);
   }, [feedInstance]);
 
   // Auto-populate URL from sourceUrl (imported URL) or MSP hosted URL
@@ -40,16 +51,18 @@ export function DownloadCatalogSection({ publisherFeed, feedInstance }: Download
     if (publisherFeedUrl) return;
 
     const checkHostedUrl = (): boolean => {
-      // First priority: use sourceUrl if the feed was imported from a URL
+      // First priority: use sourceUrl if the feed was imported from a URL.
+      // Normalized because it traces back to a user-typed import URL and gets
+      // stamped into every catalog feed's <podcast:publisher> below.
       if (publisherFeed.sourceUrl) {
-        setPublisherFeedUrl(publisherFeed.sourceUrl);
+        setPublisherFeedUrl(normalizeFeedUrl(publisherFeed.sourceUrl));
         return true;
       }
       // Second priority: check if hosted on MSP (in case hosted from another section)
       if (publisherFeed.podcastGuid) {
         const hostedInfo = getHostedFeedInfo(publisherFeed.podcastGuid);
         if (hostedInfo) {
-          setPublisherFeedUrl(buildHostedUrl(hostedInfo.feedId));
+          setPublisherFeedUrl(normalizeFeedUrl(buildHostedUrl(hostedInfo.feedId)));
           return true;
         }
       }
@@ -66,26 +79,46 @@ export function DownloadCatalogSection({ publisherFeed, feedInstance }: Download
   }, [publisherFeed.podcastGuid, publisherFeed.sourceUrl, publisherFeedUrl]);
 
   const handleSubmitToPI = async () => {
-    if (!publisherFeedUrl.trim()) return;
+    const feedUrl = normalizeFeedUrl(publisherFeedUrl);
+    if (!feedUrl) return;
 
     setIsSubmitting(true);
     setSubmitResult(null);
     try {
+      // Confirm the URL resolves before registering it — a broken entry sticks
+      // around in Podcast Index.
+      // The latch doubles as the override: set by this check or by a server
+      // refusal, and cleared whenever the URL changes.
+      const force = bypassVerify;
+      if (!force) {
+        const check = await verifyFeedUrl(feedUrl);
+        if (!check.ok) {
+          setSubmitResult({ success: false, message: `${check.warning} Click again to submit anyway.` });
+          setBypassVerify(true);
+          return;
+        }
+      }
+
       const response = await apiFetch('/api/pisubmit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: publisherFeedUrl })
+        body: JSON.stringify({ url: feedUrl, ...(force ? { force: true } : {}) })
       });
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setSubmitResult({ success: true, message: data.message || 'Feed submitted! It may take a few minutes to be indexed.' });
+        setSubmitResult({
+          success: true,
+          message: `${data.message || 'Feed submitted! It may take a few minutes to be indexed.'}${force ? FORCED_SUBMIT_NOTE : ''}`
+        });
         // Re-check after a short delay
         setTimeout(() => {
           setUrlValidation('idle');
-          setPublisherFeedUrl(prev => prev + ' ');
-          setTimeout(() => setPublisherFeedUrl(prev => prev.trim()), 10);
+          setPiCheckNonce(n => n + 1);
         }, 2000);
+      } else if (isGuardRefusal(data)) {
+        setSubmitResult({ success: false, message: `${data.error} Click again to submit anyway.` });
+        setBypassVerify(true);
       } else {
         const errorMsg = data.error || data.details?.description || 'Failed to submit feed';
         setSubmitResult({ success: false, message: errorMsg });
@@ -99,7 +132,8 @@ export function DownloadCatalogSection({ publisherFeed, feedInstance }: Download
 
   // Check if publisher feed URL exists in Podcast Index
   useEffect(() => {
-    if (!publisherFeedUrl.trim()) {
+    const feedUrl = normalizeFeedUrl(publisherFeedUrl);
+    if (!feedUrl) {
       setUrlValidation('idle');
       return;
     }
@@ -108,13 +142,15 @@ export function DownloadCatalogSection({ publisherFeed, feedInstance }: Download
     const timeoutId = setTimeout(async () => {
       setUrlValidation('checking');
       try {
-        const response = await apiFetch(`/api/pisearch?q=${encodeURIComponent(publisherFeedUrl)}`);
+        const response = await apiFetch(`/api/pisearch?q=${encodeURIComponent(feedUrl)}`);
         const data = await response.json();
 
         if (response.ok && data.feeds && data.feeds.length > 0) {
-          // Check if any returned feed matches our URL
+          // Check if any returned feed matches our URL. Normalize PI's side too —
+          // a stray space in their stored URL would otherwise read as "not found"
+          // and prompt the user to re-submit a feed that is already indexed.
           const found = data.feeds.some((feed: { url: string }) =>
-            feed.url.toLowerCase() === publisherFeedUrl.toLowerCase()
+            normalizeFeedUrl(feed.url).toLowerCase() === feedUrl.toLowerCase()
           );
           setUrlValidation(found ? 'found' : 'not-found');
         } else {
@@ -126,7 +162,7 @@ export function DownloadCatalogSection({ publisherFeed, feedInstance }: Download
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [publisherFeedUrl]);
+  }, [publisherFeedUrl, piCheckNonce]);
 
   const handleDownloadFeed = async (index: number) => {
     const item = publisherFeed.remoteItems[index];
@@ -165,6 +201,9 @@ export function DownloadCatalogSection({ publisherFeed, feedInstance }: Download
     if (publisherFeed.remoteItems.length === 0) return;
 
     setDownloadingAll(true);
+    // A failed feed used to vanish here — the catch below was empty, so a run
+    // that downloaded nothing looked identical to one that downloaded everything.
+    const failures: string[] = [];
     for (let i = 0; i < publisherFeed.remoteItems.length; i++) {
       const item = publisherFeed.remoteItems[i];
       if (!item.feedUrl) continue;
@@ -193,12 +232,22 @@ export function DownloadCatalogSection({ publisherFeed, feedInstance }: Download
         downloadXml(newXml, `${safeTitle}-with-publisher.xml`);
         // Small delay between downloads
         await new Promise(resolve => setTimeout(resolve, 500));
-      } catch {
-        // Continue with next feed
+      } catch (err) {
+        // Record and continue with the next feed, so one bad URL doesn't stop
+        // the run — but report the failures at the end rather than silently.
+        const label = item.title || item.feedUrl;
+        failures.push(`${label}: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
     }
     setDownloadingIndex(null);
     setDownloadingAll(false);
+
+    if (failures.length > 0) {
+      alert(
+        `${failures.length} of ${publisherFeed.remoteItems.length} feeds could not be downloaded:\n\n` +
+        failures.join('\n\n')
+      );
+    }
   };
 
   const hasPublisherGuid = !!publisherFeed.podcastGuid;
@@ -226,11 +275,23 @@ export function DownloadCatalogSection({ publisherFeed, feedInstance }: Download
           className="form-input"
           placeholder="https://example.com/publisher-feed.xml"
           value={publisherFeedUrl}
-          onChange={e => setPublisherFeedUrl(e.target.value)}
+          onChange={e => {
+            setPublisherFeedUrl(normalizeFeedUrl(e.target.value));
+            setBypassVerify(false);
+            setSubmitResult(null);
+          }}
+          style={publisherFeedUrlError ? { borderColor: 'var(--error, #ef4444)' } : undefined}
         />
         <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px' }}>
           The URL where you will host this publisher feed. This URL will be included in each catalog feed's publisher reference.
         </p>
+        {/* This URL is written into every catalog feed's <podcast:publisher> tag,
+            so a malformed one propagates well beyond the Podcast Index submission. */}
+        {publisherFeedUrlError && (
+          <p style={{ color: 'var(--error, #ef4444)', fontSize: '12px', marginTop: '4px' }}>
+            {publisherFeedUrlError}
+          </p>
+        )}
         {urlValidation === 'checking' && (
           <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px' }}>
             Checking Podcast Index...
@@ -249,10 +310,12 @@ export function DownloadCatalogSection({ publisherFeed, feedInstance }: Download
             <button
               className="btn btn-secondary"
               onClick={handleSubmitToPI}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !publisherFeedUrl || !!publisherFeedUrlError}
               style={{ padding: '6px 12px', fontSize: '13px' }}
             >
-              {isSubmitting ? 'Submitting...' : 'Submit to Podcast Index'}
+              {isSubmitting
+                ? 'Submitting...'
+                : bypassVerify ? 'Submit anyway' : 'Submit to Podcast Index'}
             </button>
             {submitResult && (
               <p style={{

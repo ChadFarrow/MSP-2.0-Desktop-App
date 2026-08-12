@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { verifyFeedUrl } from './verifyFeedUrl';
+import { verifyFeedUrl, isGuardRefusal } from './verifyFeedUrl';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -89,5 +89,31 @@ describe('verifyFeedUrl', () => {
       }
     });
     expect((await verifyFeedUrl('https://example.com/feed.xml')).ok).toBe(true);
+  });
+});
+
+describe('isGuardRefusal', () => {
+  it('recognises the shape the submit guard refuses with', () => {
+    expect(
+      isGuardRefusal({
+        error: "This feed can't be reached — your host returned 403 to our crawler.",
+        reachability: { ok: false, status: 403, looksLikeFeed: false, reason: 'blocked' }
+      })
+    ).toBe(true);
+  });
+
+  it('rejects an ordinary error body so normal error handling still runs', () => {
+    expect(isGuardRefusal({ error: 'Invalid URL format' })).toBe(false);
+    expect(isGuardRefusal(undefined)).toBe(false);
+    expect(isGuardRefusal('blocked')).toBe(false);
+  });
+
+  it('rejects a reachability verdict that is not a block', () => {
+    expect(
+      isGuardRefusal({
+        error: 'something else',
+        reachability: { ok: false, status: 404, looksLikeFeed: false, reason: 'not-found' }
+      })
+    ).toBe(false);
   });
 });

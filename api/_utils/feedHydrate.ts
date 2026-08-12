@@ -48,7 +48,19 @@ export async function hydrateFeed(feedId: string, metaUrl: string, xmlUrl?: stri
     }
   }
 
-  return { feedId, author, medium, ...meta, podcastIndexId };
+  // Spreading the whole meta blob shipped editTokenHash to every caller of
+  // GET /api/hosted/ and /api/account/feeds — so an admin listing handed back the
+  // token hash of every feed on the platform in one response. It's SHA-256 of >=256
+  // bits, so it isn't invertible, but nothing client-side reads it and a credential
+  // digest has no business leaving the server.
+  //
+  // ownerEmailHash is deliberately kept: ImportModal reads it to decide whether a
+  // hosted feed is linked to the signed-in email account, and the caller of
+  // /api/account/feeds already knows their own hash. Worth revisiting for the admin
+  // listing, which does see other people's.
+  const { editTokenHash: _editTokenHash, ...safeMeta } = meta;
+  void _editTokenHash;
+  return { feedId, author, medium, ...safeMeta, podcastIndexId };
 }
 
 /**

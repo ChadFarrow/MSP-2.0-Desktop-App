@@ -203,7 +203,7 @@ Vercel serverless functions (the desktop dev server proxies `/api/*` to `musicsi
 - `pisubmit.ts` - Submit feed to Podcast Index
 - `pubnotify.ts` - Podcast Index pub-notify + add/byfeedurl + optional Podping pass-through
 - `podping.ts` - Self-hosted hivepinger broadcast endpoint (rate-limited, gated on env vars)
-- `proxy-feed.ts` - CORS proxy for fetching external feeds. **Intentional divergence from the web repo:** desktop blocks private/reserved targets but allows any public host (import-by-URL needs arbitrary feeds; see `_utils/urlSafety.ts`), while the web repo enforces a domain allowlist with 403s. Don't port the web version or its allowlist tests during syncs.
+- `proxy-feed.ts` - CORS proxy for fetching external feeds. **This divergence is over:** the web repo dropped its 17-domain allowlist in August 2026 (it was 403ing every self-hosted musician) and replaced it with six guards, which desktop now shares — per-hop `assertPublicHttpUrl`, a hard byte cap, a feed-shape sniff before any byte is written, no forwarded client headers, a forced `application/xml` content-type (echoing upstream `text/html` would be stored XSS on our own origin), and a per-IP rate limit. Both repos now allow any public host. The one desktop-specific piece is CORS: it goes through `_utils/cors.ts` rather than the web repo's inline origin list, because the Tauri origins must stay allowed.
 - `example-feed.ts` - Reference example feed endpoint
 - `hosted/` - MSP feed hosting endpoints (create, update, delete, backup/restore)
 - `feed/[npub]/[guid].ts` - Nostr-stored feed retrieval
@@ -257,6 +257,12 @@ The Save Modal destination dropdown in `SaveModal.tsx` exposes these options. Su
 | Publish RSS feed to a Blossom server | Blossom + kind 1063 pointer | Yes (`/api/feed/{npub}/{podcastGuid}.xml`) | Stable MSP URL always resolves to latest; requires login |
 
 The Save Modal's help (info icon) panel mirrors these descriptions — keep both in sync when editing.
+
+**Known gap:** the web repo has an `nsite` destination (publish to an nsite gateway). `src/utils/nsite.ts` is present here but unwired — no `SaveMode` entry, no state, no panel — so the sync's `case 'nsite'` is deliberately not carried over. Wiring it is a feature addition, not a sync reconcile.
+
+**Reachability guard.** Every path that hands a URL to Podcast Index or Podping (`pisubmit`, `pubnotify`, `podping`) runs `guardFeedSubmission` first, and the matching UI (`SaveModal`, `PodpingModal`, `CatalogFeedsSection`, `DownloadCatalogSection`, `Editor`) checks `verifyFeedUrl` before submitting. A refusal is advisory: it arms a latch so a second click sends `force: 1` and the button reads "Submit anyway". The point is to stop reporting success for a feed crawlers can't fetch — PI keeps such an entry forever as a permanently blank record.
+
+**`apiFetch`, not `fetch`.** A packaged Tauri build has no same-origin `/api`, so every API call must go through `apiFetch` (`src/utils/api.ts`). Upstream writes plain `fetch('/api/…')`, so each sync re-introduces calls that work on the web and silently fail in the desktop app — converting them is part of reconciling any sync that touches a file with an API call. Several stragglers remain (`src/utils/emailSession.ts`, `PublisherFeedReminderSection.tsx`, `Editor.tsx`); grep `fetch('/api` before assuming a feature works on desktop.
 
 ## Boundaries
 

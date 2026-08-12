@@ -1,7 +1,7 @@
 // MSP 2.0 - XML Parser for importing Demu RSS Feeds
 import { XMLParser } from 'fast-xml-parser';
 import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData, PodcastImage } from '../types/feed';
-import { createEmptyTrack, LEGACY_MSP_NODE_PUBKEY, MSP_SUPPORT_RECIPIENT } from '../types/feed';
+import { createEmptyTrack, LEGACY_MSP_NODE_PUBKEY, MSP_SUPPORT_RECIPIENT, DEFAULT_TRANSCRIPT_TYPE } from '../types/feed';
 import { areValueBlocksStrictEqual, arePersonsEqual } from './comparison';
 import { detectAddressType } from './addressUtils';
 import { MIN_PLAUSIBLE_MEDIA_BYTES } from './audioUtils';
@@ -51,6 +51,18 @@ const KNOWN_CHANNEL_KEYS = new Set([
   'podcast:image'
 ]);
 
+// Album and video feeds don't model channel-level remoteItems (a podroll), so
+// letting the key stay "known" for them meant it was neither parsed nor
+// preserved — parseRssFeed never reads it, and being in the set above excludes
+// it from unknownChannelElements. Since Download Feed is a parse→regenerate,
+// that deleted a publisher's podroll from their album feeds. Dropping the key
+// here lets it round-trip as an unknown element instead. The publisher path
+// keeps the full set: it parses these into feed.remoteItems and would otherwise
+// emit them twice.
+const ALBUM_CHANNEL_KEYS = new Set(
+  [...KNOWN_CHANNEL_KEYS].filter(key => key !== 'podcast:remoteItem')
+);
+
 // Known item keys that we explicitly parse (don't capture as unknown)
 const KNOWN_ITEM_KEYS = new Set([
   'title',
@@ -96,7 +108,7 @@ export const parseRssFeed = (xmlString: string): Album => {
     medium: (getText(channel['podcast:medium']) as 'music' | 'video') || 'music',
     bannerArtUrl: '',
     op3: false,
-    unknownChannelElements: captureUnknownElements(channel, KNOWN_CHANNEL_KEYS),
+    unknownChannelElements: captureUnknownElements(channel, ALBUM_CHANNEL_KEYS),
     tracks: []
   };
 
@@ -173,6 +185,32 @@ export const parseRssFeed = (xmlString: string): Album => {
     album.publisher = parsePublisherReference(publisher);
   }
 
+  // Some feeds point at their publisher with a bare channel-level
+  // <podcast:remoteItem medium="publisher"> and no <podcast:publisher> wrapper.
+  // That has to be *modelled*, not passed through as an unknown element: the
+  // Download Catalog flows overwrite album.publisher unconditionally after
+  // parsing, so a passed-through copy would be re-emitted alongside the
+  // <podcast:publisher> block the generator writes — two publisher references
+  // in a file we rewrote on the user's behalf. Podroll remoteItems (any other
+  // medium) still round-trip untouched via unknownChannelElements.
+  const channelRemoteItems = channel['podcast:remoteItem'];
+  const remoteItemArray = channelRemoteItems
+    ? (Array.isArray(channelRemoteItems) ? channelRemoteItems : [channelRemoteItems])
+    : [];
+  const podrollItems = remoteItemArray.filter(
+    item => getAttr(item, 'medium') !== 'publisher'
+  );
+  if (podrollItems.length !== remoteItemArray.length && !album.publisher) {
+    const publisherItem = remoteItemArray.find(
+      item => getAttr(item, 'medium') === 'publisher'
+    );
+    const feedGuid = getAttr(publisherItem, 'feedGuid');
+    const feedUrl = getAttr(publisherItem, 'feedUrl');
+    if (feedGuid || feedUrl) {
+      album.publisher = { feedGuid: feedGuid || '', feedUrl: feedUrl || undefined };
+    }
+  }
+
   // Artist Npub (from podcast:txt with purpose="npub")
   const txtTags = channel['podcast:txt'];
   if (txtTags) {
@@ -186,7 +224,23 @@ export const parseRssFeed = (xmlString: string): Album => {
   }
 
   // Capture unknown channel elements
-  album.unknownChannelElements = captureUnknownElements(channel, KNOWN_CHANNEL_KEYS);
+  album.unknownChannelElements = captureUnknownElements(channel, ALBUM_CHANNEL_KEYS);
+
+  // Keep only the podroll entries in the passthrough. Any publisher-medium one
+  // was consumed into album.publisher just above, and the generator writes that
+  // back out as a <podcast:publisher> block — leaving it here too would emit it
+  // twice. Drop the key entirely when nothing but the publisher ref was there.
+  if (album.unknownChannelElements?.['podcast:remoteItem']) {
+    if (podrollItems.length > 0) {
+      album.unknownChannelElements['podcast:remoteItem'] =
+        podrollItems.length === 1 ? podrollItems[0] : podrollItems;
+    } else {
+      delete album.unknownChannelElements['podcast:remoteItem'];
+      if (Object.keys(album.unknownChannelElements).length === 0) {
+        album.unknownChannelElements = undefined;
+      }
+    }
+  }
 
   // Tracks
   const items = channel.item;
@@ -530,22 +584,43 @@ function parseRemoteItem(node: unknown): RemoteItem | null {
     feedUrl: feedUrl || undefined,
     itemGuid: getAttr(node, 'itemGuid') || undefined,
     medium: getAttr(node, 'medium') || undefined,
-    title: getText(node) || undefined,
+    // The spec defines title as an ATTRIBUTE and the element as self-closing.
+    // Reading only the element text meant every conforming publisher feed —
+    // Fountain's among them — imported with no titles at all. The text fallback
+    // stays for feeds MSP itself wrote before the generator was corrected.
+    title: getAttr(node, 'title') || getText(node) || undefined,
     image: getAttr(node, 'feedImg') || getAttr(node, 'image') || undefined
   };
 }
 
-// Parse publisher reference (for albums that belong to a publisher)
+/**
+ * Parse a publisher reference (for albums that belong to a publisher).
+ *
+ * The spec form is a <podcast:publisher> wrapping exactly one
+ * <podcast:remoteItem medium="publisher">, and that is what the generator emits.
+ * Two malformed shapes also occur in the wild and both used to return undefined
+ * — which silently *deleted* them, because 'podcast:publisher' is in
+ * KNOWN_CHANNEL_KEYS and so is excluded from unknownChannelElements too. Since
+ * the Download Feed flow is a parse→regenerate, that lost the tag outright.
+ * Reading them here normalizes all three to the canonical form on output.
+ */
 function parsePublisherReference(node: unknown): PublisherReference | undefined {
   if (!node) return undefined;
 
   const publisherNode = node as Record<string, unknown>;
-  const remoteItem = publisherNode['podcast:remoteItem'];
+  const raw = publisherNode['podcast:remoteItem'];
 
-  if (remoteItem) {
-    const feedGuid = getAttr(remoteItem, 'feedGuid');
-    const feedUrl = getAttr(remoteItem, 'feedUrl');
+  // fast-xml-parser returns an array when the child repeats, and getAttr returns
+  // '' for an array — so more than one remoteItem used to drop the publisher
+  // entirely. The spec allows exactly one; take the first usable entry.
+  const candidates: unknown[] = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
+  // Attributes written directly on <podcast:publisher> with no child element.
+  // Out of spec, but reading it beats discarding the user's data.
+  candidates.push(publisherNode);
 
+  for (const candidate of candidates) {
+    const feedGuid = getAttr(candidate, 'feedGuid');
+    const feedUrl = getAttr(candidate, 'feedUrl');
     if (feedGuid || feedUrl) {
       return {
         feedGuid: feedGuid || '',
@@ -633,7 +708,8 @@ function parseTrack(node: unknown, trackNumber: number, albumValue: ValueBlock, 
   const transcript = item['podcast:transcript'];
   if (transcript) {
     track.transcriptUrl = getAttr(transcript, 'url') || '';
-    track.transcriptType = getAttr(transcript, 'type') || 'application/srt';
+    // Fallback only — a feed that states its own type keeps it verbatim.
+    track.transcriptType = getAttr(transcript, 'type') || DEFAULT_TRANSCRIPT_TYPE;
   }
 
   // Persons - only set override if different from album
@@ -664,78 +740,108 @@ const isMspUrl = (url: string): boolean => {
     url.includes('msp-2-0');
 };
 
-// Fetch XML from URL (with CORS proxy fallback)
+/** Carries the real reason a fetch failed, so callers can say something true. */
+export class FeedFetchError extends Error {
+  // Declared as fields rather than constructor parameter properties:
+  // erasableSyntaxOnly is enabled in tsconfig.
+  readonly code: string;
+  readonly status?: number;
+
+  constructor(message: string, code: string, status?: number) {
+    super(message);
+    this.name = 'FeedFetchError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+const FETCH_ACCEPT = 'application/rss+xml, application/xml, text/xml, */*';
+const PASTE_HINT = ' You can also paste the XML content directly.';
+
+/**
+ * Mirrors the ErrorCode union in api/proxy-feed.ts. An unknown code falls back
+ * to the server's own `error` string, so adding a code server-side degrades to a
+ * usable message rather than a wrong one.
+ */
+const CODE_MESSAGES: Record<string, string> = {
+  'not-found': "That URL didn't load — the host returned 404 Not Found.",
+  blocked:
+    'The host refused our request. Bot protection (on Cloudflare: Security → Bots) may be blocking it — Podcast Index would be blocked the same way.',
+  'not-a-feed':
+    "That URL loaded, but it isn't an RSS feed. Check you copied the feed URL rather than a web page.",
+  'too-large':
+    'That feed is too large to fetch through MSP. Download the XML and import it as a file instead.',
+  'unsafe-address': 'That address is not one MSP can fetch. Use a public URL.',
+  'invalid-url': "That doesn't look like a valid feed URL.",
+  'rate-limited': "You've imported a lot of feeds recently. Wait a few minutes and try again.",
+  timeout: "That URL didn't respond in time.",
+  network: "Couldn't connect to that address.",
+  'too-many-redirects': 'That URL redirects too many times.',
+  'upstream-error': "That URL didn't load — the host returned an error."
+};
+
+const looksLikeFeed = (xml: string): boolean =>
+  xml.includes('<rss') || xml.includes('<feed') || xml.includes('<channel');
+
+/**
+ * Optimisation only. Works when the host sends CORS headers; most self-hosted
+ * feeds don't. Its failure is not evidence about the feed — a CORS rejection is
+ * a bare TypeError — so it never produces the user-facing error.
+ */
+async function fetchDirect(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url, { headers: { Accept: FETCH_ACCEPT } });
+    if (!response.ok) return null;
+    const content = await response.text();
+    return looksLikeFeed(content) ? content : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The authoritative attempt: throws a FeedFetchError carrying the real reason. */
+async function fetchViaProxy(url: string): Promise<string> {
+  let response: Response;
+  try {
+    response = await apiFetch(`/api/proxy-feed?url=${encodeURIComponent(url)}`, {
+      headers: { Accept: FETCH_ACCEPT }
+    });
+  } catch {
+    throw new FeedFetchError('Could not reach MSP to fetch that feed.' + PASTE_HINT, 'network');
+  }
+
+  if (response.ok) {
+    const content = await response.text();
+    if (looksLikeFeed(content)) return content;
+    throw new FeedFetchError(CODE_MESSAGES['not-a-feed'] + PASTE_HINT, 'not-a-feed');
+  }
+
+  const body = (await response.json().catch(() => null)) as
+    | { error?: string; code?: string; status?: number }
+    | null;
+  const code = body?.code ?? 'upstream-error';
+  const message = CODE_MESSAGES[code] ?? body?.error ?? CODE_MESSAGES['upstream-error'];
+  throw new FeedFetchError(message + PASTE_HINT, code, body?.status ?? response.status);
+}
+
+/**
+ * Fetch a feed's XML, going through /api/proxy-feed to sidestep CORS.
+ *
+ * Exactly one attempt is authoritative for the error. This used to loop over
+ * four transports — direct, our proxy, allorigins.win and corsproxy.io —
+ * `continue`-ing past every failure, so the only thing it could ever report was
+ * a generic "paste the XML directly". The two public proxies are gone for three
+ * independent reasons: they leak every user's feed URL to a third party,
+ * corsproxy.io requires an API key so that entry always failed, and allorigins
+ * wraps the body in JSON that was unwrapped heuristically, which could mangle a
+ * feed. Our own proxy no longer has a domain allowlist, so they cover nothing.
+ */
 export const fetchFeedFromUrl = async (url: string): Promise<string> => {
-  // For MSP feeds, try our own proxy first to avoid CORS issues
-  if (isMspUrl(url)) {
-    try {
-      const response = await apiFetch(`/api/proxy-feed?url=${encodeURIComponent(url)}`, {
-        headers: {
-          'Accept': 'application/rss+xml, application/xml, text/xml, */*'
-        }
-      });
+  // MSP-hosted feeds go through the proxy first: on a preview deploy the app and
+  // the canonical hosted URL are different origins, so direct always CORS-fails.
+  if (isMspUrl(url)) return fetchViaProxy(url);
 
-      if (response.ok) {
-        const content = await response.text();
-        if (content.includes('<rss') || content.includes('<channel')) {
-          return content;
-        }
-      }
-    } catch {
-      // Fall through to other methods
-    }
-  }
-
-  const corsProxies = [
-    { prefix: '', isOurProxy: false }, // Try direct first
-    { prefix: '/api/proxy-feed?url=', isOurProxy: true }, // Our own proxy
-    { prefix: 'https://api.allorigins.win/get?url=', isOurProxy: false },
-    { prefix: 'https://corsproxy.io/?', isOurProxy: false }
-  ];
-
-  for (const proxy of corsProxies) {
-    try {
-      const fetchUrl = proxy.prefix
-        ? `${proxy.prefix}${encodeURIComponent(url)}`
-        : url;
-
-      // Use apiFetch for our own proxy (handles Tauri), regular fetch for external proxies
-      const response = proxy.isOurProxy
-        ? await apiFetch(`/api/proxy-feed?url=${encodeURIComponent(url)}`, {
-            headers: {
-              'Accept': 'application/rss+xml, application/xml, text/xml, */*'
-            }
-          })
-        : await fetch(fetchUrl, {
-            headers: {
-              'Accept': 'application/rss+xml, application/xml, text/xml, */*'
-            }
-          });
-
-      if (!response.ok) continue;
-
-      let content = await response.text();
-
-      // Handle allorigins wrapper
-      if (proxy.prefix.includes('allorigins.win')) {
-        try {
-          const data = JSON.parse(content);
-          content = data.contents || content;
-        } catch {
-          // Not JSON, use as-is
-        }
-      }
-
-      // Validate it's XML
-      if (content.includes('<rss') || content.includes('<channel')) {
-        return content;
-      }
-    } catch {
-      continue;
-    }
-  }
-
-  throw new Error('Failed to fetch feed from URL. Please paste the XML content directly.');
+  return (await fetchDirect(url)) ?? (await fetchViaProxy(url));
 };
 
 // Detect if XML is a video feed based on medium tag

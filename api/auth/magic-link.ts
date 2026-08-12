@@ -22,10 +22,20 @@ function magicLinkTtlMs(): number {
 
 /**
  * Origin to send the user back to. A magic link should return you to the site you're
- * actually using (the canonical domain in prod, or a Vercel preview during testing) —
- * NOT a hardcoded domain. The host is allowlisted (canonical host or a *.vercel.app
- * preview) to prevent host-header injection pointing the link at an attacker domain;
- * anything else falls back to the canonical URL.
+ * actually using — the canonical domain in prod, or a Vercel preview during testing —
+ * so the host is read from the request rather than hardcoded.
+ *
+ * That makes it host-header injection bait, and the `*.vercel.app` suffix used to be
+ * accepted **in production**. Anyone can register a Vercel project and own a
+ * `<name>.vercel.app` host, so if a client-supplied `X-Forwarded-Host` ever reaches
+ * this function the emailed link points at the attacker with a valid single-use token
+ * in the query string: they redeem it and own the victim's account and every feed in
+ * it. Full takeover, no victim error, and the email is genuinely from MSP.
+ *
+ * Whether Vercel overwrites that header on the way in is a property of the platform,
+ * not of this code, and this function shouldn't depend on the answer. In production
+ * only the canonical host is accepted; the preview suffix is allowed solely when
+ * VERCEL_ENV says we aren't in production. Anything else falls back to canonical.
  */
 function getVerifyOrigin(req: VercelRequest): string {
   const canonical = getBaseUrl();
@@ -33,7 +43,8 @@ function getVerifyOrigin(req: VercelRequest): string {
   const host = (Array.isArray(rawHost) ? rawHost[0] : rawHost)?.split(',')[0]?.trim();
   if (host) {
     const canonicalHost = new URL(canonical).host;
-    if (host === canonicalHost || host.endsWith('.vercel.app')) {
+    const previewsAllowed = process.env.VERCEL_ENV !== 'production';
+    if (host === canonicalHost || (previewsAllowed && host.endsWith('.vercel.app'))) {
       const proto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0]?.trim() || 'https';
       return `${proto}://${host}`;
     }

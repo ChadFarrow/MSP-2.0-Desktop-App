@@ -87,6 +87,27 @@ export const PODCAST_IMAGE_PURPOSES: { value: string; label: string; description
   { value: 'poster', label: 'Poster', description: 'Static video thumbnail (16:9)' },
 ];
 
+/**
+ * MIME types the Podcasting 2.0 spec lists for <podcast:transcript>, which is
+ * what MSP writes for a track's lyrics file. Single source of truth for the UI
+ * dropdown.
+ *
+ * Note SubRip is `application/x-subrip` in the spec. MSP defaulted to
+ * `application/srt` for a long time, which is not a spec value; the default
+ * below is the correct one, but nothing rewrites the type on feeds that already
+ * carry the old string — an existing file still plays, and silently changing a
+ * user's feed under them would be worse than an unusual MIME type.
+ */
+export const TRANSCRIPT_TYPES: { value: string; label: string }[] = [
+  { value: 'application/x-subrip', label: 'SubRip (.srt)' },
+  { value: 'text/vtt', label: 'WebVTT (.vtt)' },
+  { value: 'application/json', label: 'Podcasting 2.0 JSON (.json)' },
+  { value: 'text/plain', label: 'Plain text (.txt)' },
+  { value: 'text/html', label: 'HTML (.html)' },
+];
+
+export const DEFAULT_TRANSCRIPT_TYPE = 'application/x-subrip';
+
 // Base channel data shared between Album and PublisherFeed
 export interface BaseChannelData {
   title: string;
@@ -144,6 +165,7 @@ export interface Track {
   bannerArtUrl?: string;
   podcastImages?: PodcastImage[];
   transcriptUrl?: string;
+  /** MIME type for <podcast:transcript>. See TRANSCRIPT_TYPES. */
   transcriptType?: string;
   overridePersons: boolean;
   persons: Person[];
@@ -283,7 +305,7 @@ export const createEmptyTrack = (trackNumber: number, enclosureType: string = 'a
   bannerArtUrl: '',
   podcastImages: [],
   transcriptUrl: '',
-  transcriptType: 'application/srt',
+  transcriptType: DEFAULT_TRANSCRIPT_TYPE,
   overridePersons: false,
   persons: [],
   overrideValue: false,

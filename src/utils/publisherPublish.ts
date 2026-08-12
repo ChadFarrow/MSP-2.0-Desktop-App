@@ -102,6 +102,10 @@ async function notifyPodcastIndex(
     const params = new URLSearchParams({ url: normalizeFeedUrl(feedUrl) });
     if (medium) params.set('medium', medium);
     if (guid) params.set('guid', guid);
+    // No `force` and no refusal handling on purpose: every caller of this helper
+    // passes an MSP-hosted URL (createHostedFeed's result or buildHostedUrl), and
+    // the submit guard skips those — we serve them ourselves. If a caller ever
+    // passes an external URL, it should handle the 400 refusal, not force past it.
     const res = await apiFetch(`/api/pubnotify?${params}`);
     const data = await res.json();
     if (data.success) {

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { Track } from '../../types/feed';
 import type { FeedAction } from '../../store/feedStore';
-import { createEmptyTrack } from '../../types/feed';
+import { createEmptyTrack, TRANSCRIPT_TYPES, DEFAULT_TRANSCRIPT_TYPE } from '../../types/feed';
+import { trackOrderIssue } from '../../utils/trackOrder';
 import { FIELD_INFO } from '../../data/fieldInfo';
 import { detectAddressType } from '../../utils/addressUtils';
 import { getMediaDuration, secondsToHHMMSS, formatDuration } from '../../utils/audioUtils';
@@ -20,6 +21,11 @@ interface TracksSectionProps {
 }
 
 export function TracksSection({ tracks, isVideo, dispatch }: TracksSectionProps) {
+  // Feeds built or imported before pub dates were kept in sync with list order can still
+  // be out of order; offer a one-click repair rather than rewriting an import behind
+  // the user's back.
+  const orderIssue = useMemo(() => trackOrderIssue(tracks), [tracks]);
+
   const [collapsedTracks, setCollapsedTracks] = useState<Record<string, boolean>>({});
   const [resolvingNaddr, setResolvingNaddr] = useState<Record<number, boolean>>({});
   const [naddrError, setNaddrError] = useState<Record<number, string>>({});
@@ -45,6 +51,22 @@ export function TracksSection({ tracks, isVideo, dispatch }: TracksSectionProps)
 
   return (
     <Section title={isVideo ? "Videos" : "Tracks"} icon={isVideo ? "🎬" : "🎵"}>
+      {orderIssue && (
+        <div className="track-order-warning">
+          <span>
+            {orderIssue === 'reversed'
+              ? `These ${isVideo ? 'videos' : 'tracks'} look like they're in reverse order — ${isVideo ? 'video' : 'track'} 1 is at the bottom.`
+              : `Pub dates don't match this order, so apps may play these ${isVideo ? 'videos' : 'tracks'} out of order.`}
+          </span>
+          <button
+            className="btn btn-warning"
+            onClick={() => dispatch({ type: 'FIX_TRACK_ORDER' })}
+            style={{ fontSize: '0.875rem', padding: '4px 12px', whiteSpace: 'nowrap' }}
+          >
+            {orderIssue === 'reversed' ? 'Reverse order' : 'Fix pub dates'}
+          </button>
+        </div>
+      )}
       {tracks.length > 0 && (
         <div style={{ marginBottom: '12px', textAlign: 'right' }}>
           <button
@@ -370,16 +392,40 @@ export function TracksSection({ tracks, isVideo, dispatch }: TracksSectionProps)
               />
               <div className="form-group">
                 <label className="form-label">Lyrics URL<InfoIcon text={FIELD_INFO.transcriptUrl} /></label>
-                <input
-                  type="url"
-                  className="form-input"
-                  placeholder="https://example.com/lyrics.srt"
-                  value={track.transcriptUrl || ''}
-                  onChange={e => dispatch({
-                    type: 'UPDATE_TRACK',
-                    payload: { index, track: { transcriptUrl: e.target.value } }
-                  })}
-                />
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input
+                    type="url"
+                    className="form-input"
+                    style={{ flex: '1 1 240px', minWidth: 0 }}
+                    placeholder="https://example.com/lyrics.srt"
+                    value={track.transcriptUrl || ''}
+                    onChange={e => dispatch({
+                      type: 'UPDATE_TRACK',
+                      payload: { index, track: { transcriptUrl: e.target.value } }
+                    })}
+                  />
+                  <select
+                    className="form-select"
+                    style={{ flex: '0 0 auto', minWidth: '170px' }}
+                    aria-label="Lyrics file type"
+                    value={track.transcriptType || DEFAULT_TRANSCRIPT_TYPE}
+                    onChange={e => dispatch({
+                      type: 'UPDATE_TRACK',
+                      payload: { index, track: { transcriptType: e.target.value } }
+                    })}
+                  >
+                    {TRANSCRIPT_TYPES.map(t => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                    {/* An imported feed may carry a type outside the spec list
+                        (MSP itself wrote application/srt for a long time). Show
+                        it rather than silently snapping the value to SubRip. */}
+                    {track.transcriptType &&
+                      !TRANSCRIPT_TYPES.some(t => t.value === track.transcriptType) && (
+                      <option value={track.transcriptType}>{track.transcriptType}</option>
+                    )}
+                  </select>
+                </div>
               </div>
               <div className="form-group">
                 <Toggle
