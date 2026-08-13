@@ -18,10 +18,32 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# Every job below carries the same guard, repeated because Actions has no YAML
+# anchors:
+#
+#   if: github.event_name != 'push'
+#       || !startsWith(github.event.head_commit.message, 'Merge pull request')
+#
+# sync-upstream.yml opens a PR and auto-merges it (`gh pr merge --auto --merge`).
+# The five jobs run once on that PR, then the resulting push to master runs the
+# identical five again — and because it is a *merge* commit, not a squash, master
+# holds the exact tree the PR already tested. On Aug 12 that was 17 Tests runs,
+# ~85 jobs, for ~6 syncs, and it was the largest Linux line on the account's
+# Actions bill.
+#
+# The push trigger stays: a direct push to master (no PR, no prior run) still has
+# to be tested. Only merge commits are skipped, which covers both the sync PRs and
+# anything merged by hand through the UI, since both were tested as a PR first.
+# A skipped job reports its check as skipped, which branch protection treats as
+# passing — and protection gates PRs, not pushes, so nothing here can deadlock a
+# merge.
 jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'push' ||
+      !startsWith(github.event.head_commit.message, 'Merge pull request')
 
     steps:
       - uses: actions/checkout@v7
@@ -41,6 +63,9 @@ jobs:
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'push' ||
+      !startsWith(github.event.head_commit.message, 'Merge pull request')
 
     steps:
       - uses: actions/checkout@v7
@@ -76,6 +101,9 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'push' ||
+      !startsWith(github.event.head_commit.message, 'Merge pull request')
 
     steps:
       - uses: actions/checkout@v7
@@ -98,6 +126,9 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'push' ||
+      !startsWith(github.event.head_commit.message, 'Merge pull request')
 
     steps:
       - uses: actions/checkout@v7
@@ -117,6 +148,9 @@ jobs:
   audit:
     name: Dependency Audit
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'push' ||
+      !startsWith(github.event.head_commit.message, 'Merge pull request')
 
     steps:
       - uses: actions/checkout@v7
