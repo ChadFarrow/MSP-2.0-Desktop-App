@@ -1,13 +1,28 @@
 name: 'Build & Release'
 
-# Tags and manual dispatch only. This builds a four-way matrix — two macOS legs
-# (billed at 10x) plus Windows (2x) — so firing it on every master push made it
-# by far the most expensive workflow on the account. test.yml still runs on every
-# push and PR; this one now runs when you actually want a release.
+# Master pushes publish a release again, restoring the arrangement sync-upstream.yml
+# is built around: a green synced build merges itself and ships, so web-repo updates
+# reach users without a manual step.
+#
+# This briefly ran on tags only, to keep the four-way matrix (two macOS legs at a 10x
+# minute multiplier, plus Windows at 2x) off every master push. That was a misreading
+# of the Actions usage report: the figures there are *gross consumption*, and this
+# repo is public, so the whole amount is discounted to $0. Public-repo minutes never
+# draw down the 2,000-minute included allowance. There was no cost to cut, and losing
+# auto-release was a real loss.
+#
+# The account's actual constraint is Actions *storage*, metered for private repos
+# only — none of it comes from here.
 on:
   push:
+    branches:
+      - master
     tags:
       - 'v*'
+    paths-ignore:
+      - '*.md'
+      - 'example-feed.xml'
+      - '.github/workflows/sync-upstream.yml'
   workflow_dispatch:
 
 env:
