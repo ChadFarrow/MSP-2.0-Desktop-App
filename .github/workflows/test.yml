@@ -6,6 +6,15 @@ on:
   pull_request:
     branches: [master]
 
+# Five jobs fan out per run, so a burst of merges leaves several full sets of
+# them racing over commits that are already superseded. One run per ref at a
+# time; the older one loses. Flip cancel-in-progress to
+# `${{ github.ref != 'refs/heads/master' }}` if you'd rather every master commit
+# keep its own test result and only cancel on PR branches.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -53,13 +62,16 @@ jobs:
         env:
           CI: true
 
+      # Only a failing run has a report worth opening, and a week is longer than
+      # any of these gets looked at. Uploading on every green run kept ~30 days of
+      # reports alive against the account's 0.5 GB Actions storage allowance.
       - name: Upload Playwright report
         uses: actions/upload-artifact@v7
-        if: always()
+        if: failure()
         with:
           name: playwright-report
           path: playwright-report/
-          retention-days: 30
+          retention-days: 7
 
   build:
     name: Build
