@@ -53,13 +53,16 @@ jobs:
         env:
           CI: true
 
+      # Only a failing run has a report worth opening, and a week is longer than
+      # any of these gets looked at. Uploading on every green run kept ~30 days of
+      # reports alive against the account's 0.5 GB Actions storage allowance.
       - name: Upload Playwright report
         uses: actions/upload-artifact@v7
-        if: always()
+        if: failure()
         with:
           name: playwright-report
           path: playwright-report/
-          retention-days: 30
+          retention-days: 7
 
   build:
     name: Build
