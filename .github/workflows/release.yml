@@ -1,15 +1,13 @@
 name: 'Build & Release'
 
+# Tags and manual dispatch only. This builds a four-way matrix — two macOS legs
+# (billed at 10x) plus Windows (2x) — so firing it on every master push made it
+# by far the most expensive workflow on the account. test.yml still runs on every
+# push and PR; this one now runs when you actually want a release.
 on:
   push:
-    branches:
-      - master
     tags:
       - 'v*'
-    paths-ignore:
-      - '*.md'
-      - 'example-feed.xml'
-      - '.github/workflows/sync-upstream.yml'
   workflow_dispatch:
 
 env:
