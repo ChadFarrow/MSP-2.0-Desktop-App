@@ -6,6 +6,15 @@ on:
   pull_request:
     branches: [master]
 
+# Five jobs fan out per run, so a burst of merges leaves several full sets of
+# them racing over commits that are already superseded. One run per ref at a
+# time; the older one loses. Flip cancel-in-progress to
+# `${{ github.ref != 'refs/heads/master' }}` if you'd rather every master commit
+# keep its own test result and only cancel on PR branches.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
