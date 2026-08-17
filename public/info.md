@@ -1,8 +1,8 @@
 # What is MSP 2.0?
 
-This is an updated version on the original [Music Side Project](https://www.musicsideproject.com/) by the legendary StevenB. Actually most of whats written below came from the original site and I just edited it some.
+This is an updated version on the original [Music Side Project](https://github.com/ChadFarrow/msp-studio) by the legendary StevenB. The original has been retired and archived (this site now runs on its old address), but the source is still up there to look at. Actually most of whats written below came from the original site and I just edited it some.
 
-The original version still works great but I felt like it needed updated since the landscape has changed so much over the years. 
+The original version worked great but I felt like it needed updated since the landscape has changed so much over the years.
 
 TLDR this is a simple web form that lets you build a RSS feed for your music.
 
@@ -28,7 +28,9 @@ But, you're musicians, you're used to booking your own gigs, hauling your own ge
 
 ### How is MSP 2.0 Different?
 
-Really its the same since its building PC 2.0 RSS feeds but MSP has always been missing the hosting part, you make your feed and then what? I've got some ideas on how to do this but I wont really know know how until I build it.
+Really its the same since its building PC 2.0 RSS feeds, but MSP has always been missing the hosting part - you make your feed and then what? That part is built now. MSP 2.0 can host the feed for you and hand you back a permanent link you can hand to any podcast app, and it tells the Podcast Index about it so people can actually find it. You claim the feed with an email address or a Nostr key, so it stays yours and you can come back and edit it from any device.
+
+You still don't have to use any of that. Download the XML and host it yourself - that's the whole point and it isn't going away.
 
 Any questions reach out.
 
@@ -41,21 +43,3 @@ Twitter/X - https://x.com/msp2app
 Nostr - npub177fz5zkm87jdmf0we2nz7mm7uc2e7l64uzqrv6rvdrsg8qkrg7yqx0aaq7
 
 Email - SirChadF@proton.me
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
