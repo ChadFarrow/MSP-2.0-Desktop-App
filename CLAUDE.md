@@ -2,6 +2,22 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Reporting Language
+
+Write every reply to the user in ASD-STE100 Simplified Technical English.
+
+- Use only approved STE words, and use one meaning for each word.
+- Write short sentences: 20 words maximum for an instruction, 25 for a
+  description.
+- Give one instruction in each sentence.
+- Use the active voice and simple verb tenses.
+- Do not use a noun cluster of more than three words.
+- Keep the articles. Do not use slang, idioms, or jargon.
+
+This rule applies to chat replies only. Code, code comments, commit messages,
+pull request text, file contents, and quoted material keep their normal style —
+do not rewrite existing prose into STE.
+
 ## Project Overview
 
 MSP 2.0 Desktop App (Music Side Project Studio) is a cross-platform desktop application built with Tauri and React for creating Podcasting 2.0 compatible RSS feeds for music albums, videos, and publisher catalogs. It supports Value 4 Value (Lightning Network payments), Nostr integration for cloud sync, and Podcast Index integration.
