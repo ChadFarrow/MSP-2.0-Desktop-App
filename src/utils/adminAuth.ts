@@ -144,3 +144,46 @@ export async function deleteFeed(feedId: string): Promise<void> {
     throw new Error(error.error || 'Failed to delete feed');
   }
 }
+
+/**
+ * Boost coverage — how well the captured boosts resolve to actual tracks.
+ *
+ * These shapes mirror api/boosts/coverage.ts. The frontend cannot import from api/,
+ * the same arrangement urlValidation.ts documents, so keep the two in sync by hand.
+ */
+export interface BoostCoverageSummary {
+  boosts: number;
+  keyed: number;
+  named: number;
+  withMessageTitle: number;
+  distinctTracks: number;
+  satsTotal: number;
+  satsReceived: number;
+  bySource: Record<string, number>;
+  byAction: Record<string, number>;
+  byApp: { app: string; boosts: number }[];
+  byWeek: { week: string; boosts: number; tracks: number; satsTotal: number }[];
+}
+
+export interface BoostCoverageResponse {
+  generatedAt: number;
+  totals: { all: number; mspSplit: number; other: number };
+  msp: BoostCoverageSummary;
+  everything: BoostCoverageSummary;
+}
+
+export async function fetchBoostCoverage(): Promise<BoostCoverageResponse> {
+  const url = `${window.location.origin}/api/boosts/coverage`;
+  const authHeader = await createAdminAuthHeader(url, 'GET');
+
+  const response = await fetch('/api/boosts/coverage', {
+    headers: { 'Authorization': authHeader }
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to fetch boost coverage' }));
+    throw new Error(error.error || 'Failed to fetch boost coverage');
+  }
+
+  return response.json();
+}
