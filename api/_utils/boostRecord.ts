@@ -171,6 +171,26 @@ const ACTION_NAMES: ActionName[] = ['stream', 'boost', 'auto', 'invoice', 'inval
  */
 const MESSAGE_TRACK_RE = /["“”]([^"“”]{1,200})["“”]\s+by\s+(.{1,200}?)(?:\s+sent from\s+\S+)?\s*$/i;
 
+/**
+ * Decode the HTML entities feeds routinely carry in titles.
+ *
+ * Real data: an album called "Various &amp; Assorted" arrives with the entity intact,
+ * and rendering it raw on a public page shows the artist their own title misspelled.
+ * Only the five named XML entities plus numeric references — this is a title, not a
+ * document, so there is nothing to gain from a full entity table.
+ */
+export function decodeEntities(value: string): string {
+  return value
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number(dec)))
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    // Ampersand last, or "&amp;lt;" would decode twice into "<".
+    .replace(/&amp;/g, '&');
+}
+
 function asString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() !== '' ? value : undefined;
 }
@@ -279,8 +299,8 @@ export function isMspSplit(boost: ParsedBoost): boolean {
 function extractFromMessage(message: string): { title: string; artist: string } | null {
   const match = MESSAGE_TRACK_RE.exec(message);
   if (!match) return null;
-  const title = match[1].trim();
-  const artist = match[2].trim();
+  const title = decodeEntities(match[1].trim());
+  const artist = decodeEntities(match[2].trim());
   if (!title || !artist) return null;
   return { title, artist };
 }
@@ -303,8 +323,8 @@ export function resolveTrack(boost: ParsedBoost): TrackResolution {
     return {
       trackSource: 'remote-guid',
       trackKey: `guid:${tlv.remote_feed_guid}:${tlv.remote_item_guid}`,
-      trackTitle: boost.remoteEpisode ?? fromMessage?.title,
-      trackArtist: boost.remotePodcast ?? fromMessage?.artist,
+      trackTitle: boost.remoteEpisode ? decodeEntities(boost.remoteEpisode) : fromMessage?.title,
+      trackArtist: boost.remotePodcast ? decodeEntities(boost.remotePodcast) : fromMessage?.artist,
       hasMessageTitle
     };
   }
@@ -313,8 +333,8 @@ export function resolveTrack(boost: ParsedBoost): TrackResolution {
     return {
       trackSource: 'remote-title',
       trackKey: titleKey(boost.remotePodcast, boost.remoteEpisode),
-      trackTitle: boost.remoteEpisode,
-      trackArtist: boost.remotePodcast,
+      trackTitle: decodeEntities(boost.remoteEpisode),
+      trackArtist: decodeEntities(boost.remotePodcast),
       hasMessageTitle
     };
   }
