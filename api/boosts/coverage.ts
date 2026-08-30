@@ -66,7 +66,7 @@ function summarize(records: DerivedBoost[], withCharts: boolean) {
     plays: plays.length,
     streamRecords: records.filter(r => r.actionName === 'stream').length,
     ...(withCharts
-      ? { topPlays: topTracks(plays), topBoosts: topTracks(deliberate) }
+      ? { topPlays: topTracks(plays, 10), topBoosts: topTracks(deliberate, 10) }
       : {}),
     keyed: records.filter(r => KEYED_SOURCES.has(r.trackSource)).length,
     named: records.filter(r => !!r.trackTitle).length,

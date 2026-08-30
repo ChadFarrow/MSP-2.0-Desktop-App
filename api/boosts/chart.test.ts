@@ -130,8 +130,36 @@ describe('/api/boosts/chart', () => {
     await handler(req, res);
 
     const { allTime } = res.json.mock.calls[0][0];
-    expect(allTime.plays).toEqual([{ title: 'Streamed', artist: 'Bacalao', count: 1 }]);
+    expect(allTime.streams).toEqual([{ title: 'Streamed', artist: 'Bacalao', count: 1 }]);
     expect(allTime.boosts).toEqual([{ title: 'Boosted', artist: 'Bacalao', count: 1 }]);
+  });
+
+  it("gives all time the whole ranking, while a month stays a top ten", async () => {
+    // 14 distinct tracks: a month shows 10 of them, all time shows every one.
+    const many = Array.from({ length: 14 }, (_, i) =>
+      Array.from({ length: 14 - i }, (_, n) =>
+        rec({ index: i * 100 + n, trackKey: "t" + i, trackTitle: "Track " + i })));
+    mockReadAllDerived.mockResolvedValue(many.flat());
+
+    const { req, res } = createMockReqRes();
+    await handler(req, res);
+    const body = res.json.mock.calls[0][0];
+
+    expect(body.allTime.boosts).toHaveLength(14);
+    expect(body.months[0].boosts).toHaveLength(10);
+    // Still ranked, not merely unsliced.
+    expect(body.allTime.boosts[0].count).toBeGreaterThan(body.allTime.boosts[13].count);
+  });
+
+  it("reports the stream count as streams, because \"0 plays\" reads like a bug", async () => {
+    mockReadAllDerived.mockResolvedValue([rec({ actionName: "boost" })]);
+    const { req, res } = createMockReqRes();
+    await handler(req, res);
+    const body = res.json.mock.calls[0][0];
+
+    expect(body.allTime.totalStreams).toBe(0);
+    expect(body.allTime).not.toHaveProperty("totalPlays");
+    expect(body.allTime).not.toHaveProperty("plays");
   });
 
   it('caches briefly, so a boost shows up while someone is still on the page', async () => {
