@@ -2,14 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Mock } from 'vitest';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const { mockStoreRaw, mockReplaceWeek, mockIsConfigured } = vi.hoisted(() => ({
+const { mockStoreRaw, mockReplaceWeek, mockRebuildWeek, mockIsConfigured } = vi.hoisted(() => ({
   mockStoreRaw: vi.fn(),
   mockReplaceWeek: vi.fn(),
+  mockRebuildWeek: vi.fn(),
   mockIsConfigured: vi.fn()
 }));
 vi.mock('../_utils/boostStore.js', () => ({
   storeRawBoosts: mockStoreRaw,
   replaceDerivedWeek: mockReplaceWeek,
+  rebuildWeekFromRaw: mockRebuildWeek,
   isBoostStoreConfigured: mockIsConfigured
 }));
 
@@ -66,6 +68,7 @@ describe('/api/boosts/ingest', () => {
     mockIsConfigured.mockReturnValue(true);
     mockStoreRaw.mockResolvedValue({ written: 1, duplicates: 0 });
     mockReplaceWeek.mockResolvedValue(1);
+    mockRebuildWeek.mockResolvedValue(7);
   });
 
   it('rejects anything but POST', async () => {
@@ -194,13 +197,27 @@ describe('/api/boosts/ingest', () => {
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ weekSizes: { '2025-W35': 2 } }));
   });
 
-  it('never touches derived for a plain webhook, which cannot know a whole week', async () => {
+  it("rebuilds a webhook's week from raw, passing the record it just received", async () => {
+    // A webhook knows one boost, not a week, so it cannot use the whole-week write. It
+    // rebuilds from raw instead — no merge, no read of the previous derived file — and
+    // hands its own record through, because list() may not show it yet.
     const { req, res } = createMockReqRes('POST', webhookBody(10695));
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(mockStoreRaw).toHaveBeenCalledTimes(1);
     expect(mockReplaceWeek).not.toHaveBeenCalled();
+    expect(mockRebuildWeek).toHaveBeenCalledTimes(1);
+    const [week, extras] = mockRebuildWeek.mock.calls[0];
+    expect(week).toBe('2025-W35');
+    expect(extras.map((r: { index: number }) => r.index)).toEqual([10695]);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ weekSizes: { '2025-W35': 7 } }));
+  });
+
+  it("uses the whole-week write for the importer, never a rebuild", async () => {
+    const { req, res } = createMockReqRes('POST', { week: '2025-W35', records: [webhookBody(1)] });
+    await handler(req, res);
+    expect(mockReplaceWeek).toHaveBeenCalledTimes(1);
+    expect(mockRebuildWeek).not.toHaveBeenCalled();
   });
 
   it('refuses a record that is not in the stated week rather than dropping it', async () => {

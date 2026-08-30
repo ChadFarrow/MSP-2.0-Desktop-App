@@ -46,6 +46,7 @@ A `.env` file is required with the following variables:
 - `MSP_EMAIL_HASH_KEY` - HMAC key for `ownerEmailHash`. Kept separate from `MSP_SESSION_SECRET` so sessions can rotate without orphaning feed ownership. **Rotating this breaks email→feed ownership matching**
 - `MSP_MAGIC_LINK_TTL_MIN` - Magic-link lifetime in minutes (optional; default 15)
 - `HELIPAD_WEBHOOK_TOKEN` - Shared secret for `/api/boosts/ingest`. Helipad sends it as `Authorization: Bearer <token>` from a trigger; the import script sends the same. The endpoint 404s when this or `MSP_BOOST_NAMESPACE` is unset, so boost capture simply does not exist until both are configured
+- `CRON_SECRET` - Set by Vercel when a cron job is configured; it sends it as `Authorization: Bearer $CRON_SECRET`. `/api/boosts/rebuild` accepts it, and **refuses outright when it is unset** rather than falling back to open — the endpoint rewrites stored data
 - `MSP_LISTENER_HASH_KEY` - HMAC key for `listenerKey`, the pseudonymous per-listener id that lets one person's consecutive streams of a track collapse into a single play. Kept separate from `MSP_EMAIL_HASH_KEY` and `MSP_SESSION_SECRET` so any of them can rotate alone; rotating this one only costs play grouping across the boundary. Optional — when unset the field is absent and plays collapse on app and track alone, which undercounts two simultaneous listeners rather than inflating anything
 - `MSP_BOOST_NAMESPACE` - One high-entropy path segment (16-128 chars of `[A-Za-z0-9_-]`) that the private raw boost tree lives under. **Not decorative:** Helipad's boost `index` is a small incrementing integer, so `boosts/raw/2026-08/10695.json` would be trivially enumerable if the blob store subdomain leaked, and raw records hold listener messages and sender names. Rotating it orphans the existing raw blobs; re-running the import script rebuilds them
 
@@ -248,7 +249,7 @@ Vercel serverless functions:
 - `verify-feed-url.ts` - Reachability check for a user-supplied feed URL. `GET ?url=` → `{ reachable, status?, looksLikeFeed?, finalUrl?, reason? }`. **Deliberately has no domain allowlist**, because the musicians who need checking are exactly the ones self-hosting on a domain no list would cover. It can safely drop the allowlist only because it returns a *verdict and never the bytes* — a test asserts the body is never echoed. **Never make this endpoint return response content**; that turns it into an open SSRF proxy. Rate-limited 30/hour per IP. The handler itself is thin: validation, rate limit, then `probeFeedUrl()`. All fetching lives in `_utils/feedProbe.ts` below.
 - `_utils/safeFetch.ts` - The transport shared by `/api/verify-feed-url` (via `feedProbe`) and `/api/proxy-feed`: `safeFetchFollow()` walks redirects by hand (`redirect: 'manual'`; **default** max 5, overridable per call via `maxRedirects` — `proxy-feed` passes 10, `feedProbe` keeps the default) re-running `assertPublicHttpUrl` on **every hop** — a first-hop-only check is bypassed by redirecting to `169.254.169.254` — plus `readCapped()` (returns `{ text, truncated }`; a caller that returns bytes must refuse on `truncated`) and `looksLikeFeedText()`. **It makes no policy decisions**: a 503 comes back as `ok: true`, because "we completed a request" is mechanism while "503 means server-error" is policy, and its two callers classify differently on purpose. Don't move a policy decision into it, and don't move the no-bytes rule out of `feedProbe.ts` into it.
 - `_utils/feedProbe.ts` - The shared probe, used by both `/api/verify-feed-url` (advisory) and the submit guard, so the warning shown beside a URL field and the refusal on submit can never disagree. Builds on `safeFetch.ts` above, passing `startAlreadyChecked: true` so its two parallel walks share `probeFeedUrl`'s single preflight (that's also what keeps a blocked *first* hop distinguishable from a redirect into one). Sniffs at most 64 KB for `<rss`/`<feed`/`<channel`. 10 s budget for the endpoint, 4 s for the guard (`GUARD_TIMEOUT_MS`), one `AbortController` shared by both probes. The **no-bytes guarantee is this module's alone** — `proxy-feed` shares the transport but not that rule.
-  - **The guard's 4 s is coupled to `vercel.json`.** That file sets no `functions.maxDuration`, so these run on Vercel's default, and `/api/pubnotify` already makes up to four sequential Podcast Index calls *after* the guard. A WAF challenge answers instantly — only the fail-open cases are slow, and those fail open anyway — so the short budget costs almost no detection power. If someone raises `GUARD_TIMEOUT_MS` or adds work to `pubnotify`, set `maxDuration` at the same time.
+  - **The guard's 4 s is coupled to `vercel.json`.** That file now sets `functions.maxDuration` for **two boost paths only** (`api/boosts/ingest.ts` and `api/boosts/rebuild.ts`, both 60s, because they scan a month of raw blobs); every other function including this one still runs on Vercel's default, and `/api/pubnotify` already makes up to four sequential Podcast Index calls *after* the guard. A WAF challenge answers instantly — only the fail-open cases are slow, and those fail open anyway — so the short budget costs almost no detection power. If someone raises `GUARD_TIMEOUT_MS` or adds work to `pubnotify`, set `maxDuration` at the same time.
   - **Two probes per check, and any block wins.** A bare GET and a ranged GET (`Range: bytes=0-2047`, so a `206` counts as success) run in parallel; if either returns 401/403/429 the verdict is `blocked`. Bot protection *scores* request shape rather than applying a flat rule, so the same URL answers differently depending on how you ask — measured on `rollzmcguyver.com`, `curl --http1.1` got 200 8/8 while `--http2` got 403 8/8, and Node fetch flipped between 403 and 206 within minutes. One sample is a coin flip; two differently shaped ones, biased toward reporting the block, held at 6/6. **Don't "simplify" this back to a single fetch, and don't make the two probes identical** — the difference in request shape is the point.
   - The machine-readable `ProbeVerdict` rides on the returned *wrapper*, not on `outcome`. `/api/verify-feed-url` serialises `result.outcome` verbatim, so anything added to `FeedProbeOutcome` ships in the public response — which is what keeps the endpoint's JSON stable while the guard gets what it needs.
   - A blocked *redirect target* is `unsafe`, not `blocked`. `blocked` means the origin's WAF refused our crawler; telling a user "your host returned 403" when their feed actually redirects to a private address would send them to fix the wrong thing.
@@ -269,6 +270,7 @@ Vercel serverless functions:
 - `hosted/` - MSP feed hosting endpoints (create, update, delete, backup/restore)
 - `boosts/ingest.ts` - Receives Helipad boost records (webhook or import batch). See "Boost capture" below
 - `boosts/coverage.ts` - Admin-only aggregate report over the derived boost projection. Counts only — it must never return a raw record
+- `boosts/rebuild.ts` - Rebuilds the current and previous ISO week's derived files from raw. Called daily by Vercel Cron and available for a manual repair; needs no Helipad access at all
 - `boosts/chart.ts` - The **public** music chart behind `/charts`. Unauthenticated, so what it may emit is defined narrowly: MSP splits only, **counts and never amounts**, and named tracks only. Cached at the CDN (`s-maxage=3600`) because the data only moves when the importer runs
 - `_utils/boostRecord.ts` - Parsing, the track-resolution ladder, and the PII boundary (`toDerived`)
 - `_utils/boostStore.ts` - Blob paths, raw writes, derived week merge
@@ -477,6 +479,28 @@ measuring with `Emulation.setDeviceMetricsOverride` showed `scrollWidth === clie
 and zero overflow. The screenshot was the artifact; the layout was fine. Measure
 `document.documentElement.scrollWidth` against `clientWidth`, and check interactive
 targets against WCAG 2.5.8's 24x24 CSS px in the same pass.
+
+**Capture is real-time; only the rollup is scheduled.** The webhook writes a raw record
+the moment a boost lands, so **raw needs no importer run to stay complete** — verified by
+finding webhook-written records newer than the last import. What cannot be done from a
+single webhook is updating a derived *week*, because one boost is not a complete week and
+merging would mean read-modify-write. So the webhook instead **rebuilds its own week from
+raw** (`rebuildWeekFromRaw`), which reads immutable records and writes the week whole.
+Same guarantee, no merge.
+- **The rebuild folds in the caller's own records.** `list()` is not guaranteed to return
+  a blob written moments earlier, so a webhook rebuilding purely from the listing could
+  drop the very boost that triggered it. `replaceDerivedWeek` dedupes on index, so passing
+  them through costs nothing when the listing was already current.
+- **A daily cron is the backstop**, not the mechanism. Helipad never retries a failed
+  delivery, so a dropped webhook would otherwise leave a week wrong until someone ran the
+  importer. The cron rebuilds the current and previous ISO week — a boost just after
+  midnight on Monday lands in the new week while the old one can still take a late write,
+  and nothing older can change without an importer run.
+- **The chart's page cache bounds visible freshness**, not the rebuild. `/api/boosts/chart`
+  is `s-maxage=300`; raising it back to an hour would make the real-time rebuild invisible
+  to visitors, which is how it was first shipped.
+- `tools/import-helipad.mjs` remains the backfill and repair tool, and is the only path
+  that touches Helipad.
 
 **Committed tooling lives in `tools/`, not `scripts/`.** `.gitignore` ignores `scripts/`
 entirely — it is Chad's local scratch and feed-backup directory, and a script written

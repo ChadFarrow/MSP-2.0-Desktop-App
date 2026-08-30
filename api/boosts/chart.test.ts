@@ -134,12 +134,13 @@ describe('/api/boosts/chart', () => {
     expect(allTime.boosts).toEqual([{ title: 'Boosted', artist: 'Bacalao', count: 1 }]);
   });
 
-  it('lets the CDN carry the load, since the data only moves when the importer runs', async () => {
+  it('caches briefly, so a boost shows up while someone is still on the page', async () => {
+    // The webhook rebuilds a week in seconds, so an hour of page cache would hide it.
     const { req, res } = createMockReqRes();
     await handler(req, res);
     expect(res.setHeader).toHaveBeenCalledWith(
       'Cache-Control',
-      expect.stringContaining('s-maxage=3600')
+      expect.stringContaining('s-maxage=300')
     );
   });
 

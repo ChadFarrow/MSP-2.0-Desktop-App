@@ -36,5 +36,19 @@
         }
       ]
     }
-  ]
+  ],
+  "crons": [
+    {
+      "path": "/api/boosts/rebuild",
+      "schedule": "0 5 * * *"
+    }
+  ],
+  "functions": {
+    "api/boosts/ingest.ts": {
+      "maxDuration": 60
+    },
+    "api/boosts/rebuild.ts": {
+      "maxDuration": 60
+    }
+  }
 }

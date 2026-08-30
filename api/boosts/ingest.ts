@@ -4,7 +4,12 @@ import { getClientIp } from '../_utils/urlSafety.js';
 import { timingSafeEqualString } from '../_utils/feedUtils.js';
 import { parseBoostPayload, isHelipadTestBoost, isoWeekKey } from '../_utils/boostRecord.js';
 import type { ParsedBoost } from '../_utils/boostRecord.js';
-import { isBoostStoreConfigured, storeRawBoosts, replaceDerivedWeek } from '../_utils/boostStore.js';
+import {
+  isBoostStoreConfigured,
+  storeRawBoosts,
+  replaceDerivedWeek,
+  rebuildWeekFromRaw
+} from '../_utils/boostStore.js';
 
 /**
  * Ingest for Helipad boost records.
@@ -154,8 +159,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const result = await storeRawBoosts(entries, week ? 'import' : 'webhook');
     const weekSizes: Record<string, number> = {};
+
     if (week) {
+      // The caller supplied the complete week, so write it straight out.
       weekSizes[week] = await replaceDerivedWeek(week, entries.map(e => e.parsed));
+    } else {
+      // A webhook knows one boost, not a week — so rebuild that week from raw, which
+      // needs no previous version of the derived file and therefore no merge. The
+      // records just received are passed through as well: list() may not yet show the
+      // blob written a moment ago, and rebuilding purely from the listing could drop
+      // the very boost that triggered this.
+      const byWeek = new Map<string, ParsedBoost[]>();
+      for (const entry of entries) {
+        const key = isoWeekKey(entry.parsed.ts);
+        const bucket = byWeek.get(key);
+        if (bucket) bucket.push(entry.parsed);
+        else byWeek.set(key, [entry.parsed]);
+      }
+      for (const [key, records] of byWeek) {
+        const size = await rebuildWeekFromRaw(key, records);
+        if (size !== null) weekSizes[key] = size;
+      }
     }
     // Exactly 200. Helipad treats anything else as a failed delivery.
     return res.status(200).json({ ok: true, ...result, weekSizes, skipped, tests });
