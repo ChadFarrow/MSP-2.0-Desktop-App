@@ -422,39 +422,38 @@ drop a real split. The coverage endpoint's `everything` view is a diagnostic on 
 is on the node and deliberately carries **no chart at all**, so it can never be mistaken
 for one.
 
-**A mutable blob must not be cached, must not be read through the cache, and a read
-that fails must never be treated as an empty one.** All three, and the third is the one
-that actually destroys data. A blob written with `addRandomSuffix: false` keeps a stable
-public URL and Vercel's CDN caches it — public blobs default to a one-month
-`cacheControlMaxAge`. The derived week file is read-modify-write, so a stale read merges
-onto an old base and rewrites the file smaller.
+**Never read-modify-write a Vercel Blob. There is no way to make it safe.** This cost
+2,200 of 7,028 records across three failed fixes, so the reasoning is worth keeping:
 
-- **`cache: 'no-store'` does not fix this.** It governs the *client's* HTTP cache, and
-  Node's fetch has none, so the request goes out unchanged and the edge serves what it
-  has. A first attempt at this fix used it and recovered only 584 of 3,071 missing
-  records. Bust the CDN with a distinct URL (`?__fresh=<now>`); keep
-  `cacheControlMaxAge: 0` on the write for any reader that does not.
-- **Absent and unreadable are different outcomes.** `readDerivedWeek` used to return `[]`
-  for both, and its caller overwrites the week — so one transient failure silently
-  deleted every record in that week. `list()` is a server-side API call and is *not*
-  CDN-cached, so "no blob" from `list()` genuinely means the week does not exist yet and
-  is safe to create. Anything else must throw.
-- Measured cost of getting this wrong: a 7,027-record import left **4,540** stored, with
-  39 of 57 weeks short and the shortfalls landing on exact multiples of the 50-record
-  batch size. Raw is immutable and was complete throughout, which is the only reason it
-  was all recoverable — **that is what the raw/derived split is for.**
-- `storeBoosts()` returns `weekSizes` so a caller can compare stored size against what it
-  sent. Without that there is no feedback at all, which is why this survived a full
-  import, a full re-import and a passing test suite.
+- A public blob is served through a CDN that caches on **pathname**, with a **60-second
+  floor**. `cacheControlMaxAge: 0` is silently clamped to 60.
+- **A cache-busting query string does not work** — the CDN ignores the query when keying.
+  Measured directly: fetching a just-written blob with a unique `?x=<now>` returned
+  `x-vercel-cache: HIT` and `age: 58`.
+- `cache: 'no-store'` does nothing either. It governs the *client's* HTTP cache and
+  Node's fetch has none.
+- So at import cadence every read of a recently written blob is stale, and each merge
+  rewrites the file **smaller**. The symptom is erratic rather than monotonic — one
+  measured week went 138 → 132 → 107 → 156 across four identical-sized batches — because
+  different edge nodes hold copies of different ages. Waiting does not help; it settles
+  on a stale value and stays there.
+- A test that writes the *same* content repeatedly cannot detect this, because every
+  version has the same size. That false negative cost a whole debugging round.
 
-**The same hazard exists elsewhere in this repo and is not yet fixed.**
-`accounts/index/<emailHash>.json` (`accountStore.ts`) is also read-modify-write over a
-stable public URL, so linking a feed to an email account can drop a previously linked one.
-`feeds/{id}.meta.json` is overwritten with `allowOverwrite: true` and read back the same
-way, so a stale read there serves outdated metadata — including `editTokenHash`. Neither
-is addressed here; both deserve their own pass rather than being swept into a boost fix.
-Note `redeemMagicLink()` is **safe**: it gates on `list()`, which is a server-side API call
-and not CDN-cached, so a deleted single-use token cannot be replayed from cache.
+**The design that is immune, rather than merely careful:**
+- **Raw records are immutable.** They are written once with `allowOverwrite: false` and
+  never re-read during a write, so caching them is harmless and they are always complete.
+  Raw is the source of truth and every derived artifact is rebuildable from it. That
+  property is the only reason none of the above lost anything permanently.
+- **A derived week is written whole**, from the complete set of records the caller
+  supplies (`replaceDerivedWeek`). No previous version is read, so there is nothing a
+  stale cache can corrupt. `POST /api/boosts/ingest` takes `{ week, records }` for this,
+  and **refuses** any record outside the stated week rather than dropping it silently.
+- **A live webhook cannot know a whole week**, so it writes raw only and the chart
+  catches up on the next `tools/import-helipad.mjs` run. Accepted deliberately: raw stays
+  complete, and a chart does not need to be real-time.
+- Reading derived for the chart is fine through the cache — 60 seconds of lag on a
+  weekly chart is not worth a single line of code.
 
 **Committed tooling lives in `tools/`, not `scripts/`.** `.gitignore` ignores `scripts/`
 entirely — it is Chad's local scratch and feed-backup directory, and a script written
