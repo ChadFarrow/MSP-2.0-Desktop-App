@@ -45,6 +45,8 @@ A `.env` file is required with the following variables:
 - `MSP_SESSION_SECRET` - HMAC secret signing email session JWTs (server-only). Rotating it invalidates all email sessions
 - `MSP_EMAIL_HASH_KEY` - HMAC key for `ownerEmailHash`. Kept separate from `MSP_SESSION_SECRET` so sessions can rotate without orphaning feed ownership. **Rotating this breaks email→feed ownership matching**
 - `MSP_MAGIC_LINK_TTL_MIN` - Magic-link lifetime in minutes (optional; default 15)
+- `HELIPAD_WEBHOOK_TOKEN` - Shared secret for `/api/boosts/ingest`. Helipad sends it as `Authorization: Bearer <token>` from a trigger; the import script sends the same. The endpoint 404s when this or `MSP_BOOST_NAMESPACE` is unset, so boost capture simply does not exist until both are configured
+- `MSP_BOOST_NAMESPACE` - One high-entropy path segment (16-128 chars of `[A-Za-z0-9_-]`) that the private raw boost tree lives under. **Not decorative:** Helipad's boost `index` is a small incrementing integer, so `boosts/raw/2026-08/10695.json` would be trivially enumerable if the blob store subdomain leaked, and raw records hold listener messages and sender names. Rotating it orphans the existing raw blobs; re-running the import script rebuilds them
 
 No `.env.example` exists - request credentials from the team.
 
@@ -264,13 +266,17 @@ Vercel serverless functions:
   ```
   A failure is not automatically a code bug — a musician's host may just be down. Read the printed table before believing it. Tightening a constant in `proxy-feed.ts` fails here rather than silently shrinking what MSP can import.
 - `hosted/` - MSP feed hosting endpoints (create, update, delete, backup/restore)
+- `boosts/ingest.ts` - Receives Helipad boost records (webhook or import batch). See "Boost capture" below
+- `boosts/coverage.ts` - Admin-only aggregate report over the derived boost projection. Counts only — it must never return a raw record
+- `_utils/boostRecord.ts` - Parsing, the track-resolution ladder, and the PII boundary (`toDerived`)
+- `_utils/boostStore.ts` - Blob paths, raw writes, derived week merge
 - `feed/[npub]/[guid].ts` - Nostr-stored feed retrieval
 - `admin/` - Admin authentication (challenge/verify)
 - `_utils/podcastIndex.ts` - Shared Podcast Index auth headers
 - `_utils/feedUtils.ts` - Shared feed utilities (PI notification, podping notification, `isPodpingConfigured()` helper, UUID validation, token hashing)
-- `_utils/rateLimiter.ts` - In-memory fixed-window rate limiter over a **single shared `Map`**, so every caller must namespace its key or two endpoints silently share one bucket. Current consumers: `/api/podping` (`podping:`, 10/hr), `/api/verify-feed-url` (`verify-feed-url:`, 30/hr), `/api/proxy-feed` (`proxy-feed:`, 60/hr), `/api/podping-verify` (`podping-verify:`, 60/hr), `guardFeedSubmission()` (`feed-guard:`, 60/hr), `/api/auth/magic-link` (`magiclink:ip:` + `magiclink:email:`, 5 per 15 min). **Always prefix a new key.** An unprefixed `checkRateLimit(ip, …)` shares a bucket with every other unprefixed caller, and the symptom — one endpoint's limit tripping because of traffic to a different one — looks nothing like its cause.
+- `_utils/rateLimiter.ts` - In-memory fixed-window rate limiter over a **single shared `Map`**, so every caller must namespace its key or two endpoints silently share one bucket. Current consumers: `/api/podping` (`podping:`, 10/hr), `/api/verify-feed-url` (`verify-feed-url:`, 30/hr), `/api/proxy-feed` (`proxy-feed:`, 60/hr), `/api/podping-verify` (`podping-verify:`, 60/hr), `guardFeedSubmission()` (`feed-guard:`, 60/hr), `/api/auth/magic-link` (`magiclink:ip:` + `magiclink:email:`, 5 per 15 min), `/api/boosts/ingest` (`boost-ingest:`, 600/hr). **Always prefix a new key.** An unprefixed `checkRateLimit(ip, …)` shares a bucket with every other unprefixed caller, and the symptom — one endpoint's limit tripping because of traffic to a different one — looks nothing like its cause.
   - **Every limit is per warm lambda, not global.** The `Map` is module-level, so each Vercel instance keeps its own buckets and a caller with concurrency gets N× the nominal rate. Accepted — the limits exist to stop casual abuse and runaway loops, not a determined attacker — but don't cite these numbers as a security control. A real limit needs shared state (Redis/Edge Config).
-  - Endpoints with **no** limit at all: `POST /api/hosted` (unauthenticated, 1 MB blob write + PI submit + podping), `GET /api/hosted/`, `PUT/DELETE/PATCH /api/hosted/{id}`, `/api/pisearch`, `/api/pisubmit`, `/api/pubnotify` (all three spend MSP's PI credentials), `/api/auth/verify`, `/api/account/feeds`, `/api/feed/{npub}/{guid}` (opens 4 relay sockets).
+  - Endpoints with **no** limit at all: `POST /api/hosted` (unauthenticated, 1 MB blob write + PI submit + podping), `GET /api/hosted/`, `PUT/DELETE/PATCH /api/hosted/{id}`, `/api/pisearch`, `/api/pisubmit`, `/api/pubnotify` (all three spend MSP's PI credentials), `/api/auth/verify`, `/api/account/feeds`, `/api/feed/{npub}/{guid}` (opens 4 relay sockets), `GET /api/boosts/coverage` (admin-gated, but reads every derived blob).
 - `_utils/xmlUtils.ts` - RSS XML helpers (`extractPodcastMedium()` — used by hosted POST/PUT before podping broadcast)
 - `_utils/adminAuth.ts` - Nostr NIP-98 auth verification, `NostrEvent` type
 - `_utils/urlValidation.ts` - `normalizeFeedUrl()` + `getFeedUrlError()`. Mirror of `src/utils/urlValidation.ts` (Vercel functions can't import from `src/`, so the rule table is intentionally duplicated). The `src/api mirror` test in `api/_utils/urlValidation.test.ts` asserts the two files are byte-identical apart from the api copy's 2-line header — **edit one, copy it to the other, or that test fails**. See "Feed URL whitespace & reachability" below for the full contract.
@@ -328,6 +334,70 @@ Wired into all six manual feed-URL inputs that reach PI or podping: `SaveModal` 
 - **A successful podping does not mean the feed will index.** Podping only tells indexers to go look; if the feed's own host then answers their crawler with a 403 (Cloudflare Bot Fight Mode is the common culprit on WordPress sites), the feed registers in PI with `lastGoodHttpStatusTime: 0` and stays permanently blank. `/api/podping` therefore runs the submit guard (see "Feed URL whitespace & reachability") and refuses a confirmed block, with "Send anyway" as the override. When a user reports "I podpinged and nothing showed up", check `podcasts/byfeedurl` for `lastHttpStatus` before looking at anything in MSP.
 - **Podping retries — MSP has none, by design**: `notifyPodping()` is a single `fetch` with no retry or backoff; a failed send surfaces its status and stops (the user clicks the button again). The verify polling retries the *check*, never the send — a "Not received yet" result never re-sends. Hivepinger owns queue + dedup + Hive-broadcast retries, which is why MSP doesn't duplicate them. Don't confuse this with the `msp-podping-service` **consumer**'s "retry ×2 with 2s/8s backoff" — that governs fetching feeds into stablekraft-app *after* a podping is seen on Hive, a different layer entirely. Known edge from hivepinger's dedup: re-sending a ping for a feed that was pinged moments ago writes no new op, so the `since` cutoff reports "Not received yet" even though the earlier ping landed. That's the deliberate tradeoff for eliminating the false positive (see `since` above) — prefer a missed confirmation over a fabricated one. The SaveModal previously had a "Send Podping" destination; it was removed in favor of the dedicated toolbar button.
 - **Podping `medium` — load-bearing**: hivepinger uses the `medium` value to build the custom_json op id as `pp_<medium>_<reason>` (e.g. `pp_music_update`). The companion consumer in `msp-podping-service` filters `pp_music_*` only, so any code path that fires a podping WITHOUT a medium ends up as `pp_podcast_update` (hivepinger's default) and is invisible to the consumer. Every client path that can trigger a podping passes medium: hosted POST/PUT (extracted via `extractPodcastMedium()` from the XML), SaveModal's nsite follow-up and "Submit to PodcastIndex" destination (`album.medium` / `publisherFeed.medium`), `publisherPublish.ts`'s internal `notifyPodcastIndex()` helper (takes a `medium` param forwarded to `/api/pubnotify`), PublisherFeedReminderSection (`publisherFeed.medium`). The PodpingModal toolbar button reads medium from the feed (`album.medium` / `videoFeed.medium` / `publisherFeed.medium`), matching the SaveModal pattern. Publisher feeds carry `medium: 'publisher'` which produces `pp_publisher_update` — still filtered out by the music-only consumer, preserving the prior intent without special-casing. When adding a new podping trigger, always plumb through the feed's medium — the `isPodpingConfigured()` gate + `notifyPodping(url, { medium })` signature is the canonical call site pattern.
+
+### Boost capture (Helipad → MSP)
+
+Every feed MSP generates carries a 1% `MSP 2.0` recipient
+(`COMMUNITY_SUPPORT_RECIPIENTS` in `src/types/feed.ts`), so the splits land on Chad's
+node and Helipad sees them. This subsystem captures those records so a **music chart**
+can be built from them later — a weekly Top 10 of what people actually boosted. It is
+not a revenue dashboard, and phase 1 deliberately displays nothing publicly.
+
+**Phase 1 answers one question: what share of boosts can be resolved to a real track,
+and by which signal?** `/admin` renders that as a table (`BoostCoverage.tsx`). Read it
+before designing anything on top — if most boosts land on `message` or `none`, a Top 10
+needs `valueTimeSplit` resolution or Podcast Index lookups first, or it has to be about
+shows rather than tracks.
+
+**Helipad facts, verified in `Podcastindex-org/helipad@main`, not assumed:**
+- Webhooks are **triggers**. `src/triggers.rs` builds `WebhookEffect { index, url, token }` and sends `Authorization: Bearer <token>`. There is no HMAC and no signature — the bearer token is the whole of the authentication.
+- The payload is `WebhookPayload { direction, ..BoostRecord }`, i.e. `direction` plus a flattened boost record.
+- **`tlv` is a JSON *string*, not an object**, and its contents are written by the boosting app. Two real captures share barely half their keys, so every field inside is optional and a parse failure must not lose the boost.
+- **`action` exists twice with two types** — a number in the outer body (Helipad's `ActionType`) and a string inside the TLV (the app's word). `parseBoostPayload` prefers the number and falls back to the TLV word for values the README doesn't document, rather than inventing a mapping.
+- **A delivery counts as successful only on HTTP exactly `200`** (`let successful = status == 200`). Not 201, not 204.
+- **Helipad never retries.** A non-200 loses that boost from the webhook path permanently. That is why `tools/import-helipad.mjs` is a standing repair tool, not a one-off.
+- Redirects are capped at 5, so point the trigger at the canonical host.
+- Trigger filters cover amount, sender, app and podcast — **not** the TLV `name`, so the "is this an MSP split" test (`isMspSplit()`) must live on MSP's side.
+- **Do not backfill from `/csv`.** Its columns carry no `tlv`, no `url`, no `guid` and no recipient `name`, so a CSV import can neither join a boost to a feed nor tell an MSP split from a boost to one of Chad's own shows. `/api/v1/boosts` returns the same `BoostRecord` the webhook sends and is full fidelity.
+
+**The privacy boundary is `toDerived()`, and it is the only one.** Raw records are
+stored verbatim — listener message, sender name and sender id included — because the
+song title frequently appears *only* in the free-text message, and discarding it at
+ingest would delete exactly what a Top 10 needs. Nothing serves a raw record. The
+derived projection carries no listener field at all, and a test in
+`boostRecord.test.ts` asserts that by serializing it and searching for them. Keep that
+test honest when adding a field.
+
+**Track resolution is a ladder, best rung first**, and which rung answered is recorded
+on every record as `trackSource`:
+`remote-guid` (canonical `podcast:remoteItem` pair) → `remote-title` (Helipad resolved
+the guids for us) → `boost-link` (an app's own stable song URL) → `timesplit` → `message`
+→ `none`. Two rules are load-bearing:
+- **`timesplit` returns no `trackKey`.** A playback offset is a pointer to resolve later
+  against the show's `valueTimeSplit`s, not an identity. Keying on it would make two
+  boosts seconds apart look like different tracks.
+- **A message-scraped title enriches the higher rungs.** `boost-link` gives a stable key
+  but no human-readable name, so it takes its title from the message. The rungs pick the
+  *key*; the title comes from the best source available.
+
+**Storage** is Vercel Blob, following the `accountStore.ts` "unguessable path" pattern:
+`boosts/raw/<MSP_BOOST_NAMESPACE>/<YYYY-MM>/<direction>-<index>.json` (private, verbatim)
+and `boosts/derived/<isoYear>-W<week>.json` (PII-free, weekly because that is the unit
+the chart reports in). Dedup is the raw path itself — `index` is unique per node and the
+write uses `allowOverwrite: false`. **The derived merge runs for every record in a batch
+whether or not its raw blob already existed**, which is what makes re-running the import
+script repair a lost derived write *and* re-derive history through an improved
+`resolveTrack()` without touching the store.
+
+**Committed tooling lives in `tools/`, not `scripts/`.** `.gitignore` ignores `scripts/`
+entirely — it is Chad's local scratch and feed-backup directory, and a script written
+there is silently never committed. That is where `tools/import-helipad.mjs` would have
+landed by convention, and it would have looked committed while being invisible to CI,
+to Vercel, and to the Desktop App fork.
+
+**Re-running `tools/import-helipad.mjs` is always safe** and is the answer to most
+operational problems here: a missed webhook, a lost derived write, or a resolver
+improvement that should be applied to history.
 
 ### Save Modal Destinations
 The Save modal (`src/components/modals/SaveModal.tsx`) offers nine destinations. Each is a different combination of *where the bytes live* and *who can consume them* — important context when deciding which one to point a user at:

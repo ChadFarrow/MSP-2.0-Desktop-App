@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNostr } from '../../store/nostrStore';
 import { FeedList } from './FeedList';
+import { BoostCoverage } from './BoostCoverage';
 // The 40px header logo. Points at the 192px file in public/ rather than importing
 // assets/msp-logo.png, which is a 1024x1024 PNG weighing 1,810,143 bytes — the
 // same file public/ already serves as the favicon, so importing it shipped a
@@ -74,6 +75,7 @@ export function AdminPage() {
               Signed in as: <code>{nostrState.user?.pubkey.slice(0, 8)}...{nostrState.user?.pubkey.slice(-8)}</code>
             </div>
             <FeedList onError={setError} currentUserPubkey={nostrState.user?.pubkey} />
+            <BoostCoverage onError={setError} />
             {error && <div className="admin-error">{error}</div>}
           </div>
         )}
