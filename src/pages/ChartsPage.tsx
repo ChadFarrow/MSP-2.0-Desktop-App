@@ -141,16 +141,16 @@ export function ChartsPage() {
 
                 <div className="chart-grid">
                   <ChartList
-                    title="Most played"
-                    blurb="Counted from streaming sats, with one listener's run on a track counted once."
-                    rows={current.plays}
-                    unit=" play"
-                  />
-                  <ChartList
                     title="Most boosted"
                     blurb="Counted from boosts — a listener choosing to send sats at a moment in a track."
                     rows={current.boosts}
                     unit=" boost"
+                  />
+                  <ChartList
+                    title="Most played"
+                    blurb="Counted from streaming sats, with one listener's run on a track counted once."
+                    rows={current.plays}
+                    unit=" play"
                   />
                 </div>
               </>
