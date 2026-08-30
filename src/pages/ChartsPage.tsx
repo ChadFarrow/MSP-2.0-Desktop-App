@@ -52,7 +52,7 @@ function ChartList({ title, blurb, rows, unit }: {
       ) : (
         <ol className="chart-list">
           {rows.map((row, i) => (
-            <li key={`${row.title}-${row.artist ?? ''}`} className="chart-row">
+            <li key={i} className="chart-row">
               <span className="chart-rank">{i + 1}</span>
               <span className="chart-track">
                 <span className="chart-title">{row.title}</span>
