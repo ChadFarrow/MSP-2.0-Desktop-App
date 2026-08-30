@@ -422,6 +422,25 @@ drop a real split. The coverage endpoint's `everything` view is a diagnostic on 
 is on the node and deliberately carries **no chart at all**, so it can never be mistaken
 for one.
 
+**A mutable blob must not be cached, and must not be read through the cache.** A blob
+written with `addRandomSuffix: false` keeps a stable public URL, and Vercel's CDN caches
+that URL — public blobs default to a one-month `cacheControlMaxAge`. The derived week
+file is read-modify-write, so a cached read merges new records onto a stale base and
+**shrinks** the stored file. It is silent, and it gets worse the more often a week is
+touched. Both halves are needed: `cache: 'no-store'` on the read fixes the current
+process, `cacheControlMaxAge: 0` on the write stops an already-cached copy reaching the
+next one. `storeBoosts()` returns `weekSizes` for exactly this reason — send two records,
+see a week report one, and the loss is visible on the first batch instead of after 7,000.
+
+**The same hazard exists elsewhere in this repo and is not yet fixed.**
+`accounts/index/<emailHash>.json` (`accountStore.ts`) is also read-modify-write over a
+stable public URL, so linking a feed to an email account can drop a previously linked one.
+`feeds/{id}.meta.json` is overwritten with `allowOverwrite: true` and read back the same
+way, so a stale read there serves outdated metadata — including `editTokenHash`. Neither
+is addressed here; both deserve their own pass rather than being swept into a boost fix.
+Note `redeemMagicLink()` is **safe**: it gates on `list()`, which is a server-side API call
+and not CDN-cached, so a deleted single-use token cannot be replayed from cache.
+
 **Committed tooling lives in `tools/`, not `scripts/`.** `.gitignore` ignores `scripts/`
 entirely — it is Chad's local scratch and feed-backup directory, and a script written
 there is silently never committed. That is where `tools/import-helipad.mjs` would have

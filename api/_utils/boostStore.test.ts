@@ -176,9 +176,43 @@ describe('storeBoosts', () => {
     expect(merged.find((r: { index: number }) => r.index === 99).trackTitle).toBe('KEEP ME');
   });
 
+  it('never lets a mutable blob be cached, and never reads one through the cache', async () => {
+    // The derived week file is read-modify-write under a stable URL. If the CDN serves
+    // a stale copy on read, the merge lands on an old base and SHRINKS the stored file,
+    // silently and worse the more often a week is touched.
+    mockList.mockImplementation(({ prefix }: { prefix: string }) =>
+      Promise.resolve({
+        blobs: prefix.startsWith('boosts/derived/')
+          ? [{ pathname: 'boosts/derived/2026-W35.json', url: 'https://blob.example/week' }]
+          : [],
+        cursor: undefined,
+        hasMore: false
+      })
+    );
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('[]') });
+
+    await storeBoosts([{ parsed: boost(1), payload: {} }], 'import');
+
+    expect(mockFetch).toHaveBeenCalledWith('https://blob.example/week', { cache: 'no-store' });
+    for (const call of mockPut.mock.calls) {
+      expect(call[2], String(call[0])).toMatchObject({ cacheControlMaxAge: 0 });
+    }
+  });
+
+  it('reports the stored size of every week it touched', async () => {
+    // This is the check that would have caught the caching bug on the first batch:
+    // send 2, see weekSizes say 1, and the loss is visible immediately.
+    emptyStore();
+    const result = await storeBoosts(
+      [{ parsed: boost(1), payload: {} }, { parsed: boost(2), payload: {} }],
+      'import'
+    );
+    expect(result.weekSizes).toEqual({ '2026-W35': 2 });
+  });
+
   it('does nothing at all for an empty batch', async () => {
     emptyStore();
-    expect(await storeBoosts([], 'webhook')).toEqual({ written: 0, duplicates: 0, weeks: [] });
+    expect(await storeBoosts([], 'webhook')).toEqual({ written: 0, duplicates: 0, weeks: [], weekSizes: {} });
     expect(mockPut).not.toHaveBeenCalled();
   });
 });
