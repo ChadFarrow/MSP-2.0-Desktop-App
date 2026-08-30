@@ -77,6 +77,65 @@ export function collapseToPlays(
   return plays;
 }
 
+/** Lowercase, unaccented, punctuation-free — for comparing two spellings of one name. */
+function normalize(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/**
+ * Merge rows that are the same track wearing two different names.
+ *
+ * A track's key comes from whichever rung of the resolution ladder answered, so one boost
+ * resolving by remote guid and another by boost link produce different keys for the same
+ * song — and the chart then splits its count across two rows. Observed live: "When You're
+ * Smiling (2026 remix)" sat at rank 1 with 4 boosts and rank 10 with 1, because Helipad
+ * gave the feed as `Technopolymère - Bacalao` for some records and `Technopolymère` for
+ * others.
+ *
+ * The rule is deliberately narrow: same normalized title, and one artist string a prefix
+ * of the other. That catches "X" versus "X - Y", which is the shape the data actually
+ * takes, without merging two different songs that happen to share a title. The longest
+ * artist wins as the label, since it is the most informative.
+ */
+function mergeAliases(rows: ChartRow[]): ChartRow[] {
+  const byTitle = new Map<string, ChartRow[]>();
+  const untitled: ChartRow[] = [];
+
+  for (const row of rows) {
+    if (!row.trackTitle) { untitled.push(row); continue; }
+    const key = normalize(row.trackTitle);
+    const bucket = byTitle.get(key);
+    if (bucket) bucket.push(row);
+    else byTitle.set(key, [row]);
+  }
+
+  const merged: ChartRow[] = [];
+  for (const bucket of byTitle.values()) {
+    // Longest artist first, so a shorter spelling folds into the fuller one.
+    const ordered = [...bucket].sort(
+      (a, b) => (b.trackArtist ?? '').length - (a.trackArtist ?? '').length
+    );
+    const groups: ChartRow[] = [];
+    for (const row of ordered) {
+      const artist = normalize(row.trackArtist ?? '');
+      const into = groups.find(g => {
+        const other = normalize(g.trackArtist ?? '');
+        return artist === other || other.startsWith(artist) || artist.startsWith(other);
+      });
+      if (into) into.count += row.count;
+      else groups.push({ ...row });
+    }
+    merged.push(...groups);
+  }
+
+  return [...merged, ...untitled];
+}
+
 /**
  * Rank by count, then by title so equal counts don't reorder between requests.
  * Omit `limit` to get every track rather than a top slice.
@@ -101,7 +160,7 @@ export function topTracks(records: DerivedBoost[], limit?: number): ChartRow[] {
     }
   }
 
-  const ranked = [...rows.values()]
+  const ranked = mergeAliases([...rows.values()])
     .sort((a, b) => b.count - a.count || (a.trackTitle ?? '').localeCompare(b.trackTitle ?? ''));
   return limit === undefined ? ranked : ranked.slice(0, limit);
 }
