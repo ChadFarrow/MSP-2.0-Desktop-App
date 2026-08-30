@@ -96,6 +96,19 @@ describe('parseBoostPayload', () => {
       .toBe('stream');
   });
 
+  it("maps every variant of Helipad's ActionType, not just the three its README lists", () => {
+    // dbif::ActionType is Unknown=0, Stream=1, Boost=2, Invalid=3, Auto=4, Invoice=5.
+    // 5 arrives on the /api/v1/streams list for a plain Lightning payment carrying no
+    // podcast metadata, and was silently landing as 'unknown'.
+    const expected = {
+      0: 'unknown', 1: 'stream', 2: 'boost', 3: 'invalid', 4: 'auto', 5: 'invoice'
+    };
+    for (const [num, name] of Object.entries(expected)) {
+      const parsed = parseBoostPayload(webhookBody({}, { action: Number(num), tlv: undefined }));
+      expect(parsed!.actionName, `action ${num}`).toBe(name);
+    }
+  });
+
   it('falls back to the tlv action name when the outer number is unrecognized', () => {
     const parsed = parseBoostPayload(webhookBody({ ...V4VMUSIC_TLV, action: 'boost' }, { action: 99 }));
     expect(parsed!.actionName).toBe('boost');

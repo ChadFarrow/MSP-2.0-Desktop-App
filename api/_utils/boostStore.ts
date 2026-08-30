@@ -66,6 +66,8 @@ export interface StoreResult {
   written: number;
   duplicates: number;
   weeks: string[];
+  /** Records stored in each touched week after the merge. Observability, not bookkeeping. */
+  weekSizes: Record<string, number>;
 }
 
 /** Page through every blob under a prefix. list() caps at 1000 per call. */
@@ -80,9 +82,19 @@ async function listAll(prefix: string): Promise<{ pathname: string; url: string 
   return found;
 }
 
+/**
+ * Read a blob, bypassing the CDN.
+ *
+ * A blob written with addRandomSuffix:false keeps a stable public URL, and Vercel's
+ * CDN caches that URL. The derived week file is read-modify-write, so a cached read
+ * merges new records onto a stale base and *shrinks* the stored file — silently, and
+ * worse the more often a week is touched. no-store on the read and a zero max-age on
+ * the write are both needed: the first fixes this process, the second stops an already
+ * cached copy being served to the next one.
+ */
 async function fetchJson<T>(url: string): Promise<T | null> {
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) return null;
     const text = await response.text();
     return text ? (JSON.parse(text) as T) : null;
@@ -101,7 +113,11 @@ async function putJson(pathname: string, value: unknown, allowOverwrite: boolean
     access: 'public',
     contentType: 'application/json',
     addRandomSuffix: false,
-    allowOverwrite
+    allowOverwrite,
+    // Raw records are immutable, but the derived week files are rewritten on every
+    // merge. Caching a mutable blob under a stable URL is what makes a read-modify-write
+    // lose data, so nothing here is cached.
+    cacheControlMaxAge: 0
   });
 }
 
@@ -122,7 +138,7 @@ export async function readAllDerived(): Promise<DerivedBoost[]> {
   return weeks.flatMap(week => week ?? []);
 }
 
-async function mergeDerivedWeek(weekKey: string, incoming: DerivedBoost[]): Promise<void> {
+async function mergeDerivedWeek(weekKey: string, incoming: DerivedBoost[]): Promise<number> {
   const existing = await readDerivedWeek(weekKey);
   const byIndex = new Map<number, DerivedBoost>();
   for (const record of existing) byIndex.set(record.index, record);
@@ -131,6 +147,7 @@ async function mergeDerivedWeek(weekKey: string, incoming: DerivedBoost[]): Prom
 
   const merged = [...byIndex.values()].sort((a, b) => a.ts - b.ts || a.index - b.index);
   await putJson(derivedPath(weekKey), merged, true);
+  return merged.length;
 }
 
 /**
@@ -142,7 +159,7 @@ export async function storeBoosts(
   entries: { parsed: ParsedBoost; payload: unknown }[],
   source: RawStoredBoost['source']
 ): Promise<StoreResult> {
-  if (entries.length === 0) return { written: 0, duplicates: 0, weeks: [] };
+  if (entries.length === 0) return { written: 0, duplicates: 0, weeks: [], weekSizes: {} };
 
   // One listing per month beats one existence check per record on a 200-record import.
   const months = [...new Set(entries.map(e => monthKey(e.parsed.ts)))];
@@ -179,7 +196,10 @@ export async function storeBoosts(
     if (bucket) bucket.push(toDerived(entry.parsed));
     else byWeek.set(week, [toDerived(entry.parsed)]);
   }
-  for (const [week, records] of byWeek) await mergeDerivedWeek(week, records);
+  // Report the stored size of every week touched. A caller can compare it against what
+  // it sent, which is the check that would have caught the caching bug immediately.
+  const weekSizes: Record<string, number> = {};
+  for (const [week, records] of byWeek) weekSizes[week] = await mergeDerivedWeek(week, records);
 
-  return { written, duplicates, weeks: [...byWeek.keys()] };
+  return { written, duplicates, weeks: [...byWeek.keys()], weekSizes };
 }
