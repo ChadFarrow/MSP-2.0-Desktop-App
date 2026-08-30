@@ -2191,10 +2191,13 @@ body {
 
 .chart-summary strong { color: var(--text-primary); }
 
+/* One column on every width, so the ranking reads top to bottom: boosts first as the
+   stronger signal, plays beneath. Side by side would make neither of them first. */
 .chart-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1.25rem;
+  max-width: 42rem;
 }
 
 .chart-panel {
