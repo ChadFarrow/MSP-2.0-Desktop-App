@@ -142,7 +142,7 @@ export function ChartsPage() {
                 <div className="chart-grid">
                   <ChartList
                     title="Most boosted"
-                    blurb="Counted from boosts — a listener choosing to send sats at a moment in a track."
+                    blurb="Sats sent at a moment in a track — both boosts someone sent by hand and the auto-boosts their app sent when they played it."
                     rows={current.boosts}
                     unit=" boost"
                   />
