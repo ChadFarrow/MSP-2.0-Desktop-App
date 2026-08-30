@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { checkRateLimit } from '../_utils/rateLimiter.js';
 import { getClientIp } from '../_utils/urlSafety.js';
 import { timingSafeEqualString } from '../_utils/feedUtils.js';
-import { parseBoostPayload } from '../_utils/boostRecord.js';
+import { parseBoostPayload, isHelipadTestBoost } from '../_utils/boostRecord.js';
 import type { ParsedBoost } from '../_utils/boostRecord.js';
 import { isBoostStoreConfigured, storeBoosts } from '../_utils/boostStore.js';
 
@@ -85,10 +85,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const entries: { parsed: ParsedBoost; payload: unknown }[] = [];
   let skipped = 0;
+  let tests = 0;
   for (const payload of payloads) {
     const parsed = parseBoostPayload(payload);
-    if (parsed) entries.push({ parsed, payload });
-    else skipped += 1;
+    if (!parsed) { skipped += 1; continue; }
+    // Accepted and acknowledged, never stored — see isHelipadTestBoost.
+    if (isHelipadTestBoost(parsed)) { tests += 1; continue; }
+    entries.push({ parsed, payload });
+  }
+
+  // A trigger test carries nothing else, and its whole purpose is to prove the path
+  // works. Answer 200 so Helipad reports success, having stored nothing.
+  if (entries.length === 0 && tests > 0) {
+    return res.status(200).json({ ok: true, written: 0, duplicates: 0, weeks: [], skipped, tests });
   }
 
   // Nothing usable is worth surfacing: Helipad records the failed status against the
@@ -100,7 +109,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const result = await storeBoosts(entries, Array.isArray(body) ? 'import' : 'webhook');
     // Exactly 200. Helipad treats anything else as a failed delivery.
-    return res.status(200).json({ ok: true, ...result, skipped });
+    return res.status(200).json({ ok: true, ...result, skipped, tests });
   } catch (error) {
     console.error('Boost ingest failed:', error);
     return res.status(500).json({ error: 'Failed to store boost' });

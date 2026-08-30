@@ -358,6 +358,7 @@ shows rather than tracks.
 - **Helipad never retries.** A non-200 loses that boost from the webhook path permanently. That is why `tools/import-helipad.mjs` is a standing repair tool, not a one-off.
 - Redirects are capped at 5, so point the trigger at the canonical host.
 - Trigger filters cover amount, sender, app and podcast — **not** the TLV `name`, so the "is this an MSP split" test (`isMspSplit()`) must live on MSP's side.
+- **The trigger Test button sends a synthetic boost with a hardcoded `index` of 99999** (`test_trigger()` in `src/triggers.rs`). The raw store deduplicates on index, so storing it would silently shadow a genuine boost that later carried 99999 in the same month. `isHelipadTestBoost()` drops it, and the endpoint still answers 200 so the button reports success — proving the path works is the whole point of pressing it.
 - **Do not backfill from `/csv`.** Its columns carry no `tlv`, no `url`, no `guid` and no recipient `name`, so a CSV import can neither join a boost to a feed nor tell an MSP split from a boost to one of Chad's own shows. `/api/v1/boosts` returns the same `BoostRecord` the webhook sends and is full fidelity.
 
 **The privacy boundary is `toDerived()`, and it is the only one.** Raw records are
