@@ -19,7 +19,7 @@
  *   HELIPAD_PASSWORD=... \
  *   MSP_INGEST_URL=https://musicsideproject.com/api/boosts/ingest \
  *   HELIPAD_WEBHOOK_TOKEN=... \
- *   node tools/import-helipad.mjs [--from <index>] [--page 100] [--dry-run]
+ *   node tools/import-helipad.mjs [--from <index>] [--page 100] [--batch 25] [--dry-run]
  */
 
 const USAGE = `Backfill and repair MSP's boost store from Helipad.
@@ -36,20 +36,30 @@ derived projection is rebuilt from whatever is posted.`;
 
 const REQUIRED = ['HELIPAD_URL', 'HELIPAD_PASSWORD', 'MSP_INGEST_URL', 'HELIPAD_WEBHOOK_TOKEN'];
 
-/** Must match MAX_BATCH in api/boosts/ingest.ts. */
-const INGEST_BATCH = 200;
+/**
+ * Records per POST. The endpoint caps this at 200, but each record is a separate blob
+ * write and vercel.json sets no functions.maxDuration, so a 200-record batch can run
+ * past the platform's default timeout. 25 keeps a request comfortably short; a timeout
+ * is not fatal either way, since the store deduplicates and the walk is re-runnable.
+ */
+const DEFAULT_BATCH = 25;
+const MAX_BATCH = 200;
 
 function parseArgs(argv) {
-  const args = { page: 100, from: null, dryRun: false };
+  const args = { page: 100, from: null, dryRun: false, batch: DEFAULT_BATCH };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--dry-run') args.dryRun = true;
     else if (argv[i] === '--page') args.page = Number(argv[++i]);
     else if (argv[i] === '--from') args.from = Number(argv[++i]);
+    else if (argv[i] === '--batch') args.batch = Number(argv[++i]);
     else if (argv[i] === '--help' || argv[i] === '-h') args.help = true;
     else throw new Error(`Unknown argument: ${argv[i]}`);
   }
   if (!Number.isFinite(args.page) || args.page < 1 || args.page > 500) {
     throw new Error('--page must be between 1 and 500');
+  }
+  if (!Number.isFinite(args.batch) || args.batch < 1 || args.batch > MAX_BATCH) {
+    throw new Error(`--batch must be between 1 and ${MAX_BATCH}`);
   }
   return args;
 }
@@ -65,7 +75,9 @@ async function login(baseUrl, password) {
   const response = await fetch(`${baseUrl}/api/v1/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password, stay_logged_in: true })
+    // stay_logged_in is an Option<String> on Helipad, not a boolean — its handler only
+    // checks .is_some(), so any string means yes. Sending true gets a 422.
+    body: JSON.stringify({ password, stay_logged_in: 'on' })
   });
 
   if (!response.ok) {
@@ -152,18 +164,16 @@ async function main() {
   const headers = await login(baseUrl, process.env.HELIPAD_PASSWORD);
   console.log(`Logged in to ${baseUrl}`);
 
-  let cursor = args.from;
-  if (cursor === null) {
-    cursor = unwrapNumber(await getJson(`${baseUrl}/api/v1/index`, headers), 'newest index');
-  }
-  console.log(`Walking backwards from index ${cursor}, ${args.page} at a time`);
+  const startIndex = args.from ?? unwrapNumber(
+    await getJson(`${baseUrl}/api/v1/index`, headers), 'newest index'
+  );
 
   let pending = [];
   const totals = { fetched: 0, written: 0, duplicates: 0, skipped: 0 };
 
   const flush = async () => {
     while (pending.length) {
-      const batch = pending.splice(0, INGEST_BATCH);
+      const batch = pending.splice(0, args.batch);
       if (args.dryRun) {
         console.log(`  [dry run] would post ${batch.length} records`);
         continue;
@@ -176,22 +186,38 @@ async function main() {
     }
   };
 
-  while (cursor > 0) {
-    const url = `${baseUrl}/api/v1/boosts?index=${cursor}&count=${args.page}&old=true`;
-    const boosts = unwrapList(await getJson(url, headers), 'boosts');
-    if (boosts.length === 0) break;
+  /**
+   * Walk one list backwards from an index. Helipad keeps boosts and streams in two
+   * separate lists, so both must be walked — streams are the play signal and are the
+   * larger of the two. They share one LND invoice index space, so the indexes across
+   * the two lists never collide and the store's dedup stays correct.
+   */
+  const walk = async (endpoint) => {
+    let cursor = startIndex;
+    let count = 0;
+    while (cursor > 0) {
+      const url = `${baseUrl}/api/v1/${endpoint}?index=${cursor}&count=${args.page}&old=true`;
+      const records = unwrapList(await getJson(url, headers), endpoint);
+      if (records.length === 0) break;
 
-    totals.fetched += boosts.length;
-    pending.push(...boosts);
-    if (pending.length >= INGEST_BATCH) await flush();
+      count += records.length;
+      totals.fetched += records.length;
+      pending.push(...records);
+      if (pending.length >= args.batch) await flush();
 
-    const lowest = Math.min(...boosts.map(b => Number(b.index)).filter(Number.isFinite));
-    if (!Number.isFinite(lowest) || lowest <= 0) break;
-    // Step past the oldest record in this page, or the walk repeats it forever.
-    cursor = lowest - 1;
+      const lowest = Math.min(...records.map(r => Number(r.index)).filter(Number.isFinite));
+      if (!Number.isFinite(lowest) || lowest <= 0) break;
+      // Step past the oldest record in this page, or the walk repeats it forever.
+      cursor = lowest - 1;
+    }
+    await flush();
+    console.log(`  ${endpoint}: ${count} records`);
+  };
+
+  for (const endpoint of ['boosts', 'streams']) {
+    console.log(`\nWalking /api/v1/${endpoint} backwards from index ${startIndex}, ${args.page} at a time`);
+    await walk(endpoint);
   }
-
-  await flush();
 
   console.log(
     `\nDone. fetched ${totals.fetched}, stored ${totals.written} new, ` +

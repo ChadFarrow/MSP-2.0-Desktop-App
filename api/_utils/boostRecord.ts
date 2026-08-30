@@ -18,7 +18,7 @@ import { createHmac } from 'crypto';
  */
 
 /** Helipad's own name for what kind of payment this was. */
-export type ActionName = 'stream' | 'boost' | 'auto' | 'invoice' | 'unknown';
+export type ActionName = 'stream' | 'boost' | 'auto' | 'invoice' | 'invalid' | 'unknown';
 
 /**
  * Which rung of the resolution ladder identified the track, best first. This is the
@@ -145,16 +145,21 @@ export function hashListener(sender: string, app: string): string | undefined {
 export const MSP_SUPPORT_RECIPIENT_NAME = 'MSP 2.0';
 
 /**
- * Helipad's numeric ActionType. Only the values its README states are mapped; an
- * unmapped number falls through to the TLV's own word rather than being guessed at.
+ * Helipad's numeric ActionType, complete and taken from `dbif::ActionType` in its own
+ * source rather than from its README, which lists only three of the six. The missing
+ * one that bit us was 5 = Invoice: a plain Lightning payment with no podcast metadata,
+ * which arrives on the streams list and would otherwise be recorded as 'unknown'.
  */
 const ACTION_BY_NUMBER: Record<number, ActionName> = {
+  0: 'unknown',
   1: 'stream',
   2: 'boost',
-  4: 'auto'
+  3: 'invalid',
+  4: 'auto',
+  5: 'invoice'
 };
 
-const ACTION_NAMES: ActionName[] = ['stream', 'boost', 'auto', 'invoice'];
+const ACTION_NAMES: ActionName[] = ['stream', 'boost', 'auto', 'invoice', 'invalid'];
 
 /**
  * A quoted title followed by an attribution, e.g.
