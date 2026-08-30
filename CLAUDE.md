@@ -468,6 +468,15 @@ counting them in the totals. The page states plainly that it is a sample rather 
 total, because MSP only sees a payment when its own split was actually paid and player
 apps routinely drop small splits.
 
+**"Most boosted" includes auto-boosts on purpose, and the page says so.** An auto-boost
+fires because an app played the track, so it is closer to a listening signal than an
+endorsement — and it is most of the chart: 126 of 151 named records, against 25 manual
+ones. Moving it to the streams list was considered and rejected, because manual boosts
+alone come to 21 tracks with a top count of 2, which is too thin to chart. The blurb
+therefore states that both are counted. **If the grouping ever changes, that wording has
+to change with it** — the failure mode is a chart labelled as deliberate choice while
+being five-sixths automatic.
+
 **Feed titles arrive HTML-encoded.** `decodeEntities()` in `boostRecord.ts` runs on every
 track title and artist. Real data: an album called `Various &amp; Assorted` reached the
 chart with the entity intact, which shows an artist their own title misspelled. The
