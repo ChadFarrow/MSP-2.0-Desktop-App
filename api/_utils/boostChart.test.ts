@@ -98,6 +98,19 @@ describe('isPlayRecord / isBoostRecord', () => {
   });
 });
 
+describe('the two lists never overlap', () => {
+  it('puts every action kind in exactly one list, or neither', () => {
+    // Streams are streaming sats only; auto-boosts count with boosts. A record landing
+    // in both would be counted twice across the page.
+    for (const kind of ['stream', 'boost', 'auto', 'invoice', 'invalid', 'unknown'] as const) {
+      const r = record({ actionName: kind });
+      expect(Number(isPlayRecord(r)) + Number(isBoostRecord(r)), kind).toBeLessThanOrEqual(1);
+    }
+    expect(isPlayRecord(record({ actionName: 'auto' }))).toBe(false);
+    expect(isBoostRecord(record({ actionName: 'auto' }))).toBe(true);
+  });
+});
+
 describe('topTracks', () => {
   it('ranks by count and carries the title and artist', () => {
     const rows = topTracks([

@@ -25,10 +25,24 @@ export interface ChartRow {
   count: number;
 }
 
+/**
+ * Streaming sats only. Auto-boosts are excluded deliberately — they are counted with
+ * boosts, not here, so the two lists never double-count the same record.
+ */
 export function isPlayRecord(record: DerivedBoost): boolean {
   return record.actionName === 'stream';
 }
 
+/**
+ * Boosts and auto-boosts together, deliberately.
+ *
+ * An auto-boost fires because an app played the track, so it is arguably a listening
+ * signal rather than an endorsement — and it dominates: measured on real data, 126 of
+ * the 151 named records here are automatic. Splitting them out was considered and
+ * rejected; manual boosts alone come to 21 tracks with a top count of 2, which is too
+ * thin to chart. The wording on the page says both are included, and that is the part
+ * that has to stay true if this is ever revisited.
+ */
 export function isBoostRecord(record: DerivedBoost): boolean {
   return record.actionName === 'boost' || record.actionName === 'auto';
 }
