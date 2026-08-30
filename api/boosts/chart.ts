@@ -93,8 +93,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .sort((a, b) => b[0].localeCompare(a[0]))
       .map(([month, records]) => ({ month, label: monthLabel(month), ...buildChart(records) }));
 
-    // The data only moves when the importer runs, so let the CDN carry the load.
-    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    // Short enough that a boost shows up while someone is still looking at the page,
+    // long enough that the CDN still absorbs essentially all traffic.
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
     return res.status(200).json({
       generatedAt: Date.now(),
       months,
