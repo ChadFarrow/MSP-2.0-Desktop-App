@@ -27,7 +27,7 @@
  */
 import { put, list } from '@vercel/blob';
 import type { DerivedBoost, ParsedBoost } from './boostRecord.js';
-import { isoWeekKey, monthKey, toDerived } from './boostRecord.js';
+import { isoWeekKey, monthKey, parseBoostPayload, toDerived } from './boostRecord.js';
 
 export const DERIVED_PREFIX = 'boosts/derived/';
 
@@ -171,6 +171,78 @@ export async function storeRawBoosts(
   });
 
   return { written, duplicates };
+}
+
+/**
+ * The UTC Monday and Sunday bounding an ISO week key.
+ *
+ * ISO week 1 is the week containing 4 January, so that date is the anchor: step back to
+ * its Monday to get week 1, then forward in whole weeks. Deriving the bounds this way
+ * rather than searching keeps it exact across the year boundaries where ISO and calendar
+ * years disagree — 2026-W53 really does start in December 2026 and end in January 2027.
+ */
+export function weekBounds(weekKey: string): { start: Date; end: Date } {
+  const match = /^(\d{4})-W(\d{2})$/.exec(weekKey);
+  if (!match) throw new Error(`Malformed ISO week key: ${weekKey}`);
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
+  const week1Monday = Date.UTC(year, 0, 4 - (jan4Day - 1));
+
+  const start = new Date(week1Monday + (week - 1) * 7 * 86400000);
+  const end = new Date(start.getTime() + 6 * 86400000);
+  return { start, end };
+}
+
+/**
+ * The calendar months a week's records can be filed under. Raw is bucketed by month, so
+ * a week straddling a month boundary lives under two prefixes and both must be scanned.
+ */
+export function monthsForWeek(weekKey: string): string[] {
+  const { start, end } = weekBounds(weekKey);
+  const first = monthKey(Math.floor(start.getTime() / 1000));
+  const last = monthKey(Math.floor(end.getTime() / 1000));
+  return first === last ? [first] : [first, last];
+}
+
+/**
+ * Rebuild one week's derived file from the raw records already stored.
+ *
+ * This is what lets a scheduled job keep the chart current without touching Helipad:
+ * the webhook writes raw continuously, and raw is immutable, so reading it back — even
+ * through a CDN — is always correct. The week file is then written whole, so there is no
+ * read-modify-write and nothing a cache can corrupt.
+ *
+ * Returns null when the week has no raw records at all, so a caller can tell "nothing
+ * there" from "genuinely empty" without writing an empty file over a real one.
+ */
+export async function rebuildWeekFromRaw(
+  weekKey: string,
+  extra: ParsedBoost[] = []
+): Promise<number | null> {
+  const blobs = (await Promise.all(
+    monthsForWeek(weekKey).map(month => listAll(rawMonthPrefix(month)))
+  )).flat();
+
+  const stored = await mapLimit(blobs, WRITE_CONCURRENCY, b => fetchJson<RawStoredBoost>(b.url));
+  const records: ParsedBoost[] = [];
+  for (const record of stored) {
+    const parsed = record ? parseBoostPayload(record.payload) : null;
+    if (parsed && isoWeekKey(parsed.ts) === weekKey) records.push(parsed);
+  }
+
+  // `extra` is the caller's own just-written records. list() is not guaranteed to show a
+  // blob written moments earlier, so a webhook that rebuilt purely from the listing could
+  // drop the very boost that triggered it. replaceDerivedWeek dedupes on index, so
+  // folding them in is free when the listing did already include them.
+  for (const record of extra) {
+    if (isoWeekKey(record.ts) === weekKey) records.push(record);
+  }
+
+  if (records.length === 0) return null;
+  return replaceDerivedWeek(weekKey, records);
 }
 
 /**
