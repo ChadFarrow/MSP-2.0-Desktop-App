@@ -5,6 +5,7 @@ import {
   toDerived,
   isMspSplit,
   isHelipadTestBoost,
+  hashListener,
   isoWeekKey
 } from './boostRecord.js';
 
@@ -162,6 +163,60 @@ describe('isHelipadTestBoost', () => {
 
     const sameTextDifferentIndex = { ...HELIPAD_TEST_BODY, index: 12345 };
     expect(isHelipadTestBoost(parseBoostPayload(sameTextDifferentIndex)!)).toBe(false);
+  });
+});
+
+describe('isMspSplit tolerance', () => {
+  it('accepts a name with stray whitespace or a different case', () => {
+    // The boosting app copies this string out of the feed's value block. A trailing
+    // space there would otherwise drop a genuine split out of the chart in silence.
+    for (const name of ['MSP 2.0', ' MSP 2.0 ', 'msp 2.0', 'MSP 2.0\n']) {
+      expect(isMspSplit(parseBoostPayload(webhookBody({ ...V4VMUSIC_TLV, name }))!)).toBe(true);
+    }
+  });
+
+  it('still refuses a different recipient', () => {
+    for (const name of ['MSP', 'MSP 3.0', 'Podcastindex.org', '']) {
+      expect(isMspSplit(parseBoostPayload(webhookBody({ ...V4VMUSIC_TLV, name }))!)).toBe(false);
+    }
+  });
+});
+
+describe('hashListener', () => {
+  const KEY = 'listener-hash-key-for-tests';
+
+  it('returns nothing when the key is unset, so the field simply stays absent', () => {
+    delete process.env.MSP_LISTENER_HASH_KEY;
+    expect(hashListener('someone', 'Fountain')).toBeUndefined();
+  });
+
+  it('returns nothing when the payload named no sender', () => {
+    process.env.MSP_LISTENER_HASH_KEY = KEY;
+    expect(hashListener('', 'Fountain')).toBeUndefined();
+  });
+
+  it('is stable for one listener and different for another', () => {
+    process.env.MSP_LISTENER_HASH_KEY = KEY;
+    const a = hashListener('listener-one', 'Fountain');
+    expect(a).toBe(hashListener('listener-one', 'Fountain'));
+    expect(a).not.toBe(hashListener('listener-two', 'Fountain'));
+    // Same person in two apps is two keys. Correct: their streams cannot interleave.
+    expect(a).not.toBe(hashListener('listener-one', 'CurioCaster'));
+  });
+
+  it('reveals nothing about the sender it was built from', () => {
+    process.env.MSP_LISTENER_HASH_KEY = KEY;
+    const hash = hashListener('a-real-person', 'Fountain')!;
+    expect(hash).toMatch(/^[0-9a-f]{16}$/);
+    expect(hash).not.toContain('a-real-person');
+  });
+
+  it('changes with the key, so a rotation cannot be reversed by guessing senders', () => {
+    process.env.MSP_LISTENER_HASH_KEY = KEY;
+    const before = hashListener('listener-one', 'Fountain');
+    process.env.MSP_LISTENER_HASH_KEY = 'a-different-key';
+    expect(hashListener('listener-one', 'Fountain')).not.toBe(before);
+    delete process.env.MSP_LISTENER_HASH_KEY;
   });
 });
 

@@ -151,8 +151,20 @@ export async function deleteFeed(feedId: string): Promise<void> {
  * These shapes mirror api/boosts/coverage.ts. The frontend cannot import from api/,
  * the same arrangement urlValidation.ts documents, so keep the two in sync by hand.
  */
+export interface BoostChartRow {
+  trackKey: string;
+  trackTitle?: string;
+  trackArtist?: string;
+  count: number;
+}
+
 export interface BoostCoverageSummary {
   boosts: number;
+  plays: number;
+  streamRecords: number;
+  /** Present only on the MSP-split view. The node-wide view carries no chart. */
+  topPlays?: BoostChartRow[];
+  topBoosts?: BoostChartRow[];
   keyed: number;
   named: number;
   withMessageTitle: number;

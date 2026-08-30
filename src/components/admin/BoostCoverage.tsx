@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchBoostCoverage } from '../../utils/adminAuth';
-import type { BoostCoverageResponse, BoostCoverageSummary } from '../../utils/adminAuth';
+import type { BoostChartRow, BoostCoverageResponse, BoostCoverageSummary } from '../../utils/adminAuth';
 
 /**
  * The phase 1 question, answered: what share of captured boosts can be resolved to a
@@ -26,6 +26,39 @@ function pct(part: number, whole: number): string {
   return `${Math.round((part / whole) * 100)}%`;
 }
 
+function Chart({ title, note, rows }: { title: string; note: string; rows?: BoostChartRow[] }) {
+  if (!rows) return null;
+  if (rows.length === 0) {
+    return (
+      <>
+        <h4>{title}</h4>
+        <p className="text-muted">Nothing resolved to a track yet.</p>
+      </>
+    );
+  }
+  return (
+    <>
+      <h4>{title}</h4>
+      <p className="text-muted">{note}</p>
+      <table className="admin-table">
+        <thead>
+          <tr><th>#</th><th>Track</th><th>Artist / album</th><th>Count</th></tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={row.trackKey}>
+              <td>{i + 1}</td>
+              <td>{row.trackTitle ?? <span className="text-muted">unnamed</span>}</td>
+              <td className="text-muted">{row.trackArtist ?? '—'}</td>
+              <td>{row.count}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
 function Summary({ summary }: { summary: BoostCoverageSummary }) {
   if (summary.boosts === 0) {
     return <p className="text-muted">No boosts captured yet for this view.</p>;
@@ -34,10 +67,23 @@ function Summary({ summary }: { summary: BoostCoverageSummary }) {
   return (
     <>
       <p className="text-muted">
-        {summary.boosts} boosts · {summary.distinctTracks} distinct tracks ·{' '}
+        {summary.boosts} records · {summary.plays} plays ({summary.streamRecords} stream
+        payments collapsed) · {summary.distinctTracks} distinct tracks ·{' '}
         {summary.satsTotal.toLocaleString()} sats sent by listeners ·{' '}
         {summary.satsReceived.toLocaleString()} sats received
       </p>
+
+      <Chart
+        title="Most played"
+        note="From streaming sats, with each listener's run on a track counted once. Streams come from music playback, so this signal is naturally music-only."
+        rows={summary.topPlays}
+      />
+
+      <Chart
+        title="Most boosted"
+        note="Deliberate boosts and auto-boosts. A stronger endorsement than a play, but it happens on podcasts and test feeds too — which is why the two are not combined."
+        rows={summary.topBoosts}
+      />
 
       <h4>How the track was identified</h4>
       <table className="admin-table">

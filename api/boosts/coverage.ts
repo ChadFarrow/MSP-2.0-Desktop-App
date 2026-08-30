@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { parseAuthHeader } from '../_utils/adminAuth.js';
 import { timingSafeEqualString } from '../_utils/feedUtils.js';
 import { readAllDerived } from '../_utils/boostStore.js';
+import { collapseToPlays, isBoostRecord, topTracks } from '../_utils/boostChart.js';
 import { isoWeekKey } from '../_utils/boostRecord.js';
 import type { DerivedBoost, TrackSource } from '../_utils/boostRecord.js';
 
@@ -35,7 +36,7 @@ function tally<T extends string>(values: T[]): Record<string, number> {
   return counts;
 }
 
-function summarize(records: DerivedBoost[]) {
+function summarize(records: DerivedBoost[], withCharts: boolean) {
   const bySource: Record<string, number> = {};
   for (const source of TRACK_SOURCES) bySource[source] = 0;
   for (const record of records) bySource[record.trackSource] += 1;
@@ -55,8 +56,18 @@ function summarize(records: DerivedBoost[]) {
 
   const distinctTracks = new Set(records.map(r => r.trackKey).filter((k): k is string => !!k));
 
+  // Plays and boosts are charted apart. Measured over a real node, one combined
+  // score let podcasts and test feeds take the whole top of the chart.
+  const plays = collapseToPlays(records);
+  const deliberate = records.filter(isBoostRecord);
+
   return {
     boosts: records.length,
+    plays: plays.length,
+    streamRecords: records.filter(r => r.actionName === 'stream').length,
+    ...(withCharts
+      ? { topPlays: topTracks(plays), topBoosts: topTracks(deliberate) }
+      : {}),
     keyed: records.filter(r => KEYED_SOURCES.has(r.trackSource)).length,
     named: records.filter(r => !!r.trackTitle).length,
     withMessageTitle: records.filter(r => r.hasMessageTitle).length,
@@ -97,8 +108,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       generatedAt: Date.now(),
       totals: { all: all.length, mspSplit: mspOnly.length, other: all.length - mspOnly.length },
-      msp: summarize(mspOnly),
-      everything: summarize(all)
+      // Charts are MSP splits only. "everything" is a diagnostic on what else is on
+      // the node, and deliberately carries no chart at all.
+      msp: summarize(mspOnly, true),
+      everything: summarize(all, false)
     });
   } catch (error) {
     console.error('Boost coverage failed:', error);
