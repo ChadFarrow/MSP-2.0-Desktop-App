@@ -28,6 +28,7 @@ import type { DerivedBoost } from '../_utils/boostRecord.js';
 
 const RATE_LIMIT = { limit: 120, windowMs: 60 * 60 * 1000 };
 
+/** How many rows a single month shows. All-time is uncapped. */
 const CHART_SIZE = 10;
 
 /** What a viewer sees. Deliberately narrower than ChartRow — no key, no sats. */
@@ -37,20 +38,24 @@ interface PublicRow {
   count: number;
 }
 
-function toPublicRows(records: DerivedBoost[]): PublicRow[] {
-  return topTracks(records, CHART_SIZE * 2)
-    .filter(row => row.trackTitle)
-    .slice(0, CHART_SIZE)
-    .map(row => ({ title: row.trackTitle!, artist: row.trackArtist, count: row.count }));
+/** Filter the unnamed out first, then cap — otherwise a top ten can come back short. */
+function toPublicRows(records: DerivedBoost[], limit?: number): PublicRow[] {
+  const named = topTracks(records).filter(row => row.trackTitle);
+  const shown = limit === undefined ? named : named.slice(0, limit);
+  return shown.map(row => ({ title: row.trackTitle!, artist: row.trackArtist, count: row.count }));
 }
 
-function buildChart(records: DerivedBoost[]) {
+/** `limit` omitted means the whole ranking, which is what the all-time view wants. */
+function buildChart(records: DerivedBoost[], limit?: number) {
   const plays = collapseToPlays(records);
   const boosts = records.filter(isBoostRecord);
+  // Reported as "streams", not "plays". They are the same thing — one listener's run on
+  // a track, collapsed — but "0 plays" reads like something is broken where "0 streams"
+  // reads like a fact, and streams is the familiar word for a collapsed listening count.
   return {
-    plays: toPublicRows(plays),
-    boosts: toPublicRows(boosts),
-    totalPlays: plays.length,
+    streams: toPublicRows(plays, limit),
+    boosts: toPublicRows(boosts, limit),
+    totalStreams: plays.length,
     totalBoosts: boosts.length
   };
 }
@@ -91,7 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const months = [...byMonth.entries()]
       .sort((a, b) => b[0].localeCompare(a[0]))
-      .map(([month, records]) => ({ month, label: monthLabel(month), ...buildChart(records) }));
+      .map(([month, records]) => ({ month, label: monthLabel(month), ...buildChart(records, CHART_SIZE) }));
 
     // Short enough that a boost shows up while someone is still looking at the page,
     // long enough that the CDN still absorbs essentially all traffic.
@@ -99,6 +104,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       generatedAt: Date.now(),
       months,
+      // No cap: the all-time view is the full ranking, not a top slice.
       allTime: buildChart(mspOnly)
     });
   } catch (error) {
