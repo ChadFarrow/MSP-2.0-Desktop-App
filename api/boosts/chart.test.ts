@@ -134,8 +134,9 @@ describe('/api/boosts/chart', () => {
     expect(allTime.boosts).toEqual([{ title: 'Boosted', artist: 'Bacalao', count: 1 }]);
   });
 
-  it("gives all time the whole ranking, while a month stays a top ten", async () => {
-    // 14 distinct tracks: a month shows 10 of them, all time shows every one.
+  it("caps nothing — a month shows every track it has, same as all time", async () => {
+    // A top ten was hiding real data rather than tidying it: across the live months it
+    // truncated 5 of 16 lists, and June showed 10 of its 28 boosted tracks.
     const many = Array.from({ length: 14 }, (_, i) =>
       Array.from({ length: 14 - i }, (_, n) =>
         rec({ index: i * 100 + n, trackKey: "t" + i, trackTitle: "Track " + i })));
@@ -146,7 +147,7 @@ describe('/api/boosts/chart', () => {
     const body = res.json.mock.calls[0][0];
 
     expect(body.allTime.boosts).toHaveLength(14);
-    expect(body.months[0].boosts).toHaveLength(10);
+    expect(body.months[0].boosts).toHaveLength(14);
     // Still ranked, not merely unsliced.
     expect(body.allTime.boosts[0].count).toBeGreaterThan(body.allTime.boosts[13].count);
   });
