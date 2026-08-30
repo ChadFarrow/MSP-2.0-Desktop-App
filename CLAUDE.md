@@ -46,6 +46,7 @@ A `.env` file is required with the following variables:
 - `MSP_EMAIL_HASH_KEY` - HMAC key for `ownerEmailHash`. Kept separate from `MSP_SESSION_SECRET` so sessions can rotate without orphaning feed ownership. **Rotating this breaks email→feed ownership matching**
 - `MSP_MAGIC_LINK_TTL_MIN` - Magic-link lifetime in minutes (optional; default 15)
 - `HELIPAD_WEBHOOK_TOKEN` - Shared secret for `/api/boosts/ingest`. Helipad sends it as `Authorization: Bearer <token>` from a trigger; the import script sends the same. The endpoint 404s when this or `MSP_BOOST_NAMESPACE` is unset, so boost capture simply does not exist until both are configured
+- `MSP_LISTENER_HASH_KEY` - HMAC key for `listenerKey`, the pseudonymous per-listener id that lets one person's consecutive streams of a track collapse into a single play. Kept separate from `MSP_EMAIL_HASH_KEY` and `MSP_SESSION_SECRET` so any of them can rotate alone; rotating this one only costs play grouping across the boundary. Optional — when unset the field is absent and plays collapse on app and track alone, which undercounts two simultaneous listeners rather than inflating anything
 - `MSP_BOOST_NAMESPACE` - One high-entropy path segment (16-128 chars of `[A-Za-z0-9_-]`) that the private raw boost tree lives under. **Not decorative:** Helipad's boost `index` is a small incrementing integer, so `boosts/raw/2026-08/10695.json` would be trivially enumerable if the blob store subdomain leaked, and raw records hold listener messages and sender names. Rotating it orphans the existing raw blobs; re-running the import script rebuilds them
 
 No `.env.example` exists - request credentials from the team.
@@ -389,6 +390,33 @@ write uses `allowOverwrite: false`. **The derived merge runs for every record in
 whether or not its raw blob already existed**, which is what makes re-running the import
 script repair a lost derived write *and* re-derive history through an improved
 `resolveTrack()` without touching the store.
+
+**Plays and boosts are charted separately, and the chart counts MSP splits only.**
+Measured against a real 4,411-record node export covering 50 weeks:
+- A **play** comes from streaming sats. Those fire during music playback and carry a
+  `remoteItem` reference, so the signal is naturally music-only — the measured top ten
+  by plays was entirely real songs by real artists.
+- A **boost** is the stronger endorsement but happens on podcasts and test feeds too.
+  Combining the two into one score put "LNURL Test Episode 3" and a personal podcast at
+  the top and pushed the music below them. That is why `summarize()` charts them apart.
+- Streaming sats fire about once a minute, so **raw stream records rank by track length,
+  not popularity**. `collapseToPlays()` folds one listener's run on a track into a single
+  play; the real export collapsed 361 stream records into 179 plays.
+- Track naming rates differ enormously by kind: **15%** of boosts, **82%** of auto-boosts
+  (nearly all via the message scraper) and **12%** of streams named a track. The message
+  scraper found 211 titles the structured fields missed — which is the concrete reason
+  raw records keep the listener message.
+- Volume is the binding constraint. Across 50 weeks the median week had 7 named records.
+  **A weekly Top 10 does not stand up yet**; a weekly Top 5, or a monthly Top 10, does.
+  Re-read the coverage table before designing around any period.
+
+**Only `name === "MSP 2.0"` counts.** `isMspSplit()` is the whole scope of the chart, and
+the TLV `name` is the only field carrying it — which is also why Helipad's `/csv` export
+cannot be used for backfill. The match is trimmed and case-folded, because the boosting
+app copies that string out of the feed's value block and a stray space would silently
+drop a real split. The coverage endpoint's `everything` view is a diagnostic on what else
+is on the node and deliberately carries **no chart at all**, so it can never be mistaken
+for one.
 
 **Committed tooling lives in `tools/`, not `scripts/`.** `.gitignore` ignores `scripts/`
 entirely — it is Chad's local scratch and feed-backup directory, and a script written

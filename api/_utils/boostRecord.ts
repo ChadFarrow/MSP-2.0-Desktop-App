@@ -1,3 +1,5 @@
+import { createHmac } from 'crypto';
+
 /**
  * Parsing and projection for Helipad boost records. No I/O — see boostStore.ts.
  *
@@ -69,6 +71,8 @@ export interface ParsedBoost {
   valueMsatTotal: number;
   app: string;
   message: string;
+  /** In memory only. Hashed in toDerived(); never stored in a DerivedBoost. */
+  sender: string;
   podcast: string;
   episode: string;
   remotePodcast?: string;
@@ -108,6 +112,14 @@ export interface DerivedBoost {
   trackKey?: string;
   trackTitle?: string;
   trackArtist?: string;
+  /**
+   * Pseudonymous, stable per listener per app. Its only job is to collapse one
+   * person's consecutive streams of a track into a single play — without it, one
+   * listener on repeat is indistinguishable from eight listeners, and the chart
+   * ranks by track length. Undefined when MSP_LISTENER_HASH_KEY is unset or the
+   * payload named no sender, in which case plays collapse on track and time alone.
+   */
+  listenerKey?: string;
   hasMessageTitle: boolean;
 }
 
@@ -118,6 +130,18 @@ export interface DerivedBoost {
  * Vercel functions cannot import from src/ — the same arrangement urlValidation.ts
  * documents. Change it there and here together.
  */
+/**
+ * Keyed HMAC of a listener, truncated to 64 bits. Keyed rather than a bare hash so
+ * the set of senders cannot be recovered by hashing a guessed list of names, and
+ * separate from MSP_EMAIL_HASH_KEY so either can rotate alone. Rotating this one only
+ * costs play grouping across the rotation boundary.
+ */
+export function hashListener(sender: string, app: string): string | undefined {
+  const key = process.env.MSP_LISTENER_HASH_KEY;
+  if (!key || !sender) return undefined;
+  return createHmac('sha256', key).update(`${app}|${sender}`).digest('hex').slice(0, 16);
+}
+
 export const MSP_SUPPORT_RECIPIENT_NAME = 'MSP 2.0';
 
 /**
@@ -212,6 +236,9 @@ export function parseBoostPayload(body: unknown): ParsedBoost | null {
     valueMsatTotal: asNumber(b.value_msat_total) ?? asNumber(tlv.value_msat_total) ?? 0,
     app: asString(b.app) ?? asString(tlv.app_name) ?? '',
     message: asString(b.message) ?? asString(tlv.message) ?? '',
+    // sender_id is an app's own stable per-listener id, so it groups better than a
+    // display name two people can share. Falls back to the names when absent.
+    sender: asString(tlv.sender_id) ?? asString(b.sender) ?? asString(tlv.sender_name) ?? '',
     podcast: asString(b.podcast) ?? asString(tlv.podcast) ?? '',
     episode: asString(b.episode) ?? asString(tlv.episode) ?? '',
     remotePodcast: asString(b.remote_podcast),
@@ -238,7 +265,10 @@ export function isHelipadTestBoost(boost: ParsedBoost): boolean {
 
 /** True when this payment is the MSP community-support split rather than some other recipient. */
 export function isMspSplit(boost: ParsedBoost): boolean {
-  return boost.tlv.name === MSP_SUPPORT_RECIPIENT_NAME;
+  // Trimmed and case-folded: the boosting app copies this string out of the feed's
+  // value block, and a stray space would silently drop a genuine split from the chart.
+  // Nothing else plausibly collides with "msp 2.0", so the tolerance is free.
+  return (boost.tlv.name ?? '').trim().toLowerCase() === MSP_SUPPORT_RECIPIENT_NAME.toLowerCase();
 }
 
 function extractFromMessage(message: string): { title: string; artist: string } | null {
@@ -336,6 +366,7 @@ export function toDerived(boost: ParsedBoost): DerivedBoost {
     remoteItemGuid: asString(boost.tlv.remote_item_guid),
     boostLink: asString(boost.tlv.boost_link),
     playbackTs: asNumber(boost.tlv.ts),
+    listenerKey: hashListener(boost.sender, boost.app),
     ...track
   };
 }
