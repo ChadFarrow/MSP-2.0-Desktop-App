@@ -127,9 +127,15 @@ describe('topTracks', () => {
     expect(rows.map(r => r.trackTitle)).toEqual(['Apple', 'Zebra']);
   });
 
-  it('drops records that identify no track and honours the limit', () => {
+  it('drops records that identify no track', () => {
     const many = Array.from({ length: 15 }, (_, i) => record({ index: i, trackKey: `t${i}` }));
-    expect(topTracks([...many, record({ index: 99, trackKey: undefined })])).toHaveLength(10);
+    expect(topTracks([...many, record({ index: 99, trackKey: undefined })])).toHaveLength(15);
+  });
+
+  it('returns the whole ranking when no limit is given, and a slice when one is', () => {
+    // The all-time chart wants everything; a month wants a top ten. Callers say which.
+    const many = Array.from({ length: 15 }, (_, i) => record({ index: i, trackKey: `t${i}` }));
+    expect(topTracks(many)).toHaveLength(15);
     expect(topTracks(many, 3)).toHaveLength(3);
   });
 });

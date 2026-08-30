@@ -22,9 +22,9 @@ interface ChartRow {
 interface MonthChart {
   month: string;
   label: string;
-  plays: ChartRow[];
+  streams: ChartRow[];
   boosts: ChartRow[];
-  totalPlays: number;
+  totalStreams: number;
   totalBoosts: number;
 }
 
@@ -135,7 +135,7 @@ export function ChartsPage() {
             {current && (
               <>
                 <p className="chart-summary">
-                  <strong>{current.label}</strong> — {current.totalPlays} plays and{' '}
+                  <strong>{current.label}</strong> — {current.totalStreams} streams and{' '}
                   {current.totalBoosts} boosts
                 </p>
 
@@ -147,10 +147,10 @@ export function ChartsPage() {
                     unit=" boost"
                   />
                   <ChartList
-                    title="Most played"
+                    title="Most streamed"
                     blurb="Counted from streaming sats, with one listener's run on a track counted once."
-                    rows={current.plays}
-                    unit=" play"
+                    rows={current.streams}
+                    unit=" stream"
                   />
                 </div>
               </>

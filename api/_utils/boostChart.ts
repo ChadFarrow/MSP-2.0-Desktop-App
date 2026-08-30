@@ -63,8 +63,11 @@ export function collapseToPlays(
   return plays;
 }
 
-/** Rank by count, then by title so equal counts don't reorder between requests. */
-export function topTracks(records: DerivedBoost[], limit = 10): ChartRow[] {
+/**
+ * Rank by count, then by title so equal counts don't reorder between requests.
+ * Omit `limit` to get every track rather than a top slice.
+ */
+export function topTracks(records: DerivedBoost[], limit?: number): ChartRow[] {
   const rows = new Map<string, ChartRow>();
 
   for (const record of records) {
@@ -84,7 +87,7 @@ export function topTracks(records: DerivedBoost[], limit = 10): ChartRow[] {
     }
   }
 
-  return [...rows.values()]
-    .sort((a, b) => b.count - a.count || (a.trackTitle ?? '').localeCompare(b.trackTitle ?? ''))
-    .slice(0, limit);
+  const ranked = [...rows.values()]
+    .sort((a, b) => b.count - a.count || (a.trackTitle ?? '').localeCompare(b.trackTitle ?? ''));
+  return limit === undefined ? ranked : ranked.slice(0, limit);
 }
