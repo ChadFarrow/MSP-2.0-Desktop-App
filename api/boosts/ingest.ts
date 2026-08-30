@@ -2,9 +2,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { checkRateLimit } from '../_utils/rateLimiter.js';
 import { getClientIp } from '../_utils/urlSafety.js';
 import { timingSafeEqualString } from '../_utils/feedUtils.js';
-import { parseBoostPayload, isHelipadTestBoost } from '../_utils/boostRecord.js';
+import { parseBoostPayload, isHelipadTestBoost, isoWeekKey } from '../_utils/boostRecord.js';
 import type { ParsedBoost } from '../_utils/boostRecord.js';
-import { isBoostStoreConfigured, storeBoosts } from '../_utils/boostStore.js';
+import { isBoostStoreConfigured, storeRawBoosts, replaceDerivedWeek } from '../_utils/boostStore.js';
 
 /**
  * Ingest for Helipad boost records.
@@ -18,14 +18,31 @@ import { isBoostStoreConfigured, storeBoosts } from '../_utils/boostStore.js';
  *     is why tools/import-helipad.mjs exists and is re-runnable.
  *   - It follows at most 5 redirects, so the trigger must point at the canonical host.
  *
- * The same endpoint takes an array from the import script, so one parser serves both
- * and history and live traffic can never drift apart.
+ * Two body shapes, and the difference matters:
+ *
+ *   A single record, or a bare array   -> raw records only.
+ *   { week, records: [...] }           -> raw records, plus that week's derived file
+ *                                         rewritten from the records supplied.
+ *
+ * The second form requires `records` to be the COMPLETE set for that week, because the
+ * derived file is replaced outright rather than merged. That is deliberate: merging
+ * would mean reading the previous version first, and a Vercel Blob read is served from
+ * a CDN with a 60-second floor, so at import cadence the read is stale and the merge
+ * silently truncates the week. Writing whole removes the read, and with it the bug.
+ *
+ * A live webhook cannot know a whole week, so it writes raw only and the chart catches
+ * up on the next importer run. Raw is the source of truth and is always complete.
  */
 
-/** Bounded so one request can't hold a function open writing thousands of blobs. */
-const MAX_BATCH = 200;
+/**
+ * Records per request. Raw writes run concurrently, but a request still has to fit
+ * Vercel's default function timeout, and the largest real week measured was 363.
+ */
+const MAX_BATCH = 500;
 
 const RATE_LIMIT = { limit: 600, windowMs: 60 * 60 * 1000 };
+
+const WEEK_RE = /^\d{4}-W\d{2}$/;
 
 /**
  * Vercel parses a JSON body for us, but a delivery Helipad never retries is not the
@@ -73,8 +90,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(429).json({ error: 'Rate limit exceeded' });
   }
 
-  const body: unknown = coerceBody(req.body);
-  const payloads: unknown[] = Array.isArray(body) ? body : [body];
+  const body = coerceBody(req.body);
+
+  let week: string | null = null;
+  let payloads: unknown[];
+
+  if (body && typeof body === 'object' && !Array.isArray(body) && 'records' in body) {
+    const envelope = body as { week?: unknown; records?: unknown };
+    if (typeof envelope.week !== 'string' || !WEEK_RE.test(envelope.week)) {
+      return res.status(400).json({ error: 'week must be an ISO week key, e.g. 2026-W35' });
+    }
+    if (!Array.isArray(envelope.records)) {
+      return res.status(400).json({ error: 'records must be an array' });
+    }
+    week = envelope.week;
+    payloads = envelope.records;
+  } else {
+    payloads = Array.isArray(body) ? body : [body];
+  }
 
   if (payloads.length === 0) {
     return res.status(400).json({ error: 'Empty payload' });
@@ -97,7 +130,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // A trigger test carries nothing else, and its whole purpose is to prove the path
   // works. Answer 200 so Helipad reports success, having stored nothing.
   if (entries.length === 0 && tests > 0) {
-    return res.status(200).json({ ok: true, written: 0, duplicates: 0, weeks: [], skipped, tests });
+    return res.status(200).json({ ok: true, written: 0, duplicates: 0, weekSizes: {}, skipped, tests });
   }
 
   // Nothing usable is worth surfacing: Helipad records the failed status against the
@@ -106,10 +139,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'No records carried a usable index' });
   }
 
+  // A record that does not belong to the stated week would be dropped by the rewrite
+  // without trace, so refuse rather than silently lose it.
+  if (week) {
+    const strays = entries.filter(e => isoWeekKey(e.parsed.ts) !== week);
+    if (strays.length > 0) {
+      return res.status(400).json({
+        error: `${strays.length} record(s) are not in ${week}`,
+        example: isoWeekKey(strays[0].parsed.ts)
+      });
+    }
+  }
+
   try {
-    const result = await storeBoosts(entries, Array.isArray(body) ? 'import' : 'webhook');
+    const result = await storeRawBoosts(entries, week ? 'import' : 'webhook');
+    const weekSizes: Record<string, number> = {};
+    if (week) {
+      weekSizes[week] = await replaceDerivedWeek(week, entries.map(e => e.parsed));
+    }
     // Exactly 200. Helipad treats anything else as a failed delivery.
-    return res.status(200).json({ ok: true, ...result, skipped, tests });
+    return res.status(200).json({ ok: true, ...result, weekSizes, skipped, tests });
   } catch (error) {
     console.error('Boost ingest failed:', error);
     return res.status(500).json({ error: 'Failed to store boost' });
