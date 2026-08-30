@@ -133,6 +133,35 @@ describe('/api/boosts/ingest', () => {
     expect(mockStoreBoosts.mock.calls[0][0][0].parsed.index).toBe(42);
   });
 
+  it("acknowledges Helipad's trigger test with 200 but stores nothing", async () => {
+    // The Test button exists to prove the path works, so it must see a 200. Storing it
+    // would park a synthetic record on index 99999, which dedup would later mistake for
+    // a genuine boost carrying that index.
+    const { req, res } = createMockReqRes('POST', {
+      ...webhookBody(99999),
+      app: 'Helipad',
+      podcast: 'Test Podcast',
+      message: 'This is a test trigger message'
+    });
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ ok: true, tests: 1, written: 0 }));
+    expect(mockStoreBoosts).not.toHaveBeenCalled();
+  });
+
+  it('still stores the real records in a batch that also carries a test boost', async () => {
+    const { req, res } = createMockReqRes('POST', [
+      webhookBody(1),
+      { ...webhookBody(99999), app: 'Helipad', podcast: 'Test Podcast', message: 'This is a test trigger message' }
+    ]);
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockStoreBoosts.mock.calls[0][0]).toHaveLength(1);
+    expect(mockStoreBoosts.mock.calls[0][0][0].parsed.index).toBe(1);
+  });
+
   it('refuses a batch larger than the cap', async () => {
     const { req, res } = createMockReqRes('POST', Array.from({ length: 201 }, (_, i) => webhookBody(i)));
     await handler(req, res);

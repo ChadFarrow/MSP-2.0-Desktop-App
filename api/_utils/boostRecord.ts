@@ -220,6 +220,22 @@ export function parseBoostPayload(body: unknown): ParsedBoost | null {
   };
 }
 
+/**
+ * Helipad's "Test" button on a trigger sends a synthetic boost built by test_trigger()
+ * in its src/triggers.rs, with a **hardcoded index of 99999**. That matters because the
+ * raw store deduplicates on index: leaving a test record at 99999 would silently shadow
+ * a genuine boost that later carried the same index in the same month.
+ *
+ * All four fields must match. Helipad fills every one of them with a fixed literal, so
+ * a real boost matching all four is not a case worth worrying about.
+ */
+export function isHelipadTestBoost(boost: ParsedBoost): boolean {
+  return boost.index === 99999 &&
+    boost.app === 'Helipad' &&
+    boost.podcast === 'Test Podcast' &&
+    boost.message === 'This is a test trigger message';
+}
+
 /** True when this payment is the MSP community-support split rather than some other recipient. */
 export function isMspSplit(boost: ParsedBoost): boolean {
   return boost.tlv.name === MSP_SUPPORT_RECIPIENT_NAME;

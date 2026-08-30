@@ -4,6 +4,7 @@ import {
   resolveTrack,
   toDerived,
   isMspSplit,
+  isHelipadTestBoost,
   isoWeekKey
 } from './boostRecord.js';
 
@@ -120,6 +121,47 @@ describe('isMspSplit', () => {
     const tlv = { ...V4VMUSIC_TLV } as Record<string, unknown>;
     delete tlv.name;
     expect(isMspSplit(parseBoostPayload(webhookBody(tlv))!)).toBe(false);
+  });
+});
+
+/** Exactly what Helipad's test_trigger() sends, per its src/triggers.rs. */
+const HELIPAD_TEST_BODY = {
+  direction: 'incoming',
+  index: 99999,
+  time: 1756400000,
+  value_msat: 100000,
+  value_msat_total: 100000,
+  action: 2,
+  sender: 'Test Sender',
+  app: 'Helipad',
+  message: 'This is a test trigger message',
+  podcast: 'Test Podcast',
+  episode: 'Test Episode',
+  tlv: JSON.stringify({
+    action: 'boost',
+    app_name: 'Helipad',
+    app_version: '0.16.9',
+    podcast: 'Test Podcast',
+    episode: 'Test Episode',
+    sender_name: 'Test Sender',
+    message: 'This is a test trigger message',
+    value_msat: 100000,
+    value_msat_total: 100000
+  })
+};
+
+describe('isHelipadTestBoost', () => {
+  it('recognizes the synthetic boost the trigger Test button sends', () => {
+    expect(isHelipadTestBoost(parseBoostPayload(HELIPAD_TEST_BODY)!)).toBe(true);
+  });
+
+  it('needs every marker, so a real boost that shares one of them is kept', () => {
+    // index 99999 will eventually be a genuine invoice index on a busy node.
+    const realBoostAt99999 = { ...HELIPAD_TEST_BODY, app: 'fountain', podcast: 'Homegrown Hits', message: 'great set' };
+    expect(isHelipadTestBoost(parseBoostPayload(realBoostAt99999)!)).toBe(false);
+
+    const sameTextDifferentIndex = { ...HELIPAD_TEST_BODY, index: 12345 };
+    expect(isHelipadTestBoost(parseBoostPayload(sameTextDifferentIndex)!)).toBe(false);
   });
 });
 
