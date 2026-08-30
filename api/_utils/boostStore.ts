@@ -83,24 +83,28 @@ async function listAll(prefix: string): Promise<{ pathname: string; url: string 
 }
 
 /**
- * Read a blob, bypassing the CDN.
+ * Read a JSON blob, defeating the CDN, and distinguish "absent" from "failed".
  *
- * A blob written with addRandomSuffix:false keeps a stable public URL, and Vercel's
- * CDN caches that URL. The derived week file is read-modify-write, so a cached read
- * merges new records onto a stale base and *shrinks* the stored file — silently, and
- * worse the more often a week is touched. no-store on the read and a zero max-age on
- * the write are both needed: the first fixes this process, the second stops an already
- * cached copy being served to the next one.
+ * Two things went wrong here before, and they compounded.
+ *
+ * `cache: 'no-store'` does NOT bypass a CDN. It governs the *client's* HTTP cache, and
+ * Node's fetch has none, so the request went out unchanged and Vercel's edge kept
+ * serving the copy it had. A query-string cache-buster does work, because the CDN keys
+ * on the full URL. The `cacheControlMaxAge: 0` on the write is still needed for anything
+ * that reads these blobs without busting.
+ *
+ * More seriously, a failed read used to be reported as an empty result, and the caller
+ * would then merge its batch onto "nothing" and overwrite the week — so one transient
+ * failure silently destroyed every record in that week. Absent (`null`) and failed
+ * (throws) are now different outcomes, and only one of them is safe to write over.
  */
 async function fetchJson<T>(url: string): Promise<T | null> {
-  try {
-    const response = await fetch(url, { cache: 'no-store' });
-    if (!response.ok) return null;
-    const text = await response.text();
-    return text ? (JSON.parse(text) as T) : null;
-  } catch {
-    return null;
-  }
+  const bust = `${url}${url.includes('?') ? '&' : '?'}__fresh=${Date.now()}`;
+  const response = await fetch(bust, { headers: { 'cache-control': 'no-cache' } });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`Blob read failed: ${response.status} ${url}`);
+  const text = await response.text();
+  return text ? (JSON.parse(text) as T) : null;
 }
 
 function isAlreadyExists(error: unknown): boolean {
@@ -124,9 +128,13 @@ async function putJson(pathname: string, value: unknown, allowOverwrite: boolean
 /** Read one week's derived records, or an empty list when the week has none yet. */
 export async function readDerivedWeek(weekKey: string): Promise<DerivedBoost[]> {
   const path = derivedPath(weekKey);
+  // list() is a server-side API call, not a CDN read, so a missing blob here really is
+  // a week that does not exist yet — the one case where writing a fresh file is right.
   const blobs = await listAll(path);
   const blob = blobs.find(b => b.pathname === path);
   if (!blob) return [];
+  // Anything else propagates. The caller overwrites this week, so guessing "empty" on a
+  // failed read is how a transient error turns into permanent data loss.
   return (await fetchJson<DerivedBoost[]>(blob.url)) ?? [];
 }
 
@@ -134,6 +142,8 @@ export async function readDerivedWeek(weekKey: string): Promise<DerivedBoost[]> 
 export async function readAllDerived(): Promise<DerivedBoost[]> {
   const blobs = await listAll(DERIVED_PREFIX);
   blobs.sort((a, b) => a.pathname.localeCompare(b.pathname));
+  // A week that cannot be read is an error, not an empty week. Reporting a short total
+  // as though it were the truth is what made the loss above invisible for so long.
   const weeks = await Promise.all(blobs.map(b => fetchJson<DerivedBoost[]>(b.url)));
   return weeks.flatMap(week => week ?? []);
 }

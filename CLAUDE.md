@@ -422,15 +422,30 @@ drop a real split. The coverage endpoint's `everything` view is a diagnostic on 
 is on the node and deliberately carries **no chart at all**, so it can never be mistaken
 for one.
 
-**A mutable blob must not be cached, and must not be read through the cache.** A blob
-written with `addRandomSuffix: false` keeps a stable public URL, and Vercel's CDN caches
-that URL — public blobs default to a one-month `cacheControlMaxAge`. The derived week
-file is read-modify-write, so a cached read merges new records onto a stale base and
-**shrinks** the stored file. It is silent, and it gets worse the more often a week is
-touched. Both halves are needed: `cache: 'no-store'` on the read fixes the current
-process, `cacheControlMaxAge: 0` on the write stops an already-cached copy reaching the
-next one. `storeBoosts()` returns `weekSizes` for exactly this reason — send two records,
-see a week report one, and the loss is visible on the first batch instead of after 7,000.
+**A mutable blob must not be cached, must not be read through the cache, and a read
+that fails must never be treated as an empty one.** All three, and the third is the one
+that actually destroys data. A blob written with `addRandomSuffix: false` keeps a stable
+public URL and Vercel's CDN caches it — public blobs default to a one-month
+`cacheControlMaxAge`. The derived week file is read-modify-write, so a stale read merges
+onto an old base and rewrites the file smaller.
+
+- **`cache: 'no-store'` does not fix this.** It governs the *client's* HTTP cache, and
+  Node's fetch has none, so the request goes out unchanged and the edge serves what it
+  has. A first attempt at this fix used it and recovered only 584 of 3,071 missing
+  records. Bust the CDN with a distinct URL (`?__fresh=<now>`); keep
+  `cacheControlMaxAge: 0` on the write for any reader that does not.
+- **Absent and unreadable are different outcomes.** `readDerivedWeek` used to return `[]`
+  for both, and its caller overwrites the week — so one transient failure silently
+  deleted every record in that week. `list()` is a server-side API call and is *not*
+  CDN-cached, so "no blob" from `list()` genuinely means the week does not exist yet and
+  is safe to create. Anything else must throw.
+- Measured cost of getting this wrong: a 7,027-record import left **4,540** stored, with
+  39 of 57 weeks short and the shortfalls landing on exact multiples of the 50-record
+  batch size. Raw is immutable and was complete throughout, which is the only reason it
+  was all recoverable — **that is what the raw/derived split is for.**
+- `storeBoosts()` returns `weekSizes` so a caller can compare stored size against what it
+  sent. Without that there is no feedback at all, which is why this survived a full
+  import, a full re-import and a passing test suite.
 
 **The same hazard exists elsewhere in this repo and is not yet fixed.**
 `accounts/index/<emailHash>.json` (`accountStore.ts`) is also read-modify-write over a

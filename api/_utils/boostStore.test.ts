@@ -161,6 +161,7 @@ describe('storeBoosts', () => {
     );
     mockFetch.mockResolvedValue({
       ok: true,
+      status: 200,
       text: () => Promise.resolve(JSON.stringify([
         { index: 1, ts: 1, trackTitle: 'STALE' },
         { index: 99, ts: 2, trackTitle: 'KEEP ME' }
@@ -176,10 +177,9 @@ describe('storeBoosts', () => {
     expect(merged.find((r: { index: number }) => r.index === 99).trackTitle).toBe('KEEP ME');
   });
 
-  it('never lets a mutable blob be cached, and never reads one through the cache', async () => {
-    // The derived week file is read-modify-write under a stable URL. If the CDN serves
-    // a stale copy on read, the merge lands on an old base and SHRINKS the stored file,
-    // silently and worse the more often a week is touched.
+  it('busts the CDN on every read and never lets a mutable blob be cached', async () => {
+    // cache: 'no-store' does NOT bypass a CDN — it governs the client's own HTTP cache,
+    // and Node's fetch has none. Only a distinct URL forces the edge to re-fetch.
     mockList.mockImplementation(({ prefix }: { prefix: string }) =>
       Promise.resolve({
         blobs: prefix.startsWith('boosts/derived/')
@@ -189,14 +189,52 @@ describe('storeBoosts', () => {
         hasMore: false
       })
     );
-    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('[]') });
+    mockFetch.mockResolvedValue({ ok: true, status: 200, text: () => Promise.resolve('[]') });
 
     await storeBoosts([{ parsed: boost(1), payload: {} }], 'import');
 
-    expect(mockFetch).toHaveBeenCalledWith('https://blob.example/week', { cache: 'no-store' });
+    const readUrl = mockFetch.mock.calls[0][0] as string;
+    expect(readUrl).toMatch(/^https:\/\/blob\.example\/week\?__fresh=\d+$/);
     for (const call of mockPut.mock.calls) {
       expect(call[2], String(call[0])).toMatchObject({ cacheControlMaxAge: 0 });
     }
+  });
+
+  it('refuses to overwrite a week whose existing records could not be read', async () => {
+    // The failure that cost 2,527 records: a failed read was reported as an empty week,
+    // so the caller merged its batch onto nothing and overwrote everything already there.
+    mockList.mockImplementation(({ prefix }: { prefix: string }) =>
+      Promise.resolve({
+        blobs: prefix.startsWith('boosts/derived/')
+          ? [{ pathname: 'boosts/derived/2026-W35.json', url: 'https://blob.example/week' }]
+          : [],
+        cursor: undefined,
+        hasMore: false
+      })
+    );
+    mockFetch.mockResolvedValue({ ok: false, status: 500, text: () => Promise.resolve('') });
+
+    await expect(storeBoosts([{ parsed: boost(1), payload: {} }], 'import'))
+      .rejects.toThrow(/Blob read failed: 500/);
+
+    // Nothing may be written to that week on a failed read.
+    expect(mockPut.mock.calls.filter(c => String(c[0]).startsWith('boosts/derived/'))).toHaveLength(0);
+  });
+
+  it('treats a 404 as a week that does not exist yet, which is safe to create', async () => {
+    mockList.mockImplementation(({ prefix }: { prefix: string }) =>
+      Promise.resolve({
+        blobs: prefix.startsWith('boosts/derived/')
+          ? [{ pathname: 'boosts/derived/2026-W35.json', url: 'https://blob.example/week' }]
+          : [],
+        cursor: undefined,
+        hasMore: false
+      })
+    );
+    mockFetch.mockResolvedValue({ ok: false, status: 404, text: () => Promise.resolve('') });
+
+    const result = await storeBoosts([{ parsed: boost(1), payload: {} }], 'import');
+    expect(result.weekSizes).toEqual({ '2026-W35': 1 });
   });
 
   it('reports the stored size of every week it touched', async () => {
