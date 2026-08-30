@@ -154,6 +154,44 @@ describe('/api/boosts/coverage', () => {
     expect(serialized).not.toContain('a-real-person');
   });
 
+  it('charts only the MSP splits, and gives the node-wide view no chart at all', async () => {
+    mockReadAllDerived.mockResolvedValue([
+      derived({ index: 1, isMspSplit: true, actionName: 'stream', trackKey: 'a', trackTitle: 'Vampire' }),
+      derived({ index: 2, isMspSplit: false, actionName: 'stream', trackKey: 'z', trackTitle: 'Not An MSP Feed' })
+    ]);
+
+    const { req, res } = createMockReqRes();
+    await handler(req, res);
+    const body = res.json.mock.calls[0][0];
+
+    expect(body.msp.topPlays).toEqual([
+      { trackKey: 'a', trackTitle: 'Vampire', trackArtist: undefined, count: 1 }
+    ]);
+    // A diagnostic view must never be mistakable for the chart.
+    expect(body.everything.topPlays).toBeUndefined();
+    expect(body.everything.topBoosts).toBeUndefined();
+    expect(JSON.stringify(body.msp)).not.toContain('Not An MSP Feed');
+  });
+
+  it('collapses a listener run into one play but counts each boost', async () => {
+    mockReadAllDerived.mockResolvedValue([
+      derived({ index: 1, actionName: 'stream', ts: 1_756_400_000, listenerKey: 'x', trackKey: 'a' }),
+      derived({ index: 2, actionName: 'stream', ts: 1_756_400_060, listenerKey: 'x', trackKey: 'a' }),
+      derived({ index: 3, actionName: 'stream', ts: 1_756_400_120, listenerKey: 'x', trackKey: 'a' }),
+      derived({ index: 4, actionName: 'boost', trackKey: 'a' }),
+      derived({ index: 5, actionName: 'auto', trackKey: 'a' })
+    ]);
+
+    const { req, res } = createMockReqRes();
+    await handler(req, res);
+    const { msp } = res.json.mock.calls[0][0];
+
+    expect(msp.streamRecords).toBe(3);
+    expect(msp.plays).toBe(1);
+    expect(msp.topPlays[0].count).toBe(1);
+    expect(msp.topBoosts[0].count).toBe(2);
+  });
+
   it('reports a read failure rather than an empty but plausible report', async () => {
     mockReadAllDerived.mockRejectedValue(new Error('blob down'));
     const { req, res } = createMockReqRes();
