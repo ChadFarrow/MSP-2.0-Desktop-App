@@ -20,6 +20,10 @@
     {
       "source": "/auth/verify",
       "destination": "/"
+    },
+    {
+      "source": "/charts",
+      "destination": "/"
     }
   ],
   "headers": [
