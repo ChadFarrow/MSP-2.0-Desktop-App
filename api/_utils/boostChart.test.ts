@@ -111,6 +111,66 @@ describe('the two lists never overlap', () => {
   });
 });
 
+describe('merging a track that resolved under two names', () => {
+  it('sums a track split across two spellings of its feed name', () => {
+    // Observed live: rank 1 with 4 boosts and rank 10 with 1, same song, because Helipad
+    // reported the feed as "Technopolymere - Bacalao" for some records and
+    // "Technopolymere" for others. The counts belong together.
+    const rows = topTracks([
+      record({ index: 1, trackKey: 'guid:a', trackTitle: "When You're Smiling", trackArtist: 'Technopolymere - Bacalao' }),
+      record({ index: 2, trackKey: 'guid:a', trackTitle: "When You're Smiling", trackArtist: 'Technopolymere - Bacalao' }),
+      record({ index: 3, trackKey: 'link:b', trackTitle: "When You're Smiling", trackArtist: 'Technopolymere' })
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].count).toBe(3);
+    // The fuller name is the more useful label.
+    expect(rows[0].trackArtist).toBe('Technopolymere - Bacalao');
+  });
+
+  it('merges two rows that are identical, which is what collided the React key', () => {
+    const rows = topTracks([
+      record({ index: 1, trackKey: 'guid:a', trackTitle: 'Victim [432Hz]', trackArtist: 'Victim [432Hz] - Matt Finlay' }),
+      record({ index: 2, trackKey: 'link:b', trackTitle: 'Victim [432Hz]', trackArtist: 'Victim [432Hz] - Matt Finlay' })
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].count).toBe(2);
+  });
+
+  it('keeps two different songs apart even when they share a title', () => {
+    const rows = topTracks([
+      record({ index: 1, trackKey: 'guid:a', trackTitle: 'Exist', trackArtist: 'THERAPY IN SESSION' }),
+      record({ index: 2, trackKey: 'guid:b', trackTitle: 'Exist', trackArtist: 'Some Other Band' })
+    ]);
+    expect(rows).toHaveLength(2);
+  });
+
+  it('ignores case and accents when deciding two names are the same', () => {
+    const rows = topTracks([
+      record({ index: 1, trackKey: 'a', trackTitle: 'Midna', trackArtist: 'Technopolymère' }),
+      record({ index: 2, trackKey: 'b', trackTitle: 'MIDNA', trackArtist: 'technopolymere' })
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].count).toBe(2);
+  });
+
+  it('leaves untitled rows alone rather than collapsing them together', () => {
+    const rows = topTracks([
+      record({ index: 1, trackKey: 'a', trackTitle: undefined, trackArtist: undefined }),
+      record({ index: 2, trackKey: 'b', trackTitle: undefined, trackArtist: undefined })
+    ]);
+    expect(rows).toHaveLength(2);
+  });
+
+  it('still ranks by count after merging', () => {
+    const rows = topTracks([
+      record({ index: 1, trackKey: 'a', trackTitle: 'Loner', trackArtist: 'Band A' }),
+      record({ index: 2, trackKey: 'b', trackTitle: 'Split', trackArtist: 'Band B - X' }),
+      record({ index: 3, trackKey: 'c', trackTitle: 'Split', trackArtist: 'Band B' })
+    ]);
+    expect(rows.map(r => [r.trackTitle, r.count])).toEqual([['Split', 2], ['Loner', 1]]);
+  });
+});
+
 describe('topTracks', () => {
   it('ranks by count and carries the title and artist', () => {
     const rows = topTracks([
@@ -141,13 +201,13 @@ describe('topTracks', () => {
   });
 
   it('drops records that identify no track', () => {
-    const many = Array.from({ length: 15 }, (_, i) => record({ index: i, trackKey: `t${i}` }));
+    const many = Array.from({ length: 15 }, (_, i) => record({ index: i, trackKey: `t${i}`, trackTitle: `Track ${i}` }));
     expect(topTracks([...many, record({ index: 99, trackKey: undefined })])).toHaveLength(15);
   });
 
   it('returns the whole ranking when no limit is given, and a slice when one is', () => {
     // The all-time chart wants everything; a month wants a top ten. Callers say which.
-    const many = Array.from({ length: 15 }, (_, i) => record({ index: i, trackKey: `t${i}` }));
+    const many = Array.from({ length: 15 }, (_, i) => record({ index: i, trackKey: `t${i}`, trackTitle: `Track ${i}` }));
     expect(topTracks(many)).toHaveLength(15);
     expect(topTracks(many, 3)).toHaveLength(3);
   });
