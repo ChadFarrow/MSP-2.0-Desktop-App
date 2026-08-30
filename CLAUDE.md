@@ -269,6 +269,7 @@ Vercel serverless functions:
 - `hosted/` - MSP feed hosting endpoints (create, update, delete, backup/restore)
 - `boosts/ingest.ts` - Receives Helipad boost records (webhook or import batch). See "Boost capture" below
 - `boosts/coverage.ts` - Admin-only aggregate report over the derived boost projection. Counts only — it must never return a raw record
+- `boosts/chart.ts` - The **public** music chart behind `/charts`. Unauthenticated, so what it may emit is defined narrowly: MSP splits only, **counts and never amounts**, and named tracks only. Cached at the CDN (`s-maxage=3600`) because the data only moves when the importer runs
 - `_utils/boostRecord.ts` - Parsing, the track-resolution ladder, and the PII boundary (`toDerived`)
 - `_utils/boostStore.ts` - Blob paths, raw writes, derived week merge
 - `feed/[npub]/[guid].ts` - Nostr-stored feed retrieval
@@ -454,6 +455,28 @@ for one.
   complete, and a chart does not need to be real-time.
 - Reading derived for the chart is fine through the cache — 60 seconds of lag on a
   weekly chart is not worth a single line of code.
+
+**The public chart at `/charts` publishes counts, never amounts.** That is a decision, not
+an oversight: the chart is about what people listened to, and per-track earnings for
+artists who never agreed to publication are not MSP's to give away. `api/boosts/chart.ts`
+carries no sats field at all and a test asserts none appears in the response, alongside
+the usual checks that no listener field or internal track key escapes. It also omits rows
+that resolve to no title — a row nobody can read is not a chart entry — while still
+counting them in the totals. The page states plainly that it is a sample rather than a
+total, because MSP only sees a payment when its own split was actually paid and player
+apps routinely drop small splits.
+
+**Feed titles arrive HTML-encoded.** `decodeEntities()` in `boostRecord.ts` runs on every
+track title and artist. Real data: an album called `Various &amp; Assorted` reached the
+chart with the entity intact, which shows an artist their own title misspelled. The
+ampersand is decoded **last**, or `&amp;lt;` would decode twice into `<`.
+
+**Verify a mobile layout with CDP, never with `--window-size`.** This bit again while
+building the page: a `--headless=new` screenshot at 390px looked badly clipped, and
+measuring with `Emulation.setDeviceMetricsOverride` showed `scrollWidth === clientWidth`
+and zero overflow. The screenshot was the artifact; the layout was fine. Measure
+`document.documentElement.scrollWidth` against `clientWidth`, and check interactive
+targets against WCAG 2.5.8's 24x24 CSS px in the same pass.
 
 **Committed tooling lives in `tools/`, not `scripts/`.** `.gitignore` ignores `scripts/`
 entirely — it is Chad's local scratch and feed-backup directory, and a script written

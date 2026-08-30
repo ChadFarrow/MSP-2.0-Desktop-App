@@ -2128,3 +2128,158 @@ body {
     width: 100%;
   }
 }
+
+/* ---- Public charts page (/charts) ---------------------------------------
+   Uses the app's existing tokens throughout, so the light theme comes free. */
+
+.charts-main {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.charts-intro {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  line-height: 1.5;
+  margin: 0 0 1.5rem;
+  max-width: 46rem;
+}
+
+.charts-loading,
+.charts-error {
+  color: var(--text-muted);
+  padding: 2rem 0;
+}
+
+.charts-error { color: var(--error); }
+
+/* Period picker. Scrolls sideways rather than wrapping into a wall of buttons. */
+.chart-periods {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.chart-period {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chart-period:hover { border-color: var(--border-focus); color: var(--text-primary); }
+
+.chart-period.is-active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #fff;
+}
+
+.chart-summary {
+  color: var(--text-muted);
+  margin: 0 0 1.25rem;
+  font-size: 0.9rem;
+}
+
+.chart-summary strong { color: var(--text-primary); }
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+
+.chart-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.chart-panel-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.15rem;
+  color: var(--text-primary);
+}
+
+.chart-panel-blurb {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.chart-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chart-row {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr auto;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.chart-row:first-child { border-top: none; }
+
+.chart-rank {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+}
+
+.chart-track { min-width: 0; }
+
+.chart-title {
+  display: block;
+  color: var(--text-primary);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.chart-artist {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.chart-count {
+  color: var(--accent-secondary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chart-unit {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+.chart-empty { color: var(--text-muted); font-size: 0.9rem; margin: 0; }
+
+.charts-note {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  max-width: 46rem;
+}
+
+.charts-note p { margin: 0 0 0.6rem; }
+.charts-note strong { color: var(--text-secondary); }

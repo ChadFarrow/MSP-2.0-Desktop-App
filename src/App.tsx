@@ -23,6 +23,7 @@ import { Editor } from './components/Editor/Editor';
 import { PublisherEditor } from './components/Editor/PublisherEditor';
 import { AdminPage } from './components/admin/AdminPage';
 import { VerifyMagicLink } from './pages/VerifyMagicLink';
+import { ChartsPage } from './pages/ChartsPage';
 import type { Album, Track } from './types/feed';
 // The 40px header logo. Points at the 192px file in public/ rather than importing
 // assets/msp-logo.png, which is a 1024x1024 PNG weighing 1,810,143 bytes — the
@@ -528,12 +529,21 @@ function AppContent() {
 // Main App
 function App() {
   const isAdminRoute = window.location.pathname === '/admin';
+  const isChartsRoute = window.location.pathname === '/charts';
   const isVerifyRoute = window.location.pathname === '/auth/verify';
 
   if (isVerifyRoute) {
     return (
       <ThemeProvider>
         <VerifyMagicLink />
+      </ThemeProvider>
+    );
+  }
+
+  if (isChartsRoute) {
+    return (
+      <ThemeProvider>
+        <ChartsPage />
       </ThemeProvider>
     );
   }

@@ -6,6 +6,7 @@ import {
   isMspSplit,
   isHelipadTestBoost,
   hashListener,
+  decodeEntities,
   isoWeekKey
 } from './boostRecord.js';
 
@@ -176,6 +177,26 @@ describe('isHelipadTestBoost', () => {
 
     const sameTextDifferentIndex = { ...HELIPAD_TEST_BODY, index: 12345 };
     expect(isHelipadTestBoost(parseBoostPayload(sameTextDifferentIndex)!)).toBe(false);
+  });
+});
+
+describe('decodeEntities', () => {
+  it("decodes the entities feed titles actually carry", () => {
+    // Real data: an album called "Various &amp; Assorted" reached the chart with the
+    // entity intact, showing the artist their own title misspelled.
+    expect(decodeEntities("Various &amp; Assorted")).toBe("Various & Assorted");
+    expect(decodeEntities("&quot;Quoted&quot;")).toBe('"Quoted"');
+    expect(decodeEntities("Rock &lt;3 Roll")).toBe("Rock <3 Roll");
+    expect(decodeEntities("Caf&#233;")).toBe("Café");
+    expect(decodeEntities("Caf&#xe9;")).toBe("Café");
+  });
+
+  it("decodes the ampersand last, so a double-encoded entity is not decoded twice", () => {
+    expect(decodeEntities("&amp;lt;")).toBe("&lt;");
+  });
+
+  it("leaves a title with no entities untouched", () => {
+    expect(decodeEntities("Bakalator")).toBe("Bakalator");
   });
 });
 
