@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Mock } from 'vitest';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const { mockStoreBoosts, mockIsConfigured } = vi.hoisted(() => ({
-  mockStoreBoosts: vi.fn(),
+const { mockStoreRaw, mockReplaceWeek, mockIsConfigured } = vi.hoisted(() => ({
+  mockStoreRaw: vi.fn(),
+  mockReplaceWeek: vi.fn(),
   mockIsConfigured: vi.fn()
 }));
 vi.mock('../_utils/boostStore.js', () => ({
-  storeBoosts: mockStoreBoosts,
+  storeRawBoosts: mockStoreRaw,
+  replaceDerivedWeek: mockReplaceWeek,
   isBoostStoreConfigured: mockIsConfigured
 }));
 
@@ -62,7 +64,8 @@ describe('/api/boosts/ingest', () => {
     __resetRateLimiterForTests();
     process.env.HELIPAD_WEBHOOK_TOKEN = TOKEN;
     mockIsConfigured.mockReturnValue(true);
-    mockStoreBoosts.mockResolvedValue({ written: 1, duplicates: 0, weeks: ['2026-W35'] });
+    mockStoreRaw.mockResolvedValue({ written: 1, duplicates: 0 });
+    mockReplaceWeek.mockResolvedValue(1);
   });
 
   it('rejects anything but POST', async () => {
@@ -90,7 +93,7 @@ describe('/api/boosts/ingest', () => {
       await handler(req, res);
       expect(res.status).toHaveBeenCalledWith(401);
     }
-    expect(mockStoreBoosts).not.toHaveBeenCalled();
+    expect(mockStoreRaw).not.toHaveBeenCalled();
   });
 
   it('stores a single webhook body and answers exactly 200', async () => {
@@ -99,8 +102,8 @@ describe('/api/boosts/ingest', () => {
 
     // Helipad counts a delivery successful only on 200. Not 201, not 204.
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(mockStoreBoosts).toHaveBeenCalledTimes(1);
-    const [entries, source] = mockStoreBoosts.mock.calls[0];
+    expect(mockStoreRaw).toHaveBeenCalledTimes(1);
+    const [entries, source] = mockStoreRaw.mock.calls[0];
     expect(source).toBe('webhook');
     expect(entries).toHaveLength(1);
     expect(entries[0].parsed.index).toBe(10695);
@@ -112,8 +115,8 @@ describe('/api/boosts/ingest', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(mockStoreBoosts.mock.calls[0][1]).toBe('import');
-    expect(mockStoreBoosts.mock.calls[0][0]).toHaveLength(2);
+    expect(mockStoreRaw.mock.calls[0][1]).toBe('webhook');
+    expect(mockStoreRaw.mock.calls[0][0]).toHaveLength(2);
   });
 
   it('counts unparseable records as skipped but still stores the rest', async () => {
@@ -122,7 +125,7 @@ describe('/api/boosts/ingest', () => {
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ ok: true, skipped: 1 }));
-    expect(mockStoreBoosts.mock.calls[0][0]).toHaveLength(1);
+    expect(mockStoreRaw.mock.calls[0][0]).toHaveLength(1);
   });
 
   it('parses a body that arrived as a raw string instead of dropping the boost', async () => {
@@ -130,7 +133,7 @@ describe('/api/boosts/ingest', () => {
     const { req, res } = createMockReqRes('POST', JSON.stringify(webhookBody(42)));
     await handler(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(mockStoreBoosts.mock.calls[0][0][0].parsed.index).toBe(42);
+    expect(mockStoreRaw.mock.calls[0][0][0].parsed.index).toBe(42);
   });
 
   it("acknowledges Helipad's trigger test with 200 but stores nothing", async () => {
@@ -147,7 +150,7 @@ describe('/api/boosts/ingest', () => {
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ ok: true, tests: 1, written: 0 }));
-    expect(mockStoreBoosts).not.toHaveBeenCalled();
+    expect(mockStoreRaw).not.toHaveBeenCalled();
   });
 
   it('still stores the real records in a batch that also carries a test boost', async () => {
@@ -158,21 +161,67 @@ describe('/api/boosts/ingest', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(mockStoreBoosts.mock.calls[0][0]).toHaveLength(1);
-    expect(mockStoreBoosts.mock.calls[0][0][0].parsed.index).toBe(1);
+    expect(mockStoreRaw.mock.calls[0][0]).toHaveLength(1);
+    expect(mockStoreRaw.mock.calls[0][0][0].parsed.index).toBe(1);
   });
 
   it('refuses a batch larger than the cap', async () => {
-    const { req, res } = createMockReqRes('POST', Array.from({ length: 201 }, (_, i) => webhookBody(i)));
+    const { req, res } = createMockReqRes('POST', Array.from({ length: 501 }, (_, i) => webhookBody(i)));
     await handler(req, res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(mockStoreBoosts).not.toHaveBeenCalled();
+    expect(mockStoreRaw).not.toHaveBeenCalled();
   });
 
   it('refuses a payload where nothing carries a usable index', async () => {
     const { req, res } = createMockReqRes('POST', { direction: 'incoming', tlv: '{}' });
     await handler(req, res);
     expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it('writes a whole week when sent the week envelope, and reports its stored size', async () => {
+    mockReplaceWeek.mockResolvedValue(2);
+    const { req, res } = createMockReqRes('POST', {
+      week: '2025-W35',
+      records: [webhookBody(1), webhookBody(2)]
+    });
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockStoreRaw.mock.calls[0][1]).toBe('import');
+    expect(mockReplaceWeek).toHaveBeenCalledWith('2025-W35', expect.arrayContaining([
+      expect.objectContaining({ index: 1 })
+    ]));
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ weekSizes: { '2025-W35': 2 } }));
+  });
+
+  it('never touches derived for a plain webhook, which cannot know a whole week', async () => {
+    const { req, res } = createMockReqRes('POST', webhookBody(10695));
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockStoreRaw).toHaveBeenCalledTimes(1);
+    expect(mockReplaceWeek).not.toHaveBeenCalled();
+  });
+
+  it('refuses a record that is not in the stated week rather than dropping it', async () => {
+    // The rewrite replaces the file outright, so a stray record would vanish silently.
+    const { req, res } = createMockReqRes('POST', {
+      week: '2025-W35',
+      records: [webhookBody(1), { ...webhookBody(2), time: Math.floor(Date.UTC(2020, 0, 8) / 1000) }]
+    });
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(mockReplaceWeek).not.toHaveBeenCalled();
+  });
+
+  it('rejects a malformed week key', async () => {
+    for (const week of ['2026-35', 'last week', '', 26]) {
+      const { req, res } = createMockReqRes('POST', { week, records: [webhookBody(1)] });
+      await handler(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    }
+    expect(mockReplaceWeek).not.toHaveBeenCalled();
   });
 
   it('rate limits per IP once the hourly budget is spent', async () => {
@@ -187,7 +236,7 @@ describe('/api/boosts/ingest', () => {
   });
 
   it('reports a storage failure as a 500 rather than a false success', async () => {
-    mockStoreBoosts.mockRejectedValue(new Error('blob down'));
+    mockStoreRaw.mockRejectedValue(new Error('blob down'));
     const { req, res } = createMockReqRes('POST', webhookBody(1));
     await handler(req, res);
     expect(res.status).toHaveBeenCalledWith(500);

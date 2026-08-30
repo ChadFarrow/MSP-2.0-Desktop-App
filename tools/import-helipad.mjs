@@ -42,8 +42,8 @@ const REQUIRED = ['HELIPAD_URL', 'HELIPAD_PASSWORD', 'MSP_INGEST_URL', 'HELIPAD_
  * past the platform's default timeout. 25 keeps a request comfortably short; a timeout
  * is not fatal either way, since the store deduplicates and the walk is re-runnable.
  */
-const DEFAULT_BATCH = 25;
-const MAX_BATCH = 200;
+const DEFAULT_BATCH = 500;
+const MAX_BATCH = 500;
 
 function parseArgs(argv) {
   const args = { page: 100, from: null, dryRun: false, batch: DEFAULT_BATCH };
@@ -145,6 +145,28 @@ async function postBatch(ingestUrl, token, batch) {
   return JSON.parse(text);
 }
 
+/** ISO-8601 week key, matching isoWeekKey() in api/_utils/boostRecord.ts. */
+function isoWeek(unixSeconds) {
+  const d = new Date(unixSeconds * 1000);
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dayNumber = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - dayNumber);
+  const yearStart = Date.UTC(t.getUTCFullYear(), 0, 1);
+  const week = Math.ceil(((t.getTime() - yearStart) / 86400000 + 1) / 7);
+  return `${t.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
+async function postWeek(ingestUrl, token, week, records) {
+  const response = await fetch(ingestUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ week, records })
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`Ingest rejected ${week}: ${response.status} ${text}`);
+  return JSON.parse(text);
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
@@ -168,61 +190,82 @@ async function main() {
     await getJson(`${baseUrl}/api/v1/index`, headers), 'newest index'
   );
 
-  let pending = [];
-  const totals = { fetched: 0, written: 0, duplicates: 0, skipped: 0 };
-
-  const flush = async () => {
-    while (pending.length) {
-      const batch = pending.splice(0, args.batch);
-      if (args.dryRun) {
-        console.log(`  [dry run] would post ${batch.length} records`);
-        continue;
-      }
-      const result = await postBatch(ingestUrl, ingestToken, batch);
-      totals.written += result.written ?? 0;
-      totals.duplicates += result.duplicates ?? 0;
-      totals.skipped += result.skipped ?? 0;
-      console.log(`  posted ${batch.length}: ${result.written} new, ${result.duplicates} already stored`);
-    }
-  };
-
   /**
-   * Walk one list backwards from an index. Helipad keeps boosts and streams in two
-   * separate lists, so both must be walked — streams are the play signal and are the
-   * larger of the two. They share one LND invoice index space, so the indexes across
-   * the two lists never collide and the store's dedup stays correct.
+   * Walk one list backwards. Helipad keeps boosts and streams in two separate lists,
+   * so both must be walked — streams are the play signal and are the larger of the two.
+   * They share one LND invoice index space, so indexes never collide between them.
    */
   const walk = async (endpoint) => {
+    const out = [];
     let cursor = startIndex;
-    let count = 0;
     while (cursor > 0) {
       const url = `${baseUrl}/api/v1/${endpoint}?index=${cursor}&count=${args.page}&old=true`;
       const records = unwrapList(await getJson(url, headers), endpoint);
       if (records.length === 0) break;
-
-      count += records.length;
-      totals.fetched += records.length;
-      pending.push(...records);
-      if (pending.length >= args.batch) await flush();
-
+      out.push(...records);
       const lowest = Math.min(...records.map(r => Number(r.index)).filter(Number.isFinite));
       if (!Number.isFinite(lowest) || lowest <= 0) break;
       // Step past the oldest record in this page, or the walk repeats it forever.
       cursor = lowest - 1;
     }
-    await flush();
-    console.log(`  ${endpoint}: ${count} records`);
+    console.log(`  ${endpoint}: ${out.length} records`);
+    return out;
   };
 
+  const all = [];
   for (const endpoint of ['boosts', 'streams']) {
-    console.log(`\nWalking /api/v1/${endpoint} backwards from index ${startIndex}, ${args.page} at a time`);
-    await walk(endpoint);
+    console.log(`\nWalking /api/v1/${endpoint} backwards from index ${startIndex}`);
+    all.push(...await walk(endpoint));
+  }
+
+  /**
+   * Post one whole ISO week at a time.
+   *
+   * The endpoint rewrites a week's derived file from exactly what it is sent, so it
+   * must receive the complete week. That is what removes the read-modify-write cycle,
+   * and with it a CDN cache that silently truncated weeks during earlier imports.
+   */
+  const byWeek = new Map();
+  for (const record of all) {
+    const week = isoWeek(Number(record.time));
+    if (!byWeek.has(week)) byWeek.set(week, []);
+    byWeek.get(week).push(record);
+  }
+
+  const weeks = [...byWeek.keys()].sort();
+  console.log(`\n${all.length} records across ${weeks.length} weeks`);
+
+  const totals = { written: 0, duplicates: 0, skipped: 0, stored: 0, oversized: [] };
+  for (const week of weeks) {
+    const records = byWeek.get(week);
+    if (records.length > args.batch) {
+      // Splitting would mean the second half overwrote the first. Refuse instead.
+      totals.oversized.push(`${week} (${records.length})`);
+      console.log(`  ${week}: SKIPPED, ${records.length} records exceeds --batch ${args.batch}`);
+      continue;
+    }
+    if (args.dryRun) {
+      console.log(`  [dry run] ${week}: would post ${records.length}`);
+      continue;
+    }
+    const result = await postWeek(ingestUrl, ingestToken, week, records);
+    totals.written += result.written ?? 0;
+    totals.duplicates += result.duplicates ?? 0;
+    totals.skipped += result.skipped ?? 0;
+    totals.stored += result.weekSizes?.[week] ?? 0;
+    console.log(`  ${week}: sent ${records.length}, stored ${result.weekSizes?.[week]}, ${result.written} new raw`);
   }
 
   console.log(
-    `\nDone. fetched ${totals.fetched}, stored ${totals.written} new, ` +
-    `${totals.duplicates} already present, ${totals.skipped} unusable.`
+    `\nDone. fetched ${all.length}, raw ${totals.written} new / ${totals.duplicates} existing, ` +
+    `derived ${totals.stored} stored, ${totals.skipped} unusable.`
   );
+  if (totals.oversized.length) {
+    console.log(`Weeks skipped for exceeding --batch: ${totals.oversized.join(', ')}`);
+  }
+  if (!args.dryRun && totals.stored !== all.length - totals.skipped) {
+    console.log(`WARNING: stored ${totals.stored} but sent ${all.length - totals.skipped}. They should match.`);
+  }
 }
 
 main().catch(error => {
