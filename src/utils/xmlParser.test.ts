@@ -711,7 +711,7 @@ describe('legacy MSP 1.0 recipient migration on import', () => {
     const r = parseRssFeed(xml).value.recipients[0];
 
     expect(r.name).toBe('MSP 2.0');
-    expect(r.address).toBe('chadf@getalby.com');
+    expect(r.address).toBe('musicsideproject@getalby.com');
     expect(r.type).toBe('lnaddress');
   });
 
@@ -728,7 +728,7 @@ describe('legacy MSP 1.0 recipient migration on import', () => {
       `<podcast:valueRecipient name="Whatever" type="node" address="${LEGACY_MSP_PUBKEY.toUpperCase()}" split="1"/>`
     );
 
-    expect(parseRssFeed(xml).value.recipients[0].address).toBe('chadf@getalby.com');
+    expect(parseRssFeed(xml).value.recipients[0].address).toBe('musicsideproject@getalby.com');
   });
 
   it('leaves an unrelated node recipient untouched', () => {
@@ -752,7 +752,7 @@ describe('legacy MSP 1.0 recipient migration on import', () => {
 
     const trackRecipient = parseRssFeed(xml).tracks[0].value?.recipients[0];
 
-    expect(trackRecipient?.address).toBe('chadf@getalby.com');
+    expect(trackRecipient?.address).toBe('musicsideproject@getalby.com');
     expect(trackRecipient?.type).toBe('lnaddress');
   });
 });

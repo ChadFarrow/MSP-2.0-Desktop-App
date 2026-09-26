@@ -323,14 +323,18 @@ export const createEmptyRecipient = (): ValueRecipient => ({
   type: 'lnaddress'
 });
 
+// The MSP 2.0 support split that new feeds get: the musicsideproject sub-wallet
+// on Chad's node.
+export const MSP_SUPPORT_RECIPIENT = { name: 'MSP 2.0', address: 'musicsideproject@getalby.com' } as const;
+
 // Support recipients (MSP 2.0 and Podcast Index)
 export const COMMUNITY_SUPPORT_RECIPIENTS = [
-  { name: 'MSP 2.0', address: 'chadf@getalby.com' },
+  { name: MSP_SUPPORT_RECIPIENT.name, address: MSP_SUPPORT_RECIPIENT.address },
   { name: 'Podcastindex.org', address: 'podcastindex@getalby.com' },
 ];
 
 export const createSupportRecipients = (): ValueRecipient[] => [
-  { name: 'MSP 2.0', address: 'chadf@getalby.com', split: 1, type: 'lnaddress' },
+  { name: MSP_SUPPORT_RECIPIENT.name, address: MSP_SUPPORT_RECIPIENT.address, split: 1, type: 'lnaddress' },
   { name: 'Podcastindex.org', address: 'podcastindex@getalby.com', split: 1, type: 'lnaddress' },
 ];
 
@@ -340,10 +344,15 @@ export const createSupportRecipients = (): ValueRecipient[] => [
 export const LEGACY_MSP_NODE_PUBKEY =
   '035ad2c954e264004986da2d9499e1732e5175e1dcef2453c921c6cdcc3536e9d8';
 
-export const MSP_SUPPORT_RECIPIENT = { name: 'MSP 2.0', address: 'chadf@getalby.com' } as const;
+// Feeds made before the switch to the sub-wallet pay MSP 2.0 at chadf@getalby.com.
+// Both addresses reach MSP, so that split stays as it is — but it must still count
+// as support, or the editor lists it as the artist's own split and offers to add a
+// second MSP split beside it.
+const PREVIOUS_MSP_SUPPORT_RECIPIENT = { name: 'MSP 2.0', address: 'chadf@getalby.com' };
 
 export const isCommunitySupport = (r: ValueRecipient): boolean =>
-  COMMUNITY_SUPPORT_RECIPIENTS.some(cs => cs.name === r.name && cs.address === r.address);
+  [...COMMUNITY_SUPPORT_RECIPIENTS, PREVIOUS_MSP_SUPPORT_RECIPIENT]
+    .some(cs => cs.name === r.name && cs.address === r.address);
 
 export const hasUserRecipients = (recipients: ValueRecipient[]): boolean =>
   recipients.some(r => r.address && !isCommunitySupport(r));
