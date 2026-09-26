@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createEmptyAlbum, createEmptyVideoAlbum, createEmptyTrack, PODCAST_IMAGE_PURPOSES, fillPersonalSplitDefault, rebalancePersonalForSupport, createSupportRecipients } from './feed';
+import { createEmptyAlbum, createEmptyVideoAlbum, createEmptyTrack, PODCAST_IMAGE_PURPOSES, fillPersonalSplitDefault, rebalancePersonalForSupport, createSupportRecipients, isCommunitySupport } from './feed';
 import type { ValueRecipient } from './feed';
 
 const support = createSupportRecipients(); // MSP 1 + Podcast Index 1
@@ -79,5 +79,23 @@ describe('podcastImages data model', () => {
   it('exposes the canvas purpose preset for Now Playing backgrounds', () => {
     expect(PODCAST_IMAGE_PURPOSES.map(p => p.value)).toContain('canvas');
     expect(PODCAST_IMAGE_PURPOSES.map(p => p.value)).toContain('artwork');
+  });
+});
+
+describe('MSP 2.0 support address', () => {
+  it('gives new feeds the musicsideproject sub-wallet address', () => {
+    const msp = createSupportRecipients().find(r => r.name === 'MSP 2.0');
+    expect(msp?.address).toBe('musicsideproject@getalby.com');
+  });
+
+  it('still counts the chadf@getalby.com MSP split that older feeds carry', () => {
+    // Otherwise the editor lists it as the artist's own split and offers to add a second MSP split.
+    const old: ValueRecipient = { name: 'MSP 2.0', address: 'chadf@getalby.com', split: 1, type: 'lnaddress' };
+    expect(isCommunitySupport(old)).toBe(true);
+  });
+
+  it('does not count chadf@getalby.com under any other name', () => {
+    const own: ValueRecipient = { name: 'Chad F', address: 'chadf@getalby.com', split: 50, type: 'lnaddress' };
+    expect(isCommunitySupport(own)).toBe(false);
   });
 });
