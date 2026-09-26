@@ -2,8 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Mock } from 'vitest';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const { mockReadAllDerived } = vi.hoisted(() => ({ mockReadAllDerived: vi.fn() }));
+const { mockReadAllDerived, mockParseAuthHeader } = vi.hoisted(() => ({
+  mockReadAllDerived: vi.fn(),
+  mockParseAuthHeader: vi.fn()
+}));
 vi.mock('../_utils/boostStore.js', () => ({ readAllDerived: mockReadAllDerived }));
+vi.mock('../_utils/adminAuth.js', () => ({ parseAuthHeader: mockParseAuthHeader }));
 
 import handler from './chart.js';
 import { __resetRateLimiterForTests } from '../_utils/rateLimiter.js';
@@ -11,8 +15,8 @@ import type { DerivedBoost } from '../_utils/boostRecord.js';
 
 type MockRes = VercelResponse & { status: Mock; json: Mock; setHeader: Mock };
 
-function createMockReqRes(method = 'GET', ip = '5.5.5.5') {
-  const req = { method, query: {}, headers: { 'x-forwarded-for': ip } } as unknown as VercelRequest;
+function createMockReqRes(method = 'GET', ip = '5.5.5.5', headers: Record<string, string> = {}) {
+  const req = { method, query: {}, headers: { 'x-forwarded-for': ip, ...headers } } as unknown as VercelRequest;
   const res = {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
@@ -47,6 +51,8 @@ describe('/api/boosts/chart', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     __resetRateLimiterForTests();
+    delete process.env.MSP_ADMIN_KEY;
+    mockParseAuthHeader.mockResolvedValue({ valid: true, pubkey: 'admin' });
     mockReadAllDerived.mockResolvedValue([]);
   });
 
@@ -54,6 +60,22 @@ describe('/api/boosts/chart', () => {
     const { req, res } = createMockReqRes('POST');
     await handler(req, res);
     expect(res.status).toHaveBeenCalledWith(405);
+  });
+
+  it('refuses a caller who is neither a Nostr admin nor holding the admin key', async () => {
+    mockParseAuthHeader.mockResolvedValue({ valid: false });
+    const { req, res } = createMockReqRes();
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(mockReadAllDerived).not.toHaveBeenCalled();
+  });
+
+  it('accepts the static admin key as an alternative to Nostr', async () => {
+    mockParseAuthHeader.mockResolvedValue({ valid: false });
+    process.env.MSP_ADMIN_KEY = 'static-admin-secret';
+    const { req, res } = createMockReqRes('GET', '5.5.5.5', { 'x-admin-key': 'static-admin-secret' });
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
   });
 
   it('charts only MSP splits', async () => {
@@ -163,14 +185,19 @@ describe('/api/boosts/chart', () => {
     expect(body.allTime).not.toHaveProperty("plays");
   });
 
-  it('caches briefly, so a boost shows up while someone is still on the page', async () => {
-    // The webhook rebuilds a week in seconds, so an hour of page cache would hide it.
+  it('keeps the admin-only chart out of every shared cache', async () => {
+    // A CDN copy of an authenticated response would be served to anyone who asks.
     const { req, res } = createMockReqRes();
     await handler(req, res);
-    expect(res.setHeader).toHaveBeenCalledWith(
-      'Cache-Control',
-      expect.stringContaining('s-maxage=300')
-    );
+    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'private, no-store');
+    expect(res.setHeader).not.toHaveBeenCalledWith('Cache-Control', expect.stringContaining('s-maxage'));
+  });
+
+  it('keeps a refusal out of shared caches too', async () => {
+    mockParseAuthHeader.mockResolvedValue({ valid: false });
+    const { req, res } = createMockReqRes();
+    await handler(req, res);
+    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'private, no-store');
   });
 
   it('rate limits an abusive caller', async () => {

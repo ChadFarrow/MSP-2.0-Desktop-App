@@ -1,13 +1,20 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { checkRateLimit } from '../_utils/rateLimiter.js';
 import { getClientIp } from '../_utils/urlSafety.js';
+import { parseAuthHeader } from '../_utils/adminAuth.js';
+import { timingSafeEqualString } from '../_utils/feedUtils.js';
 import { readAllDerived } from '../_utils/boostStore.js';
 import { collapseToPlays, isBoostRecord, topTracks } from '../_utils/boostChart.js';
 import { monthKey } from '../_utils/boostRecord.js';
 import type { DerivedBoost } from '../_utils/boostRecord.js';
 
 /**
- * The public music chart: what listeners played and boosted on feeds made with MSP.
+ * The music chart: what listeners played and boosted on feeds made with MSP.
+ *
+ * **Admin-only for now.** It shipped public in #130; Chad took it private on 2026-09-26
+ * while charts are still being worked out. It is gated exactly like coverage.ts, and the
+ * response is `private, no-store` — a CDN copy of an authenticated response would be
+ * served to anyone. Publishing it again means reverting both, together.
  *
  * Three rules define what may leave this endpoint, and all three are deliberate.
  *
@@ -21,9 +28,6 @@ import type { DerivedBoost } from '../_utils/boostRecord.js';
  *
  * It reads the derived projection, which carries no listener message, sender name or
  * sender id, so no amount of aggregation here can leak one.
- *
- * Public and unauthenticated, so it leans on the CDN: the underlying data changes only
- * when the importer runs, and an hour of staleness on a monthly chart costs nothing.
  */
 
 const RATE_LIMIT = { limit: 120, windowMs: 60 * 60 * 1000 };
@@ -86,6 +90,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(429).json({ error: 'Rate limit exceeded' });
   }
 
+  // Set before the auth check, so a refusal is not cached for a later admin either.
+  res.setHeader('Cache-Control', 'private, no-store');
+
+  const adminKey = req.headers['x-admin-key'];
+  const hasLegacyAdmin = !!process.env.MSP_ADMIN_KEY && typeof adminKey === 'string' &&
+    timingSafeEqualString(adminKey, process.env.MSP_ADMIN_KEY);
+  const nostrAdmin = await parseAuthHeader(req.headers['authorization'] as string | undefined);
+
+  if (!hasLegacyAdmin && !nostrAdmin.valid) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   try {
     const mspOnly = (await readAllDerived()).filter(r => r.isMspSplit);
 
@@ -101,9 +117,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .sort((a, b) => b[0].localeCompare(a[0]))
       .map(([month, records]) => ({ month, label: monthLabel(month), ...buildChart(records) }));
 
-    // Short enough that a boost shows up while someone is still looking at the page,
-    // long enough that the CDN still absorbs essentially all traffic.
-    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
     return res.status(200).json({
       generatedAt: Date.now(),
       months,

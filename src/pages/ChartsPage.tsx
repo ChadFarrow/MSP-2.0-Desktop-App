@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNostr } from '../store/nostrStore';
+import { createAdminAuthHeader } from '../utils/adminAuth';
 
 /**
- * The public music chart.
+ * The music chart — admin-only for now, like its API (see api/boosts/chart.ts).
+ * Until an admin signs in, the page shows nothing about the chart at all.
  *
  * Counts only — no sats appear here. The chart is about what people listened to, not
  * what anyone earned, and these are other people's feeds.
@@ -71,18 +74,34 @@ function ChartList({ title, blurb, rows, unit }: {
 }
 
 export function ChartsPage() {
+  const { state: nostrState, login } = useNostr();
   const [data, setData] = useState<ChartResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<string>(ALL_TIME);
 
+  // Same gate as AdminPage, and for the same reason: wait for isLoading, or the
+  // 500ms NIP-07 injection wait flashes "no extension" on every load.
+  const signedIn = !nostrState.isLoading && nostrState.hasExtension && nostrState.isLoggedIn;
+
   useEffect(() => {
+    if (!signedIn) return;
     let cancelled = false;
-    fetch('/api/boosts/chart')
-      .then(r => (r.ok ? r.json() : Promise.reject(new Error('Could not load the chart'))))
-      .then(json => { if (!cancelled) setData(json); })
-      .catch(err => { if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load the chart'); });
+    (async () => {
+      try {
+        const url = `${window.location.origin}/api/boosts/chart`;
+        const response = await fetch('/api/boosts/chart', {
+          headers: { 'Authorization': await createAdminAuthHeader(url, 'GET') }
+        });
+        if (response.status === 401) throw new Error('This chart is private for now.');
+        if (!response.ok) throw new Error('Could not load the chart');
+        const json = await response.json();
+        if (!cancelled) setData(json);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load the chart');
+      }
+    })();
     return () => { cancelled = true; };
-  }, []);
+  }, [signedIn]);
 
   const current = useMemo(() => {
     if (!data) return null;
@@ -104,16 +123,28 @@ export function ChartsPage() {
       </header>
 
       <main className="charts-main">
-        <p className="charts-intro">
-          What listeners are playing and boosting on music feeds made with MSP,
-          paid in Bitcoin over the Lightning Network.
-        </p>
+        {nostrState.isLoading && <div className="charts-loading">Checking sign-in…</div>}
+        {!nostrState.isLoading && !signedIn && (
+          <div className="charts-loading">
+            <p>This chart is private for now.</p>
+            {nostrState.hasExtension && (
+              <button className="btn btn-primary btn-small" onClick={() => login()}>
+                Sign in with Nostr
+              </button>
+            )}
+          </div>
+        )}
 
         {error && <div className="charts-error">{error}</div>}
-        {!data && !error && <div className="charts-loading">Loading the chart…</div>}
+        {signedIn && !data && !error && <div className="charts-loading">Loading the chart…</div>}
 
         {data && (
           <>
+            <p className="charts-intro">
+              What listeners are playing and boosting on music feeds made with MSP,
+              paid in Bitcoin over the Lightning Network.
+            </p>
+
             <div className="chart-periods">
               <button
                 className={`chart-period ${period === ALL_TIME ? 'is-active' : ''}`}
@@ -155,20 +186,20 @@ export function ChartsPage() {
                 </div>
               </>
             )}
+
+            <footer className="charts-note">
+              <p>
+                <strong>This is a sample, not a total.</strong> MSP only sees a payment when the
+                small support split on a feed it generated is actually paid, and player apps
+                routinely drop splits too small to send. Real listening is higher than these
+                numbers, and an artist who removed the split does not appear here at all.
+              </p>
+              <p>
+                Counts only. No earnings are published here.
+              </p>
+            </footer>
           </>
         )}
-
-        <footer className="charts-note">
-          <p>
-            <strong>This is a sample, not a total.</strong> MSP only sees a payment when the
-            small support split on a feed it generated is actually paid, and player apps
-            routinely drop splits too small to send. Real listening is higher than these
-            numbers, and an artist who removed the split does not appear here at all.
-          </p>
-          <p>
-            Counts only. No earnings are published here.
-          </p>
-        </footer>
       </main>
     </div>
   );
