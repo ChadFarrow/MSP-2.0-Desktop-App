@@ -14,9 +14,12 @@ import {
   replaceDerivedWeek,
   rebuildWeekFromRaw,
   weekBounds,
-  monthsForWeek
+  monthsForWeek,
+  selectSource,
+  readStoredBoostboxRecords,
+  readAllDerived
 } from './boostStore.js';
-import { parseBoostPayload, isoWeekKey } from './boostRecord.js';
+import { parseBoostPayload, isoWeekKey, BOOSTBOX_CUTOVER } from './boostRecord.js';
 import type { ParsedBoost } from './boostRecord.js';
 
 const NAMESPACE = 'abcdefghijklmnop0123';
@@ -25,7 +28,7 @@ function boost(index: number, overrides: Record<string, unknown> = {}): ParsedBo
   return parseBoostPayload({
     direction: 'incoming',
     index,
-    time: Math.floor(Date.UTC(2026, 7, 29) / 1000),
+    time: Math.floor(Date.UTC(2025, 7, 29) / 1000),
     value_msat: 1000,
     value_msat_total: 100000,
     action: 2,
@@ -43,7 +46,7 @@ function rawPayload(index: number): Record<string, unknown> {
   return {
     direction: 'incoming',
     index,
-    time: Math.floor(Date.UTC(2026, 7, 29) / 1000),
+    time: Math.floor(Date.UTC(2025, 7, 29) / 1000),
     value_msat: 1000,
     value_msat_total: 100000,
     action: 2,
@@ -83,11 +86,22 @@ describe('paths', () => {
   beforeEach(() => { process.env.MSP_BOOST_NAMESPACE = NAMESPACE; });
 
   it('puts the raw tree behind the namespace and keys on direction and index', () => {
-    expect(rawPath(boost(10695))).toBe(`boosts/raw/${NAMESPACE}/2026-08/incoming-10695.json`);
+    expect(rawPath(boost(10695))).toBe(`boosts/raw/${NAMESPACE}/2025-08/incoming-10695.json`);
   });
 
-  it('buckets derived by ISO week, with no namespace since it holds nothing private', () => {
-    expect(derivedPath('2026-W35')).toBe('boosts/derived/2026-W35.json');
+  it('puts derived weeks behind the namespace too, since they carry per-boost amounts', () => {
+    expect(derivedPath('2025-W35')).toBe(`boosts/derived/${NAMESPACE}/2025-W35.json`);
+  });
+
+  it('files a bot record under its payment hash, beside the Helipad ones', () => {
+    const bot = parseBoostPayload({
+      source: 'boostbox',
+      payment_hash: 'b'.repeat(64),
+      direction: 'incoming',
+      time: Math.floor(Date.UTC(2025, 7, 29) / 1000),
+      tlv: '{}'
+    })!;
+    expect(rawPath(bot)).toBe(`boosts/raw/${NAMESPACE}/2025-08/incoming-ph-${'b'.repeat(64)}.json`);
   });
 });
 
@@ -108,8 +122,8 @@ describe('storeRawBoosts', () => {
     expect(result).toEqual({ written: 2, duplicates: 0 });
     const paths = mockPut.mock.calls.map(c => c[0]).sort();
     expect(paths).toEqual([
-      `boosts/raw/${NAMESPACE}/2026-08/incoming-1.json`,
-      `boosts/raw/${NAMESPACE}/2026-08/incoming-2.json`
+      `boosts/raw/${NAMESPACE}/2025-08/incoming-1.json`,
+      `boosts/raw/${NAMESPACE}/2025-08/incoming-2.json`
     ]);
     // Immutable: a raw record is never rewritten, which is what makes it safe to cache.
     for (const call of mockPut.mock.calls) expect(call[2]).toMatchObject({ allowOverwrite: false });
@@ -117,7 +131,7 @@ describe('storeRawBoosts', () => {
 
   it('skips a record whose blob is already listed', async () => {
     mockList.mockResolvedValue({
-      blobs: [{ pathname: `boosts/raw/${NAMESPACE}/2026-08/incoming-1.json`, url: 'https://blob.example/raw' }],
+      blobs: [{ pathname: `boosts/raw/${NAMESPACE}/2025-08/incoming-1.json`, url: 'https://blob.example/raw' }],
       cursor: undefined,
       hasMore: false
     });
@@ -202,7 +216,7 @@ describe('rebuildWeekFromRaw', () => {
 
   const rawBlobs = (n: number) => ({
     blobs: Array.from({ length: n }, (_, i) => ({
-      pathname: `boosts/raw/${NAMESPACE}/2026-08/incoming-${i + 1}.json`,
+      pathname: `boosts/raw/${NAMESPACE}/2025-08/incoming-${i + 1}.json`,
       url: `https://blob.example/raw-${i + 1}`
     })),
     cursor: undefined,
@@ -222,9 +236,9 @@ describe('rebuildWeekFromRaw', () => {
       });
     });
 
-    expect(await rebuildWeekFromRaw('2026-W35')).toBe(3);
+    expect(await rebuildWeekFromRaw('2025-W35')).toBe(3);
     const write = mockPut.mock.calls.find(c => String(c[0]).startsWith('boosts/derived/'))!;
-    expect(write[0]).toBe('boosts/derived/2026-W35.json');
+    expect(write[0]).toBe(`boosts/derived/${NAMESPACE}/2025-W35.json`);
     expect(JSON.parse(write[1] as string)).toHaveLength(3);
   });
 
@@ -233,14 +247,14 @@ describe('rebuildWeekFromRaw', () => {
     mockFetch.mockImplementation((url: string) => {
       const i = Number(String(url).split('raw-')[1]);
       const payload = rawPayload(i);
-      if (i === 2) payload.time = Math.floor(Date.UTC(2026, 0, 8) / 1000);
+      if (i === 2) payload.time = Math.floor(Date.UTC(2025, 0, 8) / 1000);
       return Promise.resolve({
         ok: true, status: 200,
         text: () => Promise.resolve(JSON.stringify({ receivedAt: 1, source: 'webhook', payload }))
       });
     });
 
-    expect(await rebuildWeekFromRaw('2026-W35')).toBe(1);
+    expect(await rebuildWeekFromRaw('2025-W35')).toBe(1);
   });
 
   it('folds in the caller\'s own records, which a stale listing may not show yet', async () => {
@@ -249,7 +263,7 @@ describe('rebuildWeekFromRaw', () => {
     // very boost that triggered it.
     mockList.mockResolvedValue({ blobs: [], cursor: undefined, hasMore: false });
 
-    expect(await rebuildWeekFromRaw('2026-W35', [boost(99)])).toBe(1);
+    expect(await rebuildWeekFromRaw('2025-W35', [boost(99)])).toBe(1);
     const write = mockPut.mock.calls.find(c => String(c[0]).startsWith('boosts/derived/'))!;
     expect(JSON.parse(write[1] as string)[0].index).toBe(99);
   });
@@ -261,12 +275,12 @@ describe('rebuildWeekFromRaw', () => {
       text: () => Promise.resolve(JSON.stringify({ receivedAt: 1, source: 'webhook', payload: rawPayload(1) }))
     });
 
-    expect(await rebuildWeekFromRaw('2026-W35', [boost(1)])).toBe(1);
+    expect(await rebuildWeekFromRaw('2025-W35', [boost(1)])).toBe(1);
   });
 
   it('writes nothing when the week has no records at all', async () => {
     mockList.mockResolvedValue({ blobs: [], cursor: undefined, hasMore: false });
-    expect(await rebuildWeekFromRaw('2026-W35')).toBeNull();
+    expect(await rebuildWeekFromRaw('2025-W35')).toBeNull();
     expect(mockPut).not.toHaveBeenCalled();
   });
 });
@@ -283,7 +297,7 @@ describe('replaceDerivedWeek', () => {
     // caches on pathname with a 60-second floor and ignores query strings, so any
     // read-modify-write at import cadence merges onto a stale base and truncates the
     // week. Writing whole removes the read, and with it the bug.
-    await replaceDerivedWeek('2026-W35', [boost(1), boost(2)]);
+    await replaceDerivedWeek('2025-W35', [boost(1), boost(2)]);
 
     expect(mockFetch).not.toHaveBeenCalled();
     expect(mockList).not.toHaveBeenCalled();
@@ -291,34 +305,126 @@ describe('replaceDerivedWeek', () => {
   });
 
   it('writes the whole week and reports its size', async () => {
-    const size = await replaceDerivedWeek('2026-W35', [boost(1), boost(2), boost(3)]);
+    const size = await replaceDerivedWeek('2025-W35', [boost(1), boost(2), boost(3)]);
     expect(size).toBe(3);
-    expect(mockPut.mock.calls[0][0]).toBe('boosts/derived/2026-W35.json');
+    expect(mockPut.mock.calls[0][0]).toBe(`boosts/derived/${NAMESPACE}/2025-W35.json`);
     expect(mockPut.mock.calls[0][2]).toMatchObject({ allowOverwrite: true });
     expect(JSON.parse(mockPut.mock.calls[0][1] as string)).toHaveLength(3);
   });
 
   it('drops records that do not belong to the stated week', async () => {
-    const otherWeek = boost(9, { time: Math.floor(Date.UTC(2026, 0, 8) / 1000) });
-    const size = await replaceDerivedWeek('2026-W35', [boost(1), otherWeek]);
+    const otherWeek = boost(9, { time: Math.floor(Date.UTC(2025, 0, 8) / 1000) });
+    const size = await replaceDerivedWeek('2025-W35', [boost(1), otherWeek]);
     expect(size).toBe(1);
   });
 
   it('deduplicates on index, so a repeated record cannot inflate a chart', async () => {
-    const size = await replaceDerivedWeek('2026-W35', [boost(1), boost(1), boost(2)]);
+    const size = await replaceDerivedWeek('2025-W35', [boost(1), boost(1), boost(2)]);
     expect(size).toBe(2);
   });
 
   it('writes an empty week rather than failing, so a week can be emptied deliberately', async () => {
-    expect(await replaceDerivedWeek('2026-W35', [])).toBe(0);
+    expect(await replaceDerivedWeek('2025-W35', [])).toBe(0);
     expect(JSON.parse(mockPut.mock.calls[0][1] as string)).toEqual([]);
   });
 
   it('carries no listener field into the derived file', async () => {
-    await replaceDerivedWeek('2026-W35', [boost(1)]);
+    await replaceDerivedWeek('2025-W35', [boost(1)]);
     const written = mockPut.mock.calls[0][1] as string;
     expect(written).not.toContain('listener');
     expect(written).not.toContain('Boosting');
     expect(JSON.parse(written)[0].trackTitle).toBe('ACID');
+  });
+});
+
+describe('selectSource', () => {
+  const helipadAt = (ts: number) => ({ source: 'helipad' as const, ts });
+  const botAt = (ts: number) => ({ source: 'boostbox' as const, ts });
+
+  it('keeps Helipad before the cutover and the bot from it on', () => {
+    const records = [helipadAt(BOOSTBOX_CUTOVER - 1), botAt(BOOSTBOX_CUTOVER - 1),
+      helipadAt(BOOSTBOX_CUTOVER + 1), botAt(BOOSTBOX_CUTOVER + 1)];
+    expect(selectSource(records)).toEqual([helipadAt(BOOSTBOX_CUTOVER - 1), botAt(BOOSTBOX_CUTOVER + 1)]);
+  });
+
+  it('gives the cutover second itself to the bot', () => {
+    expect(selectSource([botAt(BOOSTBOX_CUTOVER), helipadAt(BOOSTBOX_CUTOVER)]))
+      .toEqual([botAt(BOOSTBOX_CUTOVER)]);
+  });
+
+  it('treats a record with no source as Helipad', () => {
+    expect(selectSource([{ ts: BOOSTBOX_CUTOVER - 1 }, { ts: BOOSTBOX_CUTOVER }]))
+      .toEqual([{ ts: BOOSTBOX_CUTOVER - 1 }]);
+  });
+});
+
+describe('replaceDerivedWeek across sources', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.MSP_BOOST_NAMESPACE = NAMESPACE;
+    mockPut.mockResolvedValue({ url: 'https://blob.example/x' });
+  });
+
+  it('counts a boost once when Helipad and the bot both hold it, taking the bot after the cutover', async () => {
+    const t = Math.floor(Date.UTC(2026, 7, 29) / 1000);
+    const helipad = boost(1, { time: t });
+    const bot = parseBoostPayload({
+      source: 'boostbox', payment_hash: 'c'.repeat(64), direction: 'incoming',
+      time: t, value_msat: 1000, tlv: JSON.stringify({ name: 'MSP 2.0' })
+    })!;
+    expect(await replaceDerivedWeek('2026-W35', [helipad, bot])).toBe(1);
+    const written = JSON.parse(mockPut.mock.calls[0][1] as string);
+    expect(written[0].source).toBe('boostbox');
+  });
+
+  it('keeps two bot records apart even though both carry index 0', async () => {
+    const t = Math.floor(Date.UTC(2026, 7, 29) / 1000);
+    const bot = (h: string) => parseBoostPayload({
+      source: 'boostbox', payment_hash: h.repeat(64), direction: 'incoming', time: t, tlv: '{}'
+    })!;
+    expect(await replaceDerivedWeek('2026-W35', [bot('d'), bot('e'), bot('d')])).toBe(2);
+  });
+});
+
+describe('readStoredBoostboxRecords', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.MSP_BOOST_NAMESPACE = NAMESPACE;
+  });
+
+  it("reads only the bot's raw records for the week, never fetching Helipad's", async () => {
+    mockList.mockResolvedValue({
+      blobs: [
+        { pathname: `boosts/raw/${NAMESPACE}/2026-08/incoming-7.json`, url: 'https://blob.example/helipad-7' },
+        { pathname: `boosts/raw/${NAMESPACE}/2026-08/incoming-ph-${'d'.repeat(64)}.json`, url: 'https://blob.example/bot-d' }
+      ],
+      cursor: undefined,
+      hasMore: false
+    });
+    mockFetch.mockResolvedValue({
+      ok: true, status: 200,
+      text: () => Promise.resolve(JSON.stringify({
+        receivedAt: 1, source: 'boostbox',
+        payload: {
+          source: 'boostbox', payment_hash: 'd'.repeat(64), direction: 'incoming',
+          time: Math.floor(Date.UTC(2026, 7, 29) / 1000), tlv: '{}'
+        }
+      }))
+    });
+
+    const records = await readStoredBoostboxRecords('2026-W35');
+    expect(records.map(r => r.paymentHash)).toEqual(['d'.repeat(64)]);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith('https://blob.example/bot-d');
+  });
+});
+
+describe('readAllDerived', () => {
+  it('reads only the namespaced weekly files, never the old public ones', async () => {
+    vi.clearAllMocks();
+    process.env.MSP_BOOST_NAMESPACE = NAMESPACE;
+    mockList.mockResolvedValue({ blobs: [], cursor: undefined, hasMore: false });
+    await readAllDerived();
+    expect(mockList).toHaveBeenCalledWith(expect.objectContaining({ prefix: `boosts/derived/${NAMESPACE}/` }));
   });
 });

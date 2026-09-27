@@ -9,6 +9,7 @@
  * the chart while the music sat below it — so they are charted separately.
  */
 import type { DerivedBoost } from './boostRecord.js';
+import { recordKey } from './boostRecord.js';
 
 /**
  * How long a gap ends a listening run. Streaming sats fire about once a minute, so a
@@ -61,7 +62,7 @@ export function collapseToPlays(
 ): DerivedBoost[] {
   const streams = records
     .filter(r => isPlayRecord(r) && r.trackKey)
-    .sort((a, b) => a.ts - b.ts || a.index - b.index);
+    .sort((a, b) => a.ts - b.ts || recordKey(a).localeCompare(recordKey(b)));
 
   const plays: DerivedBoost[] = [];
   const lastSeen = new Map<string, number>();

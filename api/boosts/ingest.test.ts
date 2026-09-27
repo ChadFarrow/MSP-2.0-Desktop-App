@@ -2,23 +2,28 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Mock } from 'vitest';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const { mockStoreRaw, mockReplaceWeek, mockRebuildWeek, mockIsConfigured } = vi.hoisted(() => ({
+const { mockStoreRaw, mockReplaceWeek, mockRebuildWeek, mockIsConfigured, mockReadBot, mockEnrich } = vi.hoisted(() => ({
   mockStoreRaw: vi.fn(),
   mockReplaceWeek: vi.fn(),
   mockRebuildWeek: vi.fn(),
-  mockIsConfigured: vi.fn()
+  mockIsConfigured: vi.fn(),
+  mockReadBot: vi.fn(),
+  mockEnrich: vi.fn()
 }));
 vi.mock('../_utils/boostStore.js', () => ({
   storeRawBoosts: mockStoreRaw,
   replaceDerivedWeek: mockReplaceWeek,
   rebuildWeekFromRaw: mockRebuildWeek,
-  isBoostStoreConfigured: mockIsConfigured
+  isBoostStoreConfigured: mockIsConfigured,
+  readStoredBoostboxRecords: mockReadBot
 }));
+vi.mock('../_utils/remoteItemLookup.js', () => ({ enrichWithRemoteTitles: mockEnrich }));
 
 import handler from './ingest.js';
 import { __resetRateLimiterForTests } from '../_utils/rateLimiter.js';
 
 const TOKEN = 'helipad-token-value';
+const BOT_TOKEN = 'bot-token-value-xyz';
 
 type MockRes = VercelResponse & { status: Mock; json: Mock; setHeader: Mock };
 
@@ -60,15 +65,29 @@ function webhookBody(index: number) {
   };
 }
 
+function botBody(hash: string) {
+  return {
+    source: 'boostbox',
+    payment_hash: hash,
+    direction: 'incoming',
+    time: 1790000000,
+    value_msat: 1000,
+    tlv: JSON.stringify({ name: 'MSP 2.0', action: 'boost', app_name: 'Castamatic' })
+  };
+}
+
 describe('/api/boosts/ingest', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     __resetRateLimiterForTests();
     process.env.HELIPAD_WEBHOOK_TOKEN = TOKEN;
+    process.env.MSP_BOT_INGEST_TOKEN = BOT_TOKEN;
     mockIsConfigured.mockReturnValue(true);
     mockStoreRaw.mockResolvedValue({ written: 1, duplicates: 0 });
     mockReplaceWeek.mockResolvedValue(1);
     mockRebuildWeek.mockResolvedValue(7);
+    mockReadBot.mockResolvedValue([]);
+    mockEnrich.mockImplementation(async (entries: unknown[]) => entries);
   });
 
   it('rejects anything but POST', async () => {
@@ -78,6 +97,7 @@ describe('/api/boosts/ingest', () => {
   });
 
   it('is 404 until both the token and the namespace are configured', async () => {
+    delete process.env.MSP_BOT_INGEST_TOKEN;
     delete process.env.HELIPAD_WEBHOOK_TOKEN;
     const a = createMockReqRes('POST', webhookBody(1));
     await handler(a.req, a.res);
@@ -97,6 +117,78 @@ describe('/api/boosts/ingest', () => {
       expect(res.status).toHaveBeenCalledWith(401);
     }
     expect(mockStoreRaw).not.toHaveBeenCalled();
+  });
+
+  it('stores a bot record sent with the bot token, labelled as the bot', async () => {
+    const { req, res } = createMockReqRes('POST', botBody('f'.repeat(64)), { authorization: `Bearer ${BOT_TOKEN}` });
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockStoreRaw.mock.calls[0][1]).toBe('boostbox');
+    expect(mockStoreRaw.mock.calls[0][0][0].parsed.paymentHash).toBe('f'.repeat(64));
+  });
+
+  it('stores what the Podcast Index step returns, not what arrived', async () => {
+    const enriched = [{ parsed: { source: 'boostbox', paymentHash: 'f'.repeat(64), index: 0, ts: 1790000000, direction: 'incoming' }, payload: { marker: true } }];
+    mockEnrich.mockResolvedValue(enriched);
+    const { req, res } = createMockReqRes('POST', botBody('f'.repeat(64)), { authorization: `Bearer ${BOT_TOKEN}` });
+    await handler(req, res);
+    expect(mockEnrich).toHaveBeenCalledTimes(1);
+    expect(mockStoreRaw.mock.calls[0][0]).toBe(enriched);
+  });
+
+  it("refuses a bot record under Helipad's token, and a Helipad record under the bot's", async () => {
+    const a = createMockReqRes('POST', botBody('f'.repeat(64)));
+    await handler(a.req, a.res);
+    expect(a.res.status).toHaveBeenCalledWith(400);
+
+    const b = createMockReqRes('POST', webhookBody(1), { authorization: `Bearer ${BOT_TOKEN}` });
+    await handler(b.req, b.res);
+    expect(b.res.status).toHaveBeenCalledWith(400);
+    expect(mockStoreRaw).not.toHaveBeenCalled();
+  });
+
+  it("refuses the week envelope under the bot's token, storing nothing", async () => {
+    // The envelope rewrites a whole week from the records supplied plus the bot's stored
+    // ones, so a bot-token envelope would write that week with every Helipad record gone.
+    const { req, res } = createMockReqRes(
+      'POST',
+      { week: '2026-W39', records: [botBody('f'.repeat(64))] },
+      { authorization: `Bearer ${BOT_TOKEN}` }
+    );
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'The week envelope is for the Helipad importer only' });
+    expect(mockStoreRaw).not.toHaveBeenCalled();
+    expect(mockReplaceWeek).not.toHaveBeenCalled();
+  });
+
+  it("skips a bot record that is not MSP's split, before anything is stored", async () => {
+    // A bot with a wrong BBN_RECIPIENT_NAMES must not put another show's listener
+    // messages into MSP's raw store.
+    const other = { ...botBody('f'.repeat(64)), tlv: JSON.stringify({ name: 'Some Other Show', action: 'boost' }) };
+    const a = createMockReqRes('POST', other, { authorization: `Bearer ${BOT_TOKEN}` });
+    await handler(a.req, a.res);
+    expect(a.res.status).toHaveBeenCalledWith(400);
+    expect(mockStoreRaw).not.toHaveBeenCalled();
+
+    const b = createMockReqRes('POST', [botBody('e'.repeat(64)), other], { authorization: `Bearer ${BOT_TOKEN}` });
+    await handler(b.req, b.res);
+    expect(b.res.status).toHaveBeenCalledWith(200);
+    expect(b.res.json).toHaveBeenCalledWith(expect.objectContaining({ skipped: 1 }));
+    expect(mockStoreRaw.mock.calls[0][0]).toHaveLength(1);
+    expect(mockStoreRaw.mock.calls[0][0][0].parsed.paymentHash).toBe('e'.repeat(64));
+  });
+
+  it('works with only the bot token configured, and is 404 with neither', async () => {
+    delete process.env.HELIPAD_WEBHOOK_TOKEN;
+    const a = createMockReqRes('POST', botBody('f'.repeat(64)), { authorization: `Bearer ${BOT_TOKEN}` });
+    await handler(a.req, a.res);
+    expect(a.res.status).toHaveBeenCalledWith(200);
+
+    delete process.env.MSP_BOT_INGEST_TOKEN;
+    const b = createMockReqRes('POST', botBody('f'.repeat(64)), { authorization: `Bearer ${BOT_TOKEN}` });
+    await handler(b.req, b.res);
+    expect(b.res.status).toHaveBeenCalledWith(404);
   });
 
   it('stores a single webhook body and answers exactly 200', async () => {
@@ -218,6 +310,19 @@ describe('/api/boosts/ingest', () => {
     await handler(req, res);
     expect(mockReplaceWeek).toHaveBeenCalledTimes(1);
     expect(mockRebuildWeek).not.toHaveBeenCalled();
+  });
+
+  it("keeps the bot's stored records when the importer rewrites a week", async () => {
+    const botRecord = { source: 'boostbox', paymentHash: 'e'.repeat(64), index: 0, ts: 1756400000 };
+    mockReadBot.mockResolvedValue([botRecord]);
+    const { req, res } = createMockReqRes('POST', { week: '2025-W35', records: [webhookBody(1)] });
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockReadBot).toHaveBeenCalledWith('2025-W35');
+    const [, records] = mockReplaceWeek.mock.calls[0];
+    expect(records).toHaveLength(2);
+    expect(records).toContainEqual(botRecord);
   });
 
   it('refuses a record that is not in the stated week rather than dropping it', async () => {

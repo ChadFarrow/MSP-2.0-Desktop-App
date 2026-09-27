@@ -43,6 +43,8 @@ function recentWeek(weeksAgo: number): string {
   return isoWeekKey(Math.floor(Date.now() / 1000) - weeksAgo * 7 * 86400);
 }
 
+const WEEK_RE = /^\d{4}-W\d{2}$/;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -55,16 +57,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Three ways in, and no fourth. With CRON_SECRET unset the cron path simply cannot
   // authenticate — it never falls back to open, which is the failure mode that matters
   // for an endpoint that rewrites stored data.
-  const authorized = isCronCaller(req)
-    || isLegacyAdmin(req)
+  const cron = isCronCaller(req);
+  const admin = isLegacyAdmin(req)
     || (await parseAuthHeader(req.headers['authorization'] as string | undefined)).valid;
 
-  if (!authorized) {
+  if (!cron && !admin) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // A named week is a manual repair — the derived-path migration walks every week this
+  // way. The cron never names one, so only an admin may.
+  const requested = typeof req.query.week === 'string' ? req.query.week : undefined;
+  if (requested !== undefined) {
+    if (!WEEK_RE.test(requested)) {
+      return res.status(400).json({ error: 'week must be an ISO week key, e.g. 2026-W35' });
+    }
+    if (!admin) {
+      return res.status(403).json({ error: 'Only an admin may rebuild a named week' });
+    }
+  }
+
   try {
-    const weeks = [recentWeek(0), recentWeek(1)];
+    const weeks = requested ? [requested] : [recentWeek(0), recentWeek(1)];
     const rebuilt: Record<string, number | null> = {};
     for (const week of weeks) {
       rebuilt[week] = await rebuildWeekFromRaw(week);
