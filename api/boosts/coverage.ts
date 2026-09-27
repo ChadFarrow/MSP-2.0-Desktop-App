@@ -4,6 +4,7 @@ import { timingSafeEqualString } from '../_utils/feedUtils.js';
 import { readAllDerived } from '../_utils/boostStore.js';
 import { collapseToPlays, isBoostRecord, topTracks } from '../_utils/boostChart.js';
 import { isoWeekKey } from '../_utils/boostRecord.js';
+import type { ChartRow } from '../_utils/boostChart.js';
 import type { DerivedBoost, TrackSource } from '../_utils/boostRecord.js';
 
 /**
@@ -26,6 +27,16 @@ const TRACK_SOURCES: TrackSource[] = [
   'message',
   'none'
 ];
+
+/**
+ * A chart row as this report shows it. `ChartRow` also carries the row's listener keys and
+ * the bookkeeping the chart uses to mark new songs; none of that belongs in a response.
+ */
+function coverageRows(rows: ChartRow[]) {
+  return rows.map(({ trackKey, trackTitle, trackArtist, count, mergedFrom }) => ({
+    trackKey, trackTitle, trackArtist, count, ...(mergedFrom ? { mergedFrom } : {})
+  }));
+}
 
 /** Sources that produce a stable key, i.e. ones a Top 10 could actually count on. */
 const KEYED_SOURCES = new Set<TrackSource>(['remote-guid', 'remote-title', 'boost-link', 'message']);
@@ -66,7 +77,7 @@ function summarize(records: DerivedBoost[], withCharts: boolean) {
     plays: plays.length,
     streamRecords: records.filter(r => r.actionName === 'stream').length,
     ...(withCharts
-      ? { topPlays: topTracks(plays, 10), topBoosts: topTracks(deliberate, 10) }
+      ? { topPlays: coverageRows(topTracks(plays, 10)), topBoosts: coverageRows(topTracks(deliberate, 10)) }
       : {}),
     keyed: records.filter(r => KEYED_SOURCES.has(r.trackSource)).length,
     named: records.filter(r => !!r.trackTitle).length,

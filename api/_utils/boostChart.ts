@@ -9,7 +9,7 @@
  * the chart while the music sat below it — so they are charted separately.
  */
 import type { DerivedBoost } from './boostRecord.js';
-import { recordKey } from './boostRecord.js';
+import { monthKey, recordKey } from './boostRecord.js';
 
 /**
  * How long a gap ends a listening run. Streaming sats fire about once a minute, so a
@@ -30,6 +30,23 @@ export interface ChartRow {
    * so a wrong merge can be seen.
    */
   mergedFrom?: string[];
+  /**
+   * The distinct `listenerKey`s behind this row. Internal: the API publishes only the
+   * count, because a key is a stable pseudonym and a set of them is a list of listeners.
+   */
+  listenerKeys: Set<string>;
+  /** Records that named no sender, so they add to the count but to no listener. */
+  unattributed: number;
+  /** Every chart key folded into this row — how a month's row finds its all-time song. */
+  chartKeys: Set<string>;
+  /** When the row's earliest record was paid, unix seconds. */
+  firstTs: number;
+  /** Records per UTC month (`monthKey`) — the row's trend. */
+  byMonth: Map<string, number>;
+}
+
+function addMonths(into: Map<string, number>, from: Map<string, number>): void {
+  from.forEach((n, month) => into.set(month, (into.get(month) ?? 0) + n));
 }
 
 /**
@@ -166,8 +183,21 @@ function mergeAliases(rows: ChartRow[]): ChartRow[] {
         return artist === other || other.startsWith(artist) || artist.startsWith(other)
           || lastPart(g.trackArtist) === artist || lastPart(row.trackArtist) === other;
       });
-      if (!into) { groups.push({ ...row }); continue; }
+      if (!into) {
+        groups.push({
+          ...row,
+          listenerKeys: new Set(row.listenerKeys),
+          chartKeys: new Set(row.chartKeys),
+          byMonth: new Map(row.byMonth)
+        });
+        continue;
+      }
       into.count += row.count;
+      into.unattributed += row.unattributed;
+      into.firstTs = Math.min(into.firstTs, row.firstTs);
+      row.listenerKeys.forEach(k => into.listenerKeys.add(k));
+      row.chartKeys.forEach(k => into.chartKeys.add(k));
+      addMonths(into.byMonth, row.byMonth);
       // Record only a spelling that differs: an identical one is certain, not worth review.
       const known = [into.trackArtist, ...(into.mergedFrom ?? [])].map(a => normalize(a ?? ''));
       if (row.trackArtist && !known.includes(artist)) {
@@ -190,22 +220,172 @@ export function topTracks(records: DerivedBoost[], limit?: number): ChartRow[] {
   for (const record of records) {
     const key = chartKey(record);
     if (!key) continue;
-    const existing = rows.get(key);
-    if (existing) {
-      existing.count += 1;
-      existing.trackTitle ??= record.trackTitle;
-      existing.trackArtist ??= record.trackArtist;
-    } else {
-      rows.set(key, {
+    let row = rows.get(key);
+    if (!row) {
+      row = {
         trackKey: key,
         trackTitle: record.trackTitle,
         trackArtist: record.trackArtist,
-        count: 1
-      });
+        count: 0,
+        listenerKeys: new Set(),
+        unattributed: 0,
+        chartKeys: new Set([key]),
+        firstTs: record.ts,
+        byMonth: new Map()
+      };
+      rows.set(key, row);
     }
+    row.count += 1;
+    row.trackTitle ??= record.trackTitle;
+    row.trackArtist ??= record.trackArtist;
+    row.firstTs = Math.min(row.firstTs, record.ts);
+    const month = monthKey(record.ts);
+    row.byMonth.set(month, (row.byMonth.get(month) ?? 0) + 1);
+    if (record.listenerKey) row.listenerKeys.add(record.listenerKey);
+    else row.unattributed += 1;
   }
 
   const ranked = mergeAliases([...rows.values()])
     .sort((a, b) => b.count - a.count || (a.trackTitle ?? '').localeCompare(b.trackTitle ?? ''));
   return limit === undefined ? ranked : ranked.slice(0, limit);
+}
+
+export interface ArtistRow {
+  /** Normalized name — what two spellings of one artist share. */
+  artistKey: string;
+  artist: string;
+  count: number;
+  /** Song rows behind this artist. */
+  songs: number;
+  listenerKeys: Set<string>;
+  unattributed: number;
+  /** Album-only labels given to this artist through `albumArtists`; absent when none. */
+  mergedFrom?: string[];
+  firstTs: number;
+  /** Its songs' counts per month, added up. */
+  byMonth: Map<string, number>;
+}
+
+/** "Album - Artist" split at its last " - "; undefined for a label that names one thing. */
+function splitLabel(label: string): { album: string; artist: string } | undefined {
+  const at = label.lastIndexOf(' - ');
+  if (at < 0) return undefined;
+  const album = label.slice(0, at).trim();
+  const artist = label.slice(at + 3).trim();
+  return album && artist ? { album, artist } : undefined;
+}
+
+/**
+ * Album → artist, learned from every label that names both, keyed by normalized album.
+ *
+ * Podcast Index gives a remote item's feed title, which for music is the album, so some
+ * rows say only "Kulture Collection" where the message scrape says "Kulture Collection -
+ * Matt Finlay". A row naming both is what links them — the same rule `mergeAliases`
+ * follows. An album named with two different artists maps to neither: "Singles" is a
+ * feed title many artists use, and an album-only "Singles" could be any of them.
+ */
+export function albumArtists(rows: ChartRow[]): Map<string, string> {
+  const seen = new Map<string, string | null>();
+  for (const row of rows) {
+    for (const label of [row.trackArtist, ...(row.mergedFrom ?? [])]) {
+      const parts = label ? splitLabel(label) : undefined;
+      if (!parts) continue;
+      const album = normalize(parts.album);
+      const prior = seen.get(album);
+      if (prior === undefined) seen.set(album, parts.artist);
+      else if (prior !== null && normalize(prior) !== normalize(parts.artist)) seen.set(album, null);
+    }
+  }
+  return new Map([...seen].filter((entry): entry is [string, string] => entry[1] !== null));
+}
+
+/**
+ * Song rows grouped by artist, ranked by count and then name. The artist is the part after
+ * the last " - " of a row's label, or the whole label when it names one thing — unless
+ * `albums` says that one thing is an album, in which case the row goes to its artist and
+ * the artist row lists the label in `mergedFrom`, so the inference can be checked.
+ *
+ * Pass the all-time `albums` for a month, so a month groups its artists exactly as all
+ * time does. Rows with no title or no artist are left out: an artist row nobody can read,
+ * or one made of unreadable songs, is not a chart entry.
+ */
+export function topArtists(rows: ChartRow[], albums: Map<string, string> = albumArtists(rows)): ArtistRow[] {
+  const byArtist = new Map<string, ArtistRow>();
+
+  for (const row of rows) {
+    if (!row.trackTitle || !row.trackArtist) continue;
+    const label = row.trackArtist.trim();
+    const split = splitLabel(label);
+    const inferred = split ? undefined : albums.get(normalize(label));
+    const name = split?.artist ?? inferred ?? label;
+    const key = normalize(name);
+    if (!key) continue;
+
+    let artist = byArtist.get(key);
+    if (!artist) {
+      // Rows arrive ranked, so the label comes from the artist's most counted song.
+      artist = {
+        artistKey: key, artist: name, count: 0, songs: 0,
+        listenerKeys: new Set(), unattributed: 0, firstTs: row.firstTs, byMonth: new Map()
+      };
+      byArtist.set(key, artist);
+    }
+    artist.count += row.count;
+    artist.songs += 1;
+    artist.unattributed += row.unattributed;
+    artist.firstTs = Math.min(artist.firstTs, row.firstTs);
+    row.listenerKeys.forEach(k => artist.listenerKeys.add(k));
+    addMonths(artist.byMonth, row.byMonth);
+    if (inferred && normalize(inferred) !== normalize(label) && !artist.mergedFrom?.includes(label)) {
+      artist.mergedFrom = [...(artist.mergedFrom ?? []), label];
+    }
+  }
+
+  return [...byArtist.values()].sort((a, b) => b.count - a.count || a.artist.localeCompare(b.artist));
+}
+
+/**
+ * What all time knows about each song and artist, so a month can say which of its rows
+ * are new and group its artists the same way all time does.
+ *
+ * Built once from every counted record. A month on its own is not enough: its row for a
+ * song may hold only the spelling that first appeared that month, while all time has
+ * merged it with a spelling supported months earlier — and a month that only has an
+ * album-only label cannot know the artist a July row named for that album.
+ */
+export interface ChartIdentity {
+  /** Chart key → when its all-time song was first supported, unix seconds. */
+  songFirstTs: Map<string, number>;
+  /** Album → artist, learned across all time (see `albumArtists`). */
+  albums: Map<string, string>;
+  /** Artist key → when the artist was first supported. */
+  artistFirstTs: Map<string, number>;
+  /** The month of the earliest counted record. Nothing is new in it: everything would be. */
+  firstMonth?: string;
+}
+
+export function buildIdentity(records: DerivedBoost[]): ChartIdentity {
+  const counted = records.filter(r => isBoostRecord(r) || isPlayRecord(r));
+  const songs = topTracks(counted);
+  const songFirstTs = new Map<string, number>();
+  for (const row of songs) row.chartKeys.forEach(key => songFirstTs.set(key, row.firstTs));
+  const albums = albumArtists(songs);
+  const artistFirstTs = new Map(topArtists(songs, albums).map(a => [a.artistKey, a.firstTs] as const));
+  const first = counted.reduce<number | undefined>((min, r) => (min === undefined || r.ts < min ? r.ts : min), undefined);
+  return { songFirstTs, albums, artistFirstTs, firstMonth: first === undefined ? undefined : monthKey(first) };
+}
+
+/** A month row's song, dated by all time: the earliest of every spelling folded into it. */
+export function songFirstSeen(row: ChartRow, identity: ChartIdentity): number {
+  let first = row.firstTs;
+  row.chartKeys.forEach(key => {
+    const seen = identity.songFirstTs.get(key);
+    if (seen !== undefined && seen < first) first = seen;
+  });
+  return first;
+}
+
+/** Whether something first supported at `firstTs` is new in `month`. */
+export function isNewIn(month: string, firstTs: number, identity: ChartIdentity): boolean {
+  return month !== identity.firstMonth && monthKey(firstTs) === month;
 }

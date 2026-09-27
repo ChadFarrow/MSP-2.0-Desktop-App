@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { collapseToPlays, topTracks, isBoostRecord, isPlayRecord } from './boostChart.js';
+import { collapseToPlays, topTracks, topArtists, isBoostRecord, isPlayRecord } from './boostChart.js';
 import type { DerivedBoost } from './boostRecord.js';
 
 const HOUR = 3600;
@@ -222,7 +222,7 @@ describe('topTracks', () => {
       record({ index: 2, trackKey: 'a', trackTitle: 'Shoot Me Down', trackArtist: 'THERAPY IN SESSION' }),
       record({ index: 3, trackKey: 'b', trackTitle: 'Vampire', trackArtist: 'Feeling the Light' })
     ]);
-    expect(rows).toEqual([
+    expect(rows.map(({ trackKey, trackTitle, trackArtist, count }) => ({ trackKey, trackTitle, trackArtist, count }))).toEqual([
       { trackKey: 'a', trackTitle: 'Shoot Me Down', trackArtist: 'THERAPY IN SESSION', count: 2 },
       { trackKey: 'b', trackTitle: 'Vampire', trackArtist: 'Feeling the Light', count: 1 }
     ]);
@@ -273,5 +273,158 @@ describe('topTracks', () => {
     const many = Array.from({ length: 15 }, (_, i) => record({ index: i, trackKey: `t${i}`, trackTitle: `Track ${i}` }));
     expect(topTracks(many)).toHaveLength(15);
     expect(topTracks(many, 3)).toHaveLength(3);
+  });
+});
+
+describe('listeners on a row', () => {
+  it('counts each listener once, however often they sent support', () => {
+    const rows = topTracks([
+      record({ index: 1, listenerKey: 'listener-aaaa' }),
+      record({ index: 2, listenerKey: 'listener-aaaa' }),
+      record({ index: 3, listenerKey: 'listener-bbbb' })
+    ]);
+    expect(rows[0].count).toBe(3);
+    expect(rows[0].listenerKeys.size).toBe(2);
+    expect(rows[0].unattributed).toBe(0);
+  });
+
+  it('counts a record that named no sender as unattributed, not as a listener', () => {
+    const rows = topTracks([
+      record({ index: 1, listenerKey: 'listener-aaaa' }),
+      record({ index: 2, listenerKey: undefined })
+    ]);
+    expect(rows[0].listenerKeys.size).toBe(1);
+    expect(rows[0].unattributed).toBe(1);
+  });
+
+  it('keeps one listener once when two spellings of their song merge', () => {
+    const rows = topTracks([
+      record({ index: 1, trackKey: 'link:a', trackTitle: 'Copenhagen Time', trackArtist: 'Kulture Collection - Matt Finlay', listenerKey: 'listener-aaaa' }),
+      record({ index: 2, trackKey: 'guid:b', trackTitle: 'Copenhagen Time', trackArtist: 'Matt Finlay', listenerKey: 'listener-aaaa' }),
+      record({ index: 3, trackKey: 'guid:b', trackTitle: 'Copenhagen Time', trackArtist: 'Matt Finlay', listenerKey: undefined })
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].listenerKeys.size).toBe(1);
+    expect(rows[0].unattributed).toBe(1);
+  });
+
+  it('keeps the earliest time any spelling of the song was seen', () => {
+    const rows = topTracks([
+      record({ index: 1, ts: 2000, trackKey: 'link:a', trackTitle: 'Copenhagen Time', trackArtist: 'Kulture Collection - Matt Finlay' }),
+      record({ index: 2, ts: 1000, trackKey: 'guid:b', trackTitle: 'Copenhagen Time', trackArtist: 'Matt Finlay' })
+    ]);
+    expect(rows[0].firstTs).toBe(1000);
+    expect([...rows[0].chartKeys].sort()).toEqual(['guid:b', 'link:a']);
+  });
+});
+
+describe('topArtists', () => {
+  function song(index: number, title: string, artist: string | undefined, extra: Partial<DerivedBoost> = {}) {
+    return record({ index, trackKey: `guid:${title}`, trackTitle: title, trackArtist: artist, ...extra });
+  }
+
+  it("adds up an artist's songs, whether or not the label also names the album", () => {
+    const artists = topArtists(topTracks([
+      song(1, 'Copenhagen Time', 'Kulture Collection - Matt Finlay'),
+      song(2, 'Copenhagen Time', 'Kulture Collection - Matt Finlay'),
+      song(3, 'Contrails', 'Matt Finlay'),
+      song(4, 'Vampire', 'Feeling the Light')
+    ]));
+    expect(artists.map(a => [a.artist, a.count, a.songs])).toEqual([
+      ['Matt Finlay', 3, 2],
+      ['Feeling the Light', 1, 1]
+    ]);
+    // Reading the artist out of "Album - Artist" is the rule, not a guess: nothing to mark.
+    expect(artists[0].mergedFrom).toBeUndefined();
+  });
+
+  it('gives an album-only label to the one artist a row names for that album, and marks it', () => {
+    // Podcast Index gives a feed title — the album — where the message gives "Album - Artist".
+    const artists = topArtists(topTracks([
+      song(1, 'Copenhagen Time', 'Kulture Collection - Matt Finlay'),
+      song(2, 'Safe And Effective', 'Kulture Collection')
+    ]));
+    expect(artists).toHaveLength(1);
+    expect(artists[0]).toMatchObject({ artist: 'Matt Finlay', count: 2, songs: 2, mergedFrom: ['Kulture Collection'] });
+  });
+
+  it('leaves an album name that several artists use on its own row', () => {
+    // Many artists release a "Singles" feed; an album-only "Singles" could be any of them.
+    const artists = topArtists(topTracks([
+      song(1, 'ACID', 'Singles - Horseheads'),
+      song(2, 'Other Song', 'Singles - Some Band'),
+      song(3, 'Mystery', 'Singles')
+    ]));
+    expect(artists.map(a => a.artist).sort()).toEqual(['Horseheads', 'Singles', 'Some Band']);
+  });
+
+  it("counts a listener once across all of an artist's songs", () => {
+    const artists = topArtists(topTracks([
+      song(1, 'Copenhagen Time', 'Matt Finlay', { listenerKey: 'listener-aaaa' }),
+      song(2, 'Contrails', 'Matt Finlay', { listenerKey: 'listener-aaaa' }),
+      song(3, 'Contrails', 'Matt Finlay', { listenerKey: undefined })
+    ]));
+    expect(artists[0].listenerKeys.size).toBe(1);
+    expect(artists[0].unattributed).toBe(1);
+  });
+
+  it('joins spellings of one artist that differ only in case and accents', () => {
+    const artists = topArtists(topTracks([
+      song(1, 'Midna', 'Technopolymère'),
+      song(2, 'Bakalator', 'TECHNOPOLYMERE')
+    ]));
+    expect(artists).toHaveLength(1);
+    expect(artists[0].count).toBe(2);
+  });
+
+  it('skips songs with no title or no artist', () => {
+    const artists = topArtists(topTracks([
+      song(1, 'Nameless', undefined),
+      record({ index: 2, trackKey: 'guid:x', trackTitle: undefined, trackArtist: 'Ghost' })
+    ]));
+    expect(artists).toEqual([]);
+  });
+
+  it('ranks by count, then by name', () => {
+    const artists = topArtists(topTracks([
+      song(1, 'One', 'Zebra'),
+      song(2, 'Two', 'Apple'),
+      song(3, 'Three', 'Mango'),
+      song(4, 'Four', 'Mango')
+    ]));
+    expect(artists.map(a => a.artist)).toEqual(['Mango', 'Apple', 'Zebra']);
+  });
+});
+
+describe('counts per month', () => {
+  const JUL = Math.floor(Date.UTC(2026, 6, 12) / 1000);
+  const AUG = Math.floor(Date.UTC(2026, 7, 12) / 1000);
+
+  it("counts a row's records month by month", () => {
+    const rows = topTracks([
+      record({ index: 1, ts: JUL }),
+      record({ index: 2, ts: AUG }),
+      record({ index: 3, ts: AUG })
+    ]);
+    expect(Object.fromEntries(rows[0].byMonth)).toEqual({ '2026-07': 1, '2026-08': 2 });
+  });
+
+  it('adds up the months of two spellings that merge into one song', () => {
+    const rows = topTracks([
+      record({ index: 1, ts: JUL, trackKey: 'link:a', trackTitle: 'Copenhagen Time', trackArtist: 'Kulture Collection - Matt Finlay' }),
+      record({ index: 2, ts: AUG, trackKey: 'guid:b', trackTitle: 'Copenhagen Time', trackArtist: 'Matt Finlay' }),
+      record({ index: 3, ts: AUG, trackKey: 'link:a', trackTitle: 'Copenhagen Time', trackArtist: 'Kulture Collection - Matt Finlay' })
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(Object.fromEntries(rows[0].byMonth)).toEqual({ '2026-07': 1, '2026-08': 2 });
+  });
+
+  it("adds up an artist's songs month by month", () => {
+    const artists = topArtists(topTracks([
+      record({ index: 1, ts: JUL, trackKey: 'a', trackTitle: 'Copenhagen Time', trackArtist: 'Matt Finlay' }),
+      record({ index: 2, ts: AUG, trackKey: 'b', trackTitle: 'Contrails', trackArtist: 'Matt Finlay' }),
+      record({ index: 3, ts: AUG, trackKey: 'a', trackTitle: 'Copenhagen Time', trackArtist: 'Matt Finlay' })
+    ]));
+    expect(Object.fromEntries(artists[0].byMonth)).toEqual({ '2026-07': 1, '2026-08': 2 });
   });
 });
