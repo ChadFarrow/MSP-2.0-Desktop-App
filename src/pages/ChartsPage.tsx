@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNostr } from '../store/nostrStore';
 import { createAdminAuthHeader } from '../utils/adminAuth';
+import { Sparkline, SupportPerMonth } from '../components/charts/TrendGraphs';
+import type { Trend } from '../components/charts/TrendGraphs';
 
 /**
  * The music chart — admin-only for now, like its API (see api/boosts/chart.ts).
  * Until an admin signs in, the page shows nothing about the chart at all.
  *
+ * It is written for people new to Value for Value music: every term on the page is
+ * explained where it appears, because "boost", "stream" and "sats" mean nothing yet to
+ * the reader it is for.
+ *
  * Counts only — no sats appear here. The chart is about what people listened to, not
- * what anyone earned, and these are other people's feeds.
+ * what anyone earned, and these are other people's feeds. Listener counts are counts too:
+ * the API never sends the keys behind them.
  *
  * The honesty note at the bottom is not decoration. MSP only sees a boost when its own
  * 1% split was actually paid, and small splits are frequently dropped by player apps.
@@ -16,36 +23,110 @@ import { createAdminAuthHeader } from '../utils/adminAuth';
 
 const mspLogo = '/msp-logo-192.png';
 
-interface ChartRow {
+interface SongRow {
   title: string;
   artist?: string;
   count: number;
+  /** Distinct listeners: one sender in one app. */
+  listeners: number;
+  /** Payments in the row that named no sender, so they reach no listener count. */
+  unattributed: number;
   /** Other artist spellings the API merged into this row; shown so a wrong merge is visible. */
   mergedFrom?: string[];
+  /** First supported in this month. Month views only. */
+  isNew?: true;
+  /** Count per month along `trend.months`. All time only. */
+  trend?: number[];
 }
 
-interface MonthChart {
-  month: string;
-  label: string;
-  streams: ChartRow[];
-  boosts: ChartRow[];
+interface ArtistRow {
+  artist: string;
+  count: number;
+  songs: number;
+  listeners: number;
+  unattributed: number;
+  /** Album-only names the API gave to this artist; shown so a wrong join is visible. */
+  mergedFrom?: string[];
+  isNew?: true;
+  trend?: number[];
+}
+
+interface PeriodChart {
+  streams: SongRow[];
+  boosts: SongRow[];
+  artistStreams: ArtistRow[];
+  artistBoosts: ArtistRow[];
   totalStreams: number;
   totalBoosts: number;
+  listeners: number;
+  unattributed: number;
+}
+
+interface MonthChart extends PeriodChart {
+  month: string;
+  label: string;
 }
 
 interface ChartResponse {
   generatedAt: number;
   months: MonthChart[];
-  allTime: Omit<MonthChart, 'month' | 'label'>;
+  allTime: PeriodChart;
+  trend: Trend;
 }
+
+/** What one line of a list shows, whether it is a song or an artist. */
+interface ListRow {
+  title: string;
+  subtitle?: string;
+  count: number;
+  listeners: number;
+  unattributed: number;
+  mergedFrom?: string[];
+  isNew?: true;
+  trend?: number[];
+}
+
+type View = 'songs' | 'artists';
 
 const ALL_TIME = 'all-time';
 
-function ChartList({ title, blurb, rows, unit }: {
+function fromSongs(rows: SongRow[]): ListRow[] {
+  return rows.map(row => ({ ...row, subtitle: row.artist }));
+}
+
+function fromArtists(rows: ArtistRow[]): ListRow[] {
+  return rows.map(row => ({
+    ...row,
+    title: row.artist,
+    subtitle: row.songs === 1 ? '1 song' : `${row.songs} songs`
+  }));
+}
+
+/**
+ * "3 listeners", or "3+ listeners" when some payments named no sender — those could be
+ * any number of further people. Nothing at all when no payment named anyone.
+ */
+function listenerText(listeners: number, unattributed: number): string | null {
+  if (listeners === 0) return null;
+  const plus = unattributed > 0 ? '+' : '';
+  return `${listeners}${plus} ${listeners === 1 && !plus ? 'listener' : 'listeners'}`;
+}
+
+/** The UTC month (`YYYY-MM`) of a time in milliseconds, as the API buckets it. */
+function monthOf(ms: number): string {
+  const d = new Date(ms);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function ChartList({ title, blurb, rows, unit, empty, months, thisMonth }: {
   title: string;
   blurb: string;
-  rows: ChartRow[];
+  rows: ListRow[];
   unit: string;
+  empty: string;
+  /** The trend's months, when the rows carry a trend (all time only). */
+  months?: string[];
+  thisMonth: string;
 }) {
   return (
     <section className="chart-panel">
@@ -53,27 +134,37 @@ function ChartList({ title, blurb, rows, unit }: {
       <p className="chart-panel-blurb">{blurb}</p>
 
       {rows.length === 0 ? (
-        <p className="chart-empty">Nothing charted for this period yet.</p>
+        <p className="chart-empty">{empty}</p>
       ) : (
         <ol className="chart-list">
-          {rows.map((row, i) => (
-            <li key={i} className="chart-row">
-              <span className="chart-rank">{i + 1}</span>
-              <span className="chart-track">
-                <span className="chart-title">{row.title}</span>
-                {row.artist && <span className="chart-artist">{row.artist}</span>}
-                {row.mergedFrom && row.mergedFrom.length > 0 && (
-                  <span className="chart-merged" title="Counted together: the same title under these artist spellings">
-                    ⚭ merged: {row.mergedFrom.join(' · ')}
+          {rows.map((row, i) => {
+            const listeners = listenerText(row.listeners, row.unattributed);
+            return (
+              <li key={i} className="chart-row">
+                <span className="chart-rank">{i + 1}</span>
+                <span className="chart-track">
+                  <span className="chart-title">
+                    {row.title}
+                    {row.isNew && <span className="chart-new">New</span>}
                   </span>
-                )}
-              </span>
-              <span className="chart-count">
-                {row.count}
-                <span className="chart-unit">{row.count === 1 ? unit : `${unit}s`}</span>
-              </span>
-            </li>
-          ))}
+                  {row.subtitle && <span className="chart-artist">{row.subtitle}</span>}
+                  {row.mergedFrom && row.mergedFrom.length > 0 && (
+                    <span className="chart-merged" title="Counted together: these names were read as the same artist">
+                      ⚭ merged: {row.mergedFrom.join(' · ')}
+                    </span>
+                  )}
+                </span>
+                <span className="chart-count">
+                  {months && row.trend && (
+                    <Sparkline months={months} values={row.trend} unit={unit.trim()} thisMonth={thisMonth} />
+                  )}
+                  {row.count}
+                  <span className="chart-unit">{row.count === 1 ? unit : `${unit}s`}</span>
+                  {listeners && <span className="chart-listeners">{listeners}</span>}
+                </span>
+              </li>
+            );
+          })}
         </ol>
       )}
     </section>
@@ -85,6 +176,8 @@ export function ChartsPage() {
   const [data, setData] = useState<ChartResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<string>(ALL_TIME);
+  const [view, setView] = useState<View>('songs');
+  const [onlyNew, setOnlyNew] = useState(false);
 
   // Same gate as AdminPage, and for the same reason: wait for isLoading, or the
   // 500ms NIP-07 injection wait flashes "no extension" on every load.
@@ -117,6 +210,22 @@ export function ChartsPage() {
     return month ?? null;
   }, [data, period]);
 
+  // "New" only means something inside one month; all time has no "new".
+  const newOnly = onlyNew && period !== ALL_TIME;
+
+  const lists = useMemo(() => {
+    if (!current) return null;
+    const boosts = view === 'songs' ? fromSongs(current.boosts) : fromArtists(current.artistBoosts);
+    const streams = view === 'songs' ? fromSongs(current.streams) : fromArtists(current.artistStreams);
+    const keep = (rows: ListRow[]) => (newOnly ? rows.filter(r => r.isNew) : rows);
+    return { boosts: keep(boosts), streams: keep(streams) };
+  }, [current, view, newOnly]);
+
+  const periodListeners = current ? listenerText(current.listeners, current.unattributed) : null;
+  const thisMonth = data ? monthOf(data.generatedAt) : '';
+  const trendMonths = period === ALL_TIME ? data?.trend.months : undefined;
+  const empty = newOnly ? 'Nothing new in this list this month.' : 'Nothing charted for this period yet.';
+
   return (
     <div className="charts-page">
       <header className="header">
@@ -148,8 +257,10 @@ export function ChartsPage() {
         {data && (
           <>
             <p className="charts-intro">
-              What listeners are playing and boosting on music feeds made with MSP,
-              paid in Bitcoin over the Lightning Network.
+              What people are listening to and supporting on music feeds made with MSP. In
+              podcast apps that support Value for Value, listeners pay artists directly in
+              sats — small amounts of bitcoin — while they listen. These charts count those
+              payments.
             </p>
 
             <div className="chart-periods">
@@ -170,26 +281,59 @@ export function ChartsPage() {
               ))}
             </div>
 
-            {current && (
+            <div className="chart-views">
+              <div className="chart-view-switch" role="group" aria-label="Show">
+                {(['songs', 'artists'] as const).map(v => (
+                  <button
+                    key={v}
+                    className={`chart-period ${view === v ? 'is-active' : ''}`}
+                    aria-pressed={view === v}
+                    onClick={() => setView(v)}
+                  >
+                    {v === 'songs' ? 'Songs' : 'Artists'}
+                  </button>
+                ))}
+              </div>
+              {period !== ALL_TIME && (
+                <button
+                  className={`chart-period ${onlyNew ? 'is-active' : ''}`}
+                  aria-pressed={onlyNew}
+                  onClick={() => setOnlyNew(!onlyNew)}
+                >
+                  Only new
+                </button>
+              )}
+            </div>
+
+            {current && lists && (
               <>
                 <p className="chart-summary">
                   <strong>{current.label}</strong> — {current.totalStreams} streams and{' '}
-                  {current.totalBoosts} boosts
+                  {current.totalBoosts} boosts{periodListeners && <> from {periodListeners}</>}
                 </p>
 
                 <div className="chart-grid">
                   <ChartList
                     title="Most boosted"
-                    blurb="Sats sent at a moment in a track — both boosts someone sent by hand and the auto-boosts their app sent when they played it."
-                    rows={current.boosts}
+                    blurb="A boost is a payment a listener sends while a song plays, often with a message. This counts both the boosts people send by hand and the automatic boosts some apps send for each song played."
+                    rows={lists.boosts}
                     unit=" boost"
+                    empty={empty}
+                    months={trendMonths}
+                    thisMonth={thisMonth}
                   />
                   <ChartList
                     title="Most streamed"
-                    blurb="Counted from streaming sats, with one listener's run on a track counted once."
-                    rows={current.streams}
+                    blurb="Streaming pays a few sats for each minute of listening. One listener's time on a song counts once."
+                    rows={lists.streams}
                     unit=" stream"
+                    empty={empty}
+                    months={trendMonths}
+                    thisMonth={thisMonth}
                   />
+                  {period === ALL_TIME && data.trend.months.length > 0 && (
+                    <SupportPerMonth trend={data.trend} thisMonth={thisMonth} />
+                  )}
                 </div>
               </>
             )}
@@ -200,6 +344,25 @@ export function ChartsPage() {
                 small support split on a feed it generated is actually paid, and player apps
                 routinely drop splits too small to send. Real listening is higher than these
                 numbers, and an artist who removed the split does not appear here at all.
+              </p>
+              <p>
+                <strong>Listeners.</strong> A listener is one person in one app, so the same
+                person in two apps counts twice. Some apps do not say who sent a payment; a
+                "+" means some payments in that row came without a name.
+              </p>
+              <p>
+                <strong>Trends.</strong> In All time, the small graph beside each count shows
+                its last twelve months, on its own scale, so you can see what is rising. The
+                last, fainter column is this month so far.
+              </p>
+              <p>
+                <strong>New.</strong> Marks a song or artist whose first payment MSP has seen
+                came in that month.
+              </p>
+              <p>
+                <strong>Artists</strong> are read from the names the apps send. When a name is
+                only an album, it joins the artist another payment names for that album, and
+                the "⚭ merged" line shows it.
               </p>
               <p>
                 Counts only. No earnings are published here.
