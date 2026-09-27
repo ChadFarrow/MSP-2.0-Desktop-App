@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNostr } from '../store/nostrStore';
 import { createAdminAuthHeader } from '../utils/adminAuth';
 import { Sparkline, SupportPerMonth } from '../components/charts/TrendGraphs';
 import type { Trend } from '../components/charts/TrendGraphs';
+import { foldSummary, listenerText } from '../utils/chartText';
+import type { ChartView } from '../utils/chartText';
 
 /**
  * The music chart — admin-only for now, like its API (see api/boosts/chart.ts).
@@ -86,8 +88,6 @@ interface ListRow {
   trend?: number[];
 }
 
-type View = 'songs' | 'artists';
-
 const ALL_TIME = 'all-time';
 
 function fromSongs(rows: SongRow[]): ListRow[] {
@@ -102,71 +102,89 @@ function fromArtists(rows: ArtistRow[]): ListRow[] {
   }));
 }
 
-/**
- * "3 listeners", or "3+ listeners" when some payments named no sender — those could be
- * any number of further people. Nothing at all when no payment named anyone.
- */
-function listenerText(listeners: number, unattributed: number): string | null {
-  if (listeners === 0) return null;
-  const plus = unattributed > 0 ? '+' : '';
-  return `${listeners}${plus} ${listeners === 1 && !plus ? 'listener' : 'listeners'}`;
-}
-
 /** The UTC month (`YYYY-MM`) of a time in milliseconds, as the API buckets it. */
 function monthOf(ms: number): string {
   const d = new Date(ms);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-function ChartList({ title, blurb, rows, unit, empty, months, thisMonth }: {
+/**
+ * One ranked list, folded shut until the reader opens it: the full lists run to dozens of
+ * rows, and on a phone two of them bury everything below. The heading says how much is
+ * behind it, and a native <details> gives the fold its keyboard and screen-reader
+ * behaviour for free. It stays mounted across periods and views, so a list the reader
+ * opened stays open while they browse.
+ */
+function ChartList({ title, blurb, rows, unit, empty, summary, months, thisMonth }: {
   title: string;
   blurb: string;
   rows: ListRow[];
   unit: string;
   empty: string;
+  /** What the closed list says under its heading, e.g. "62 songs". */
+  summary: string;
   /** The trend's months, when the rows carry a trend (all time only). */
   months?: string[];
   thisMonth: string;
 }) {
-  return (
-    <section className="chart-panel">
-      <h2 className="chart-panel-title">{title}</h2>
-      <p className="chart-panel-blurb">{blurb}</p>
+  const panel = useRef<HTMLElement>(null);
+  const fold = useRef<HTMLDetailsElement>(null);
 
-      {rows.length === 0 ? (
-        <p className="chart-empty">{empty}</p>
-      ) : (
-        <ol className="chart-list">
-          {rows.map((row, i) => {
-            const listeners = listenerText(row.listeners, row.unattributed);
-            return (
-              <li key={i} className="chart-row">
-                <span className="chart-rank">{i + 1}</span>
-                <span className="chart-track">
-                  <span className="chart-title">
-                    {row.title}
-                    {row.isNew && <span className="chart-new">New</span>}
-                  </span>
-                  {row.subtitle && <span className="chart-artist">{row.subtitle}</span>}
-                  {row.mergedFrom && row.mergedFrom.length > 0 && (
-                    <span className="chart-merged" title="Counted together: these names were read as the same artist">
-                      ⚭ merged: {row.mergedFrom.join(' · ')}
+  // Closing from the bottom of a long list would leave the reader far below the panel.
+  const hide = () => {
+    if (fold.current) fold.current.open = false;
+    if (panel.current && panel.current.getBoundingClientRect().top < 0) {
+      panel.current.scrollIntoView({ block: 'start' });
+    }
+  };
+
+  return (
+    <section ref={panel} className="chart-panel">
+      <details ref={fold} className="chart-fold">
+        <summary className="chart-fold-summary">
+          <h2 className="chart-panel-title">{title}</h2>
+          <span className="chart-fold-count">{summary}</span>
+        </summary>
+        <p className="chart-panel-blurb">{blurb}</p>
+
+        {rows.length === 0 ? (
+          <p className="chart-empty">{empty}</p>
+        ) : (
+          <ol className="chart-list">
+            {rows.map((row, i) => {
+              const listeners = listenerText(row.listeners, row.unattributed);
+              return (
+                <li key={i} className="chart-row">
+                  <span className="chart-rank">{i + 1}</span>
+                  <span className="chart-track">
+                    <span className="chart-title">
+                      {row.title}
+                      {row.isNew && <span className="chart-new">New</span>}
                     </span>
-                  )}
-                </span>
-                <span className="chart-count">
-                  {months && row.trend && (
-                    <Sparkline months={months} values={row.trend} unit={unit.trim()} thisMonth={thisMonth} />
-                  )}
-                  {row.count}
-                  <span className="chart-unit">{row.count === 1 ? unit : `${unit}s`}</span>
-                  {listeners && <span className="chart-listeners">{listeners}</span>}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      )}
+                    {row.subtitle && <span className="chart-artist">{row.subtitle}</span>}
+                    {row.mergedFrom && row.mergedFrom.length > 0 && (
+                      <span className="chart-merged" title="Counted together: these names were read as the same artist">
+                        ⚭ merged: {row.mergedFrom.join(' · ')}
+                      </span>
+                    )}
+                  </span>
+                  <span className="chart-count">
+                    {months && row.trend && (
+                      <Sparkline months={months} values={row.trend} unit={unit.trim()} thisMonth={thisMonth} />
+                    )}
+                    {row.count}
+                    <span className="chart-unit">{row.count === 1 ? unit : `${unit}s`}</span>
+                    {listeners && <span className="chart-listeners">{listeners}</span>}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+        {rows.length > 0 && (
+          <button type="button" className="chart-fold-hide" onClick={hide}>Hide list</button>
+        )}
+      </details>
     </section>
   );
 }
@@ -176,7 +194,7 @@ export function ChartsPage() {
   const [data, setData] = useState<ChartResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<string>(ALL_TIME);
-  const [view, setView] = useState<View>('songs');
+  const [view, setView] = useState<ChartView>('songs');
   const [onlyNew, setOnlyNew] = useState(false);
 
   // Same gate as AdminPage, and for the same reason: wait for isLoading, or the
@@ -319,6 +337,7 @@ export function ChartsPage() {
                     rows={lists.boosts}
                     unit=" boost"
                     empty={empty}
+                    summary={foldSummary(lists.boosts.length, view, newOnly)}
                     months={trendMonths}
                     thisMonth={thisMonth}
                   />
@@ -328,6 +347,7 @@ export function ChartsPage() {
                     rows={lists.streams}
                     unit=" stream"
                     empty={empty}
+                    summary={foldSummary(lists.streams.length, view, newOnly)}
                     months={trendMonths}
                     thisMonth={thisMonth}
                   />
