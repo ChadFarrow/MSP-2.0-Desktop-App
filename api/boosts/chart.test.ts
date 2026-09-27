@@ -115,6 +115,22 @@ describe('/api/boosts/chart', () => {
     expect(body).not.toContain('trackKey');
   });
 
+  it('says which spellings a merged row absorbed, and says nothing on an unmerged one', async () => {
+    mockReadAllDerived.mockResolvedValue([
+      rec({ index: 1, trackKey: 'link:a', trackTitle: 'Copenhagen Time', trackArtist: 'Kulture Collection - Matt Finlay' }),
+      rec({ index: 2, trackKey: 'guid:b', trackTitle: 'Copenhagen Time', trackArtist: 'Matt Finlay' }),
+      rec({ index: 3, trackKey: 'guid:c', trackTitle: 'Bakalator', trackArtist: 'Bacalao' })
+    ]);
+    const { req, res } = createMockReqRes();
+    await handler(req, res);
+
+    const rows = res.json.mock.calls[0][0].allTime.boosts;
+    const merged = rows.find((r: { title: string }) => r.title === 'Copenhagen Time');
+    const single = rows.find((r: { title: string }) => r.title === 'Bakalator');
+    expect(merged).toMatchObject({ count: 2, artist: 'Kulture Collection - Matt Finlay', mergedFrom: ['Matt Finlay'] });
+    expect(single).not.toHaveProperty('mergedFrom');
+  });
+
   it('omits records that resolve to no title, but still counts them in the totals', async () => {
     mockReadAllDerived.mockResolvedValue([
       rec({ index: 1, trackKey: 'a', trackTitle: 'Named' }),

@@ -24,6 +24,12 @@ export interface ChartRow {
   trackTitle?: string;
   trackArtist?: string;
   count: number;
+  /**
+   * Other artist spellings `mergeAliases` folded into this row, in the order it met them.
+   * Absent when nothing with a different spelling was merged — the chart marks these rows
+   * so a wrong merge can be seen.
+   */
+  mergedFrom?: string[];
 }
 
 /**
@@ -88,6 +94,11 @@ function normalize(value: string): string {
     .trim();
 }
 
+/** The part after the last " - ", normalized: the artist in "Album - Artist". */
+function lastPart(value: string | undefined): string {
+  return normalize((value ?? '').split(' - ').pop() ?? '');
+}
+
 /**
  * Merge rows that are the same track wearing two different names.
  *
@@ -98,10 +109,18 @@ function normalize(value: string): string {
  * gave the feed as `Technopolymère - Bacalao` for some records and `Technopolymère` for
  * others.
  *
- * The rule is deliberately narrow: same normalized title, and one artist string a prefix
- * of the other. That catches "X" versus "X - Y", which is the shape the data actually
- * takes, without merging two different songs that happen to share a title. The longest
- * artist wins as the label, since it is the most informative.
+ * The rule is deliberately narrow: same normalized title, and one artist string either a
+ * prefix of the other or equal to the other's last " - " part. That catches "Album" and
+ * "Artist" versus "Album - Artist", which are the shapes the data actually takes — the
+ * message scrape gives "Album - Artist", Podcast Index's feed title gives the album, and
+ * some apps give the artist. Observed live: "Copenhagen Time" charted three times under
+ * "Kulture Collection - Matt Finlay", "Kulture Collection" and "Matt Finlay". A bare
+ * suffix match is not used, or "Fred" would join "Right Said Fred". Chad's rule, 2026-09-27:
+ * the same title and the same artist are the same song, whatever the release. "Album" and
+ * "Artist" alone cannot be joined — nothing in the data says they belong together.
+ *
+ * The longest artist wins as the label, since it is the most informative, and every other
+ * spelling it absorbed is kept in `mergedFrom` so the chart can show the merge.
  */
 function mergeAliases(rows: ChartRow[]): ChartRow[] {
   const byTitle = new Map<string, ChartRow[]>();
@@ -126,10 +145,16 @@ function mergeAliases(rows: ChartRow[]): ChartRow[] {
       const artist = normalize(row.trackArtist ?? '');
       const into = groups.find(g => {
         const other = normalize(g.trackArtist ?? '');
-        return artist === other || other.startsWith(artist) || artist.startsWith(other);
+        return artist === other || other.startsWith(artist) || artist.startsWith(other)
+          || lastPart(g.trackArtist) === artist || lastPart(row.trackArtist) === other;
       });
-      if (into) into.count += row.count;
-      else groups.push({ ...row });
+      if (!into) { groups.push({ ...row }); continue; }
+      into.count += row.count;
+      // Record only a spelling that differs: an identical one is certain, not worth review.
+      const known = [into.trackArtist, ...(into.mergedFrom ?? [])].map(a => normalize(a ?? ''));
+      if (row.trackArtist && !known.includes(artist)) {
+        into.mergedFrom = [...(into.mergedFrom ?? []), row.trackArtist];
+      }
     }
     merged.push(...groups);
   }
