@@ -37,6 +37,8 @@ interface PublicRow {
   title: string;
   artist?: string;
   count: number;
+  /** Other artist spellings merged into this row (see mergeAliases); absent when none. */
+  mergedFrom?: string[];
 }
 
 /**
@@ -50,7 +52,12 @@ interface PublicRow {
 function toPublicRows(records: DerivedBoost[]): PublicRow[] {
   return topTracks(records)
     .filter(row => row.trackTitle)
-    .map(row => ({ title: row.trackTitle!, artist: row.trackArtist, count: row.count }));
+    .map(row => ({
+      title: row.trackTitle!,
+      artist: row.trackArtist,
+      count: row.count,
+      ...(row.mergedFrom ? { mergedFrom: row.mergedFrom } : {})
+    }));
 }
 
 function buildChart(records: DerivedBoost[]) {

@@ -20,6 +20,8 @@ interface ChartRow {
   title: string;
   artist?: string;
   count: number;
+  /** Other artist spellings the API merged into this row; shown so a wrong merge is visible. */
+  mergedFrom?: string[];
 }
 
 interface MonthChart {
@@ -60,6 +62,11 @@ function ChartList({ title, blurb, rows, unit }: {
               <span className="chart-track">
                 <span className="chart-title">{row.title}</span>
                 {row.artist && <span className="chart-artist">{row.artist}</span>}
+                {row.mergedFrom && row.mergedFrom.length > 0 && (
+                  <span className="chart-merged" title="Counted together: the same title under these artist spellings">
+                    ⚭ merged: {row.mergedFrom.join(' · ')}
+                  </span>
+                )}
               </span>
               <span className="chart-count">
                 {row.count}

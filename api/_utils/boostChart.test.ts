@@ -125,6 +125,40 @@ describe('merging a track that resolved under two names', () => {
     expect(rows[0].count).toBe(3);
     // The fuller name is the more useful label.
     expect(rows[0].trackArtist).toBe('Technopolymere - Bacalao');
+    // And the row says what it absorbed, so a wrong merge can be spotted.
+    expect(rows[0].mergedFrom).toEqual(['Technopolymere']);
+  });
+
+  it('merges an artist-only spelling into "Album - Artist", and an album-only one too', () => {
+    // Observed live: "Copenhagen Time" charted three times — as "Kulture Collection -
+    // Matt Finlay" (the message's "album - artist"), "Kulture Collection" (Podcast Index's
+    // feed title) and "Matt Finlay". Same title, same artist: one song.
+    const rows = topTracks([
+      ...Array.from({ length: 4 }, (_, i) => record({ index: i, trackKey: 'link:a', trackTitle: 'Copenhagen Time', trackArtist: 'Kulture Collection - Matt Finlay' })),
+      ...Array.from({ length: 6 }, (_, i) => record({ index: 10 + i, trackKey: 'guid:b', trackTitle: 'Copenhagen Time', trackArtist: 'Kulture Collection' })),
+      ...Array.from({ length: 4 }, (_, i) => record({ index: 20 + i, trackKey: 'title:c', trackTitle: 'Copenhagen Time', trackArtist: 'Matt Finlay' }))
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].count).toBe(14);
+    expect(rows[0].trackArtist).toBe('Kulture Collection - Matt Finlay');
+    expect(rows[0].mergedFrom).toEqual(['Kulture Collection', 'Matt Finlay']);
+  });
+
+  it('keeps an artist apart from a longer name that merely ends with the same word', () => {
+    const rows = topTracks([
+      record({ index: 1, trackKey: 'a', trackTitle: 'Lord Have Mercy', trackArtist: 'Right Said Fred' }),
+      record({ index: 2, trackKey: 'b', trackTitle: 'Lord Have Mercy', trackArtist: 'Fred' })
+    ]);
+    expect(rows).toHaveLength(2);
+  });
+
+  it('cannot join an album-only and an artist-only spelling without a row naming both', () => {
+    const rows = topTracks([
+      record({ index: 1, trackKey: 'a', trackTitle: 'Safe And Effective', trackArtist: 'Kulture Collection' }),
+      record({ index: 2, trackKey: 'b', trackTitle: 'Safe And Effective', trackArtist: 'Matt Finlay' })
+    ]);
+    expect(rows).toHaveLength(2);
+    expect(rows.every(r => r.mergedFrom === undefined)).toBe(true);
   });
 
   it('merges two rows that are identical, which is what collided the React key', () => {
@@ -134,6 +168,8 @@ describe('merging a track that resolved under two names', () => {
     ]);
     expect(rows).toHaveLength(1);
     expect(rows[0].count).toBe(2);
+    // Identical spellings are certain, so they carry no mark to review.
+    expect(rows[0].mergedFrom).toBeUndefined();
   });
 
   it('keeps two different songs apart even when they share a title', () => {
