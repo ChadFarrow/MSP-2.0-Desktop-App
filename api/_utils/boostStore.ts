@@ -1,10 +1,10 @@
 /**
  * Blob-backed storage for boost records.
  *
- *   boosts/raw/<MSP_BOOST_NAMESPACE>/<YYYY-MM>/<direction>-<index>.json
+ *   boosts/raw/<MSP_BOOST_NAMESPACE>/<YYYY-MM>/<direction>-<index | ph-<payment_hash>>.json
  *       The verbatim payload, listener message and sender name included. Written once,
  *       never rewritten, never served by any endpoint.
- *   boosts/derived/<isoYear>-W<week>.json
+ *   boosts/derived/<MSP_BOOST_NAMESPACE>/<isoYear>-W<week>.json
  *       The PII-free projection a chart reads. Written whole, never merged.
  *
  * The namespace segment is load-bearing: Helipad's `index` is a small incrementing
@@ -26,10 +26,8 @@
  *     stale read could corrupt.
  */
 import { put, list } from '@vercel/blob';
-import type { DerivedBoost, ParsedBoost } from './boostRecord.js';
-import { isoWeekKey, monthKey, parseBoostPayload, toDerived } from './boostRecord.js';
-
-export const DERIVED_PREFIX = 'boosts/derived/';
+import type { BoostSource, DerivedBoost, ParsedBoost } from './boostRecord.js';
+import { BOOSTBOX_CUTOVER, isoWeekKey, monthKey, parseBoostPayload, recordKey, toDerived } from './boostRecord.js';
 
 /** Rejects a misconfigured namespace rather than letting it build a path we didn't mean. */
 const NAMESPACE_RE = /^[A-Za-z0-9_-]{16,128}$/;
@@ -55,16 +53,27 @@ export function rawMonthPrefix(month: string): string {
 }
 
 export function rawPath(boost: ParsedBoost): string {
-  return `${rawMonthPrefix(monthKey(boost.ts))}${boost.direction}-${boost.index}.json`;
+  const id = boost.source === 'boostbox' ? `ph-${boost.paymentHash}` : String(boost.index);
+  return `${rawMonthPrefix(monthKey(boost.ts))}${boost.direction}-${id}.json`;
+}
+
+/**
+ * Weekly chart files, behind the same secret namespace as raw. They are public blobs at
+ * fixed names and carry per-boost amounts the chart itself never shows, so a guessable
+ * path would publish them. Until 2026-09-26 they lived at boosts/derived/<week>.json;
+ * tools/migrate-derived-to-namespace.mjs moved them.
+ */
+export function derivedPrefix(): string {
+  return `boosts/derived/${namespace()}/`;
 }
 
 export function derivedPath(weekKey: string): string {
-  return `${DERIVED_PREFIX}${weekKey}.json`;
+  return `${derivedPrefix()}${weekKey}.json`;
 }
 
 export interface RawStoredBoost {
   receivedAt: number;
-  source: 'webhook' | 'import';
+  source: 'webhook' | 'import' | 'boostbox';
   payload: unknown;
 }
 
@@ -125,7 +134,7 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promis
 
 /** Read every derived week. Safe to serve from cache — a chart tolerates 60s of lag. */
 export async function readAllDerived(): Promise<DerivedBoost[]> {
-  const blobs = await listAll(DERIVED_PREFIX);
+  const blobs = await listAll(derivedPrefix());
   blobs.sort((a, b) => a.pathname.localeCompare(b.pathname));
   const weeks = await mapLimit(blobs, WRITE_CONCURRENCY, b => fetchJson<DerivedBoost[]>(b.url));
   return weeks.flatMap(week => week ?? []);
@@ -207,6 +216,30 @@ export function monthsForWeek(weekKey: string): string[] {
   return first === last ? [first] : [first, last];
 }
 
+/** Every stored raw record of one week whose path passes `keep`. Raw is immutable, so a cached read is correct. */
+async function readRawWeek(weekKey: string, keep: (pathname: string) => boolean = () => true): Promise<ParsedBoost[]> {
+  const blobs = (await Promise.all(
+    monthsForWeek(weekKey).map(month => listAll(rawMonthPrefix(month)))
+  )).flat().filter(b => keep(b.pathname));
+
+  const stored = await mapLimit(blobs, WRITE_CONCURRENCY, b => fetchJson<RawStoredBoost>(b.url));
+  const records: ParsedBoost[] = [];
+  for (const record of stored) {
+    const parsed = record ? parseBoostPayload(record.payload) : null;
+    if (parsed && isoWeekKey(parsed.ts) === weekKey) records.push(parsed);
+  }
+  return records;
+}
+
+/**
+ * msp-bot's raw records for one week. The Helipad importer supplies only Helipad's
+ * records, and its whole-week write would otherwise replace the bot's with nothing.
+ */
+export async function readStoredBoostboxRecords(weekKey: string): Promise<ParsedBoost[]> {
+  const records = await readRawWeek(weekKey, pathname => pathname.includes('/incoming-ph-'));
+  return records.filter(r => r.source === 'boostbox');
+}
+
 /**
  * Rebuild one week's derived file from the raw records already stored.
  *
@@ -222,20 +255,11 @@ export async function rebuildWeekFromRaw(
   weekKey: string,
   extra: ParsedBoost[] = []
 ): Promise<number | null> {
-  const blobs = (await Promise.all(
-    monthsForWeek(weekKey).map(month => listAll(rawMonthPrefix(month)))
-  )).flat();
-
-  const stored = await mapLimit(blobs, WRITE_CONCURRENCY, b => fetchJson<RawStoredBoost>(b.url));
-  const records: ParsedBoost[] = [];
-  for (const record of stored) {
-    const parsed = record ? parseBoostPayload(record.payload) : null;
-    if (parsed && isoWeekKey(parsed.ts) === weekKey) records.push(parsed);
-  }
+  const records = await readRawWeek(weekKey);
 
   // `extra` is the caller's own just-written records. list() is not guaranteed to show a
   // blob written moments earlier, so a webhook that rebuilt purely from the listing could
-  // drop the very boost that triggered it. replaceDerivedWeek dedupes on index, so
+  // drop the very boost that triggered it. replaceDerivedWeek dedupes on recordKey, so
   // folding them in is free when the listing did already include them.
   for (const record of extra) {
     if (isoWeekKey(record.ts) === weekKey) records.push(record);
@@ -246,22 +270,35 @@ export async function rebuildWeekFromRaw(
 }
 
 /**
+ * Keep one source per period: Helipad's records before BOOSTBOX_CUTOVER, the bot's from
+ * it on. The bot holds every MSP split payment Helipad holds after the cutover, so
+ * choosing by date counts each boost once without pairing records. Helipad records
+ * after the cutover stay in raw; they are only left out here. A record with no source
+ * predates the bot and is Helipad's.
+ */
+export function selectSource<T extends { source?: BoostSource; ts: number }>(records: T[]): T[] {
+  return records.filter(r => (r.source === 'boostbox') === (r.ts >= BOOSTBOX_CUTOVER));
+}
+
+/**
  * Write one week's derived file from the complete set of that week's records.
  *
  * The caller must supply every record for the week, because this replaces the file
  * outright. That requirement is the point: with no previous version to merge, there is
- * no read, and therefore nothing a 60-second CDN cache can corrupt.
+ * no read, and therefore nothing a 60-second CDN cache can corrupt. Records are
+ * de-duplicated on recordKey after selectSource picks one source per period.
  */
 export async function replaceDerivedWeek(
   weekKey: string,
   records: ParsedBoost[]
 ): Promise<number> {
-  const byIndex = new Map<number, DerivedBoost>();
-  for (const record of records) {
+  const byKey = new Map<string, DerivedBoost>();
+  for (const record of selectSource(records)) {
     if (isoWeekKey(record.ts) !== weekKey) continue;
-    byIndex.set(record.index, toDerived(record));
+    byKey.set(recordKey(record), toDerived(record));
   }
-  const week = [...byIndex.values()].sort((a, b) => a.ts - b.ts || a.index - b.index);
+  const week = [...byKey.values()]
+    .sort((a, b) => a.ts - b.ts || recordKey(a).localeCompare(recordKey(b)));
   await putJson(derivedPath(weekKey), week, true);
   return week.length;
 }

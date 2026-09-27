@@ -32,6 +32,25 @@ export type TrackSource =
   | 'message'       // scraped out of free text
   | 'none';
 
+/** Which system delivered a record. A record stored before this existed is Helipad's. */
+export type BoostSource = 'helipad' | 'boostbox';
+
+/** A Lightning payment hash: 32 bytes, lowercase hex. The bot's raw path is built from it. */
+const PAYMENT_HASH_RE = /^[0-9a-f]{64}$/;
+
+/**
+ * Where msp-bot's history starts: its first-run watermark, 2026-01-29T21:18:53Z.
+ * Measured on 2026-09-26, the bot holds every MSP split payment Helipad holds after this
+ * instant, and 87 more, so the chart takes Helipad's records before it and the bot's
+ * from it on. See docs/superpowers/specs/2026-09-26-msp-bot-boost-ingest-design.md.
+ */
+export const BOOSTBOX_CUTOVER = 1769721533;
+
+/** The key a derived week de-duplicates on. Helipad's index and the bot's hash never collide. */
+export function recordKey(r: { source?: BoostSource; index: number; paymentHash?: string }): string {
+  return r.source === 'boostbox' ? `ph:${r.paymentHash}` : `h:${r.index}`;
+}
+
 /**
  * Everything a boosting app might put in TLV record 7629169. All optional on purpose:
  * two real captures of this field share barely half their keys.
@@ -64,6 +83,9 @@ export interface HelipadTlv {
 /** A normalized boost, listener fields included. Never serve this. */
 export interface ParsedBoost {
   index: number;
+  /** Helipad records carry `index`; msp-bot records carry `paymentHash` and index 0. */
+  source: BoostSource;
+  paymentHash?: string;
   direction: 'incoming' | 'outgoing';
   ts: number;
   actionName: ActionName;
@@ -92,6 +114,9 @@ export interface TrackResolution {
 /** The PII-free projection. Only this shape may leave an endpoint. */
 export interface DerivedBoost {
   index: number;
+  /** Absent on weeks written before msp-bot existed; read as 'helipad'. */
+  source?: BoostSource;
+  paymentHash?: string;
   ts: number;
   direction: 'incoming' | 'outgoing';
   actionName: ActionName;
@@ -247,13 +272,29 @@ export function parseBoostPayload(body: unknown): ParsedBoost | null {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return null;
   const b = body as Record<string, unknown>;
 
-  const index = asNumber(b.index);
-  if (index === undefined) return null;
+  const source: BoostSource = b.source === 'boostbox' ? 'boostbox' : 'helipad';
+  let index: number | undefined;
+  let paymentHash: string | undefined;
+  if (source === 'boostbox') {
+    // msp-bot has no LND invoice index; the payment hash is its unique key instead.
+    const hash = asString(b.payment_hash);
+    if (!hash || !PAYMENT_HASH_RE.test(hash)) return null;
+    // The bot only forwards incoming payments, and its raw records live at
+    // incoming-ph-<payment_hash>.json; an outgoing one has no path to be read back from.
+    if (b.direction === 'outgoing') return null;
+    paymentHash = hash;
+    index = 0;
+  } else {
+    index = asNumber(b.index);
+    if (index === undefined) return null;
+  }
 
   const tlv = parseTlv(b.tlv);
 
   return {
     index,
+    source,
+    ...(paymentHash ? { paymentHash } : {}),
     direction: b.direction === 'outgoing' ? 'outgoing' : 'incoming',
     ts: asNumber(b.time) ?? Math.floor(Date.now() / 1000),
     actionName: resolveActionName(b.action, tlv.action),
@@ -375,6 +416,8 @@ export function toDerived(boost: ParsedBoost): DerivedBoost {
   const track = resolveTrack(boost);
   return {
     index: boost.index,
+    source: boost.source,
+    ...(boost.paymentHash ? { paymentHash: boost.paymentHash } : {}),
     ts: boost.ts,
     direction: boost.direction,
     actionName: boost.actionName,

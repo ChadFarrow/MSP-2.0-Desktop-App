@@ -19,8 +19,8 @@ const CRON_SECRET = 'cron-secret-value';
 
 type MockRes = VercelResponse & { status: Mock; json: Mock; setHeader: Mock };
 
-function createMockReqRes(method = 'GET', headers: Record<string, string> = {}) {
-  const req = { method, query: {}, headers } as unknown as VercelRequest;
+function createMockReqRes(method = 'GET', headers: Record<string, string> = {}, query: Record<string, string> = {}) {
+  const req = { method, query, headers } as unknown as VercelRequest;
   const res = {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
@@ -106,5 +106,28 @@ describe('/api/boosts/rebuild', () => {
     const { req, res } = createMockReqRes('GET', { authorization: `Bearer ${CRON_SECRET}` });
     await handler(req, res);
     expect(res.status).toHaveBeenCalledWith(500);
+  });
+
+  it('rebuilds one named week for an admin, and nothing else', async () => {
+    process.env.MSP_ADMIN_KEY = 'admin-key-value';
+    const { req, res } = createMockReqRes('GET', { 'x-admin-key': 'admin-key-value' }, { week: '2026-W10' });
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockRebuild).toHaveBeenCalledTimes(1);
+    expect(mockRebuild).toHaveBeenCalledWith('2026-W10');
+  });
+
+  it('refuses a named week from the cron, which never sends one', async () => {
+    const { req, res } = createMockReqRes('GET', { authorization: `Bearer ${CRON_SECRET}` }, { week: '2026-W10' });
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(mockRebuild).not.toHaveBeenCalled();
+  });
+
+  it('refuses a malformed week key', async () => {
+    process.env.MSP_ADMIN_KEY = 'admin-key-value';
+    const { req, res } = createMockReqRes('GET', { 'x-admin-key': 'admin-key-value' }, { week: '2026-10' });
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
   });
 });

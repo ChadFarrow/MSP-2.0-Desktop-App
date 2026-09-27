@@ -7,7 +7,9 @@ import {
   isHelipadTestBoost,
   hashListener,
   decodeEntities,
-  isoWeekKey
+  isoWeekKey,
+  recordKey,
+  BOOSTBOX_CUTOVER
 } from './boostRecord.js';
 
 /**
@@ -363,5 +365,63 @@ describe('isoWeekKey', () => {
 
   it('zero-pads a single-digit week so the keys sort', () => {
     expect(isoWeekKey(Date.UTC(2026, 0, 8) / 1000)).toBe('2026-W02');
+  });
+});
+
+const HASH = 'a'.repeat(64);
+
+/** What msp-bot sends: no Helipad index, a payment hash instead, everything else in tlv. */
+function botBody(overrides: Record<string, unknown> = {}) {
+  return {
+    source: 'boostbox',
+    payment_hash: HASH,
+    direction: 'incoming',
+    time: BOOSTBOX_CUTOVER + 3600,
+    value_msat: 1000,
+    tlv: JSON.stringify(V4VMUSIC_TLV),
+    ...overrides
+  };
+}
+
+describe('parseBoostPayload for msp-bot records', () => {
+  it('takes the payment hash as the key when there is no Helipad index', () => {
+    const parsed = parseBoostPayload(botBody())!;
+    expect(parsed.source).toBe('boostbox');
+    expect(parsed.paymentHash).toBe(HASH);
+    expect(parsed.app).toBe('v4vmusic-com');
+    expect(parsed.actionName).toBe('auto');
+    expect(parsed.valueMsatTotal).toBe(100000);
+    expect(isMspSplit(parsed)).toBe(true);
+  });
+
+  it('skips a bot record whose payment hash is not 64 lowercase hex characters', () => {
+    for (const bad of [undefined, '', 'A'.repeat(64), 'a'.repeat(63), '../' + 'a'.repeat(61)]) {
+      expect(parseBoostPayload(botBody({ payment_hash: bad }))).toBeNull();
+    }
+  });
+
+  it('marks a Helipad record as helipad', () => {
+    expect(parseBoostPayload(webhookBody(V4VMUSIC_TLV))!.source).toBe('helipad');
+  });
+
+  it('carries the source and payment hash into the derived record', () => {
+    const derived = toDerived(parseBoostPayload(botBody())!);
+    expect(derived.source).toBe('boostbox');
+    expect(derived.paymentHash).toBe(HASH);
+  });
+
+  it('skips a bot record that claims to be outgoing', () => {
+    expect(parseBoostPayload(botBody({ direction: 'outgoing' }))).toBeNull();
+  });
+});
+
+describe('recordKey', () => {
+  it('keys Helipad on its index and the bot on its payment hash, so they never collide', () => {
+    expect(recordKey(parseBoostPayload(webhookBody(V4VMUSIC_TLV))!)).toBe('h:10695');
+    expect(recordKey(parseBoostPayload(botBody())!)).toBe(`ph:${HASH}`);
+  });
+
+  it('treats a derived record written before sources existed as Helipad', () => {
+    expect(recordKey({ index: 7 })).toBe('h:7');
   });
 });

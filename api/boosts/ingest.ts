@@ -2,14 +2,16 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { checkRateLimit } from '../_utils/rateLimiter.js';
 import { getClientIp } from '../_utils/urlSafety.js';
 import { timingSafeEqualString } from '../_utils/feedUtils.js';
-import { parseBoostPayload, isHelipadTestBoost, isoWeekKey } from '../_utils/boostRecord.js';
-import type { ParsedBoost } from '../_utils/boostRecord.js';
+import { parseBoostPayload, isHelipadTestBoost, isMspSplit, isoWeekKey } from '../_utils/boostRecord.js';
+import type { BoostSource, ParsedBoost } from '../_utils/boostRecord.js';
 import {
   isBoostStoreConfigured,
   storeRawBoosts,
   replaceDerivedWeek,
-  rebuildWeekFromRaw
+  rebuildWeekFromRaw,
+  readStoredBoostboxRecords
 } from '../_utils/boostStore.js';
+import { enrichWithRemoteTitles } from '../_utils/remoteItemLookup.js';
 
 /**
  * Ingest for Helipad boost records.
@@ -37,6 +39,13 @@ import {
  *
  * A live webhook cannot know a whole week, so it writes raw only and the chart catches
  * up on the next importer run. Raw is the source of truth and is always complete.
+ *
+ * A second caller, msp-bot (boostbox), posts the same record shape with
+ * `source: "boostbox"` and a `payment_hash` in place of `index`, under its own
+ * MSP_BOT_INGEST_TOKEN. Since 2026-09-26 it is the chart's live source; Helipad's
+ * records count only before BOOSTBOX_CUTOVER (see boostRecord.ts). It sends single
+ * records or arrays only: the week envelope is refused under its token, and so is any
+ * record that is not the MSP split.
  */
 
 /**
@@ -68,11 +77,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const expectedToken = process.env.HELIPAD_WEBHOOK_TOKEN;
+  const helipadToken = process.env.HELIPAD_WEBHOOK_TOKEN;
+  const botToken = process.env.MSP_BOT_INGEST_TOKEN;
 
-  // 404 rather than 401 when unconfigured: until both env vars are set the feature
-  // does not exist, and saying so invites nobody to guess at the token.
-  if (!expectedToken || !isBoostStoreConfigured()) {
+  // 404 rather than 401 when unconfigured: until a token and the namespace are set the
+  // feature does not exist, and saying so invites nobody to guess at a token.
+  if ((!helipadToken && !botToken) || !isBoostStoreConfigured()) {
     return res.status(404).json({ error: 'Not found' });
   }
 
@@ -83,7 +93,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Constant-time, and the string variant on purpose: timingSafeEqualHex would run
   // Buffer.from(x, 'hex') over a free-form secret and compare two truncations equal.
-  if (!presented || !timingSafeEqualString(presented, expectedToken)) {
+  // Each token names its caller, and a caller may only write its own source's records.
+  const caller: BoostSource | null =
+    presented && helipadToken && timingSafeEqualString(presented, helipadToken) ? 'helipad'
+    : presented && botToken && timingSafeEqualString(presented, botToken) ? 'boostbox'
+    : null;
+
+  if (!caller) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -108,6 +124,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!Array.isArray(envelope.records)) {
       return res.status(400).json({ error: 'records must be an array' });
     }
+    // The envelope rewrites the whole week from the records supplied plus the bot's
+    // stored ones, so only Helipad's importer may send it: a bot-token envelope would
+    // write that week with every Helipad record gone. The bot never needs it.
+    if (caller !== 'helipad') {
+      return res.status(400).json({ error: 'The week envelope is for the Helipad importer only' });
+    }
     week = envelope.week;
     payloads = envelope.records;
   } else {
@@ -121,12 +143,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: `Batch too large, maximum ${MAX_BATCH}` });
   }
 
-  const entries: { parsed: ParsedBoost; payload: unknown }[] = [];
+  let entries: { parsed: ParsedBoost; payload: unknown }[] = [];
   let skipped = 0;
   let tests = 0;
   for (const payload of payloads) {
     const parsed = parseBoostPayload(payload);
     if (!parsed) { skipped += 1; continue; }
+    // A leaked bot token must not be able to forge Helipad history, nor the reverse.
+    if (parsed.source !== caller) { skipped += 1; continue; }
+    // A bot with a wrong BBN_RECIPIENT_NAMES must not put another show's listener
+    // messages into MSP's raw store. Helipad's records are all kept, as they always were.
+    if (parsed.source === 'boostbox' && !isMspSplit(parsed)) { skipped += 1; continue; }
     // Accepted and acknowledged, never stored — see isHelipadTestBoost.
     if (isHelipadTestBoost(parsed)) { tests += 1; continue; }
     entries.push({ parsed, payload });
@@ -156,13 +183,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // Helipad resolves a remote item's titles itself; for msp-bot's records MSP does it
+  // here, before the raw write, so the resolver's remote-guid rung keeps its names.
+  entries = await enrichWithRemoteTitles(entries);
+
   try {
-    const result = await storeRawBoosts(entries, week ? 'import' : 'webhook');
+    const result = await storeRawBoosts(entries, week ? 'import' : caller === 'boostbox' ? 'boostbox' : 'webhook');
     const weekSizes: Record<string, number> = {};
 
     if (week) {
-      // The caller supplied the complete week, so write it straight out.
-      weekSizes[week] = await replaceDerivedWeek(week, entries.map(e => e.parsed));
+      // The importer supplies Helipad's records only. The bot's stored records for the
+      // week go into the same whole-week write, or re-running the importer would drop
+      // them from the chart.
+      const stored = await readStoredBoostboxRecords(week);
+      weekSizes[week] = await replaceDerivedWeek(week, [...entries.map(e => e.parsed), ...stored]);
     } else {
       // A webhook knows one boost, not a week — so rebuild that week from raw, which
       // needs no previous version of the derived file and therefore no merge. The
