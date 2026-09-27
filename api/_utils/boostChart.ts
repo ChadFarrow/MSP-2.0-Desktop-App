@@ -74,7 +74,7 @@ export function collapseToPlays(
   const lastSeen = new Map<string, number>();
 
   for (const record of streams) {
-    const key = `${record.listenerKey ?? 'anon'}|${record.app}|${record.trackKey}`;
+    const key = `${record.listenerKey ?? 'anon'}|${record.app}|${chartKey(record)}`;
     const previous = lastSeen.get(key);
     // Seconds on the wire, milliseconds in the gap — convert before comparing.
     if (previous === undefined || (record.ts - previous) * 1000 > gapMs) plays.push(record);
@@ -92,6 +92,24 @@ function normalize(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+}
+
+/**
+ * What one chart row counts. A boost link is an app's own URL and ought to name one song,
+ * but v4vmusic's does not: measured on 2026-09-27, 28 of 75 boost links carried more than
+ * one song title (144 boosts), one of them six songs. Keyed on the link alone, the chart
+ * summed different songs under whichever title came first — "Copenhagen Time" showed 19
+ * where 14 were its own. So a boost-link record is keyed by its link and title together,
+ * and an untitled one stays apart rather than joining some song on the same link. A guid
+ * or title key does name one song, so it keeps its key, and a record without a title still
+ * takes one from another record of the same key.
+ */
+function chartKey(record: DerivedBoost): string | undefined {
+  if (!record.trackKey) return undefined;
+  if (record.trackSource === 'boost-link' && record.trackTitle) {
+    return `${record.trackKey}|${normalize(record.trackTitle)}`;
+  }
+  return record.trackKey;
 }
 
 /** The part after the last " - ", normalized: the artist in "Album - Artist". */
@@ -170,15 +188,16 @@ export function topTracks(records: DerivedBoost[], limit?: number): ChartRow[] {
   const rows = new Map<string, ChartRow>();
 
   for (const record of records) {
-    if (!record.trackKey) continue;
-    const existing = rows.get(record.trackKey);
+    const key = chartKey(record);
+    if (!key) continue;
+    const existing = rows.get(key);
     if (existing) {
       existing.count += 1;
       existing.trackTitle ??= record.trackTitle;
       existing.trackArtist ??= record.trackArtist;
     } else {
-      rows.set(record.trackKey, {
-        trackKey: record.trackKey,
+      rows.set(key, {
+        trackKey: key,
         trackTitle: record.trackTitle,
         trackArtist: record.trackArtist,
         count: 1
