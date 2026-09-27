@@ -25,6 +25,14 @@ function record(overrides: Partial<DerivedBoost>): DerivedBoost {
 }
 
 describe('collapseToPlays', () => {
+  it('does not join two songs a listener streamed under one shared boost link', () => {
+    const streams = [
+      record({ index: 1, ts: 1_756_400_000, trackSource: 'boost-link', trackKey: 'link:shared', trackTitle: 'Copenhagen Time' }),
+      record({ index: 2, ts: 1_756_400_060, trackSource: 'boost-link', trackKey: 'link:shared', trackTitle: 'Contrails' })
+    ];
+    expect(collapseToPlays(streams)).toHaveLength(2);
+  });
+
   it('collapses one listener streaming a track into a single play', () => {
     // Streaming sats fire about once a minute. Counting them raw would rank a
     // six-minute song above a two-minute one on a single listen each.
@@ -218,6 +226,25 @@ describe('topTracks', () => {
       { trackKey: 'a', trackTitle: 'Shoot Me Down', trackArtist: 'THERAPY IN SESSION', count: 2 },
       { trackKey: 'b', trackTitle: 'Vampire', trackArtist: 'Feeling the Light', count: 1 }
     ]);
+  });
+
+  it('keeps two songs apart when an app gives them the same boost link', () => {
+    // Observed live: v4vmusic sent one boost link with six different songs; keyed on the
+    // link alone, the chart summed them under whichever title came first.
+    const rows = topTracks([
+      record({ index: 1, trackSource: 'boost-link', trackKey: 'link:shared', trackTitle: 'Copenhagen Time', trackArtist: 'Matt Finlay' }),
+      record({ index: 2, trackSource: 'boost-link', trackKey: 'link:shared', trackTitle: 'Contrails', trackArtist: 'Matt Finlay' }),
+      record({ index: 3, trackSource: 'boost-link', trackKey: 'link:shared', trackTitle: 'Contrails', trackArtist: 'Matt Finlay' })
+    ]);
+    expect(rows.map(r => [r.trackTitle, r.count])).toEqual([['Contrails', 2], ['Copenhagen Time', 1]]);
+  });
+
+  it('never gives an untitled boost on a shared link to whichever song came first', () => {
+    const rows = topTracks([
+      record({ index: 1, trackSource: 'boost-link', trackKey: 'link:shared', trackTitle: 'That Old Thing', trackArtist: 'MezzaForte' }),
+      record({ index: 2, trackSource: 'boost-link', trackKey: 'link:shared', trackTitle: undefined, trackArtist: undefined })
+    ]);
+    expect(rows.find(r => r.trackTitle === 'That Old Thing')?.count).toBe(1);
   });
 
   it('fills a title from a later record when the first one lacked one', () => {
