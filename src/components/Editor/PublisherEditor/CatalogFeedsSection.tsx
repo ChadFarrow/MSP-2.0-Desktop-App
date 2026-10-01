@@ -7,6 +7,7 @@ import { createAdminAuthHeader } from '../../../utils/adminAuth';
 import { checkSignerConnection } from '../../../utils/nostrSigner';
 import { getFeedUrlError, normalizeFeedUrl } from '../../../utils/urlValidation';
 import { verifyFeedUrl, isGuardRefusal, FORCED_SUBMIT_NOTE } from '../../../utils/verifyFeedUrl';
+import { PUBLISHER_ROLES, catalogRole } from '../../../utils/publisherRole';
 import { InfoIcon } from '../../InfoIcon';
 import { Section } from '../../Section';
 import { apiFetch, resolveApiUrl } from '../../../utils/api';
@@ -32,6 +33,7 @@ const PUBLISHER_FIELD_INFO = {
   remoteItemFeedGuid: 'The podcast:guid of the feed you want to include in your publisher catalog. This is the unique identifier that links to the feed.',
   remoteItemFeedUrl: 'The URL of the RSS feed (optional but recommended). This helps apps find the feed if they cannot resolve the GUID.',
   remoteItemTitle: 'A display title for this feed (optional). If not provided, apps will fetch the title from the feed itself.',
+  publisherRole: 'Tells apps whether this publisher is the artist of these feeds or a label. MSP writes it as rel on each catalog feed, and on the publisher reference of each album when you publish. "Not stated" writes nothing. rel is proposed in podcast-namespace discussion #579.',
 };
 
 interface CatalogFeedsSectionProps {
@@ -279,6 +281,26 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
           Note: All catalog feeds must be in the Podcast Index for the publisher reference to work.
         </strong>
       </p>
+
+      {/* Publisher role, written as rel on both sides of each link (utils/publisherRole.ts) */}
+      <div className="form-group" style={{ marginBottom: '20px' }}>
+        <label className="form-label">This publisher is<InfoIcon text={PUBLISHER_FIELD_INFO.publisherRole} /></label>
+        <select
+          className="form-select"
+          value={catalogRole(publisherFeed.remoteItems) ?? 'mixed'}
+          // The role lives on the catalog items, so there is nothing to hold it yet.
+          disabled={publisherFeed.remoteItems.length === 0}
+          title={publisherFeed.remoteItems.length === 0 ? 'Add a catalog feed first' : undefined}
+          onChange={e => dispatch({ type: 'SET_PUBLISHER_ROLE', payload: e.target.value })}
+        >
+          {catalogRole(publisherFeed.remoteItems) === null && (
+            <option value="mixed" disabled>Mixed (the imported feeds state different roles)</option>
+          )}
+          {PUBLISHER_ROLES.map(role => (
+            <option key={role.value} value={role.value}>{role.label}</option>
+          ))}
+        </select>
+      </div>
 
       {/* Search UI */}
       <div style={{ marginBottom: '20px' }}>

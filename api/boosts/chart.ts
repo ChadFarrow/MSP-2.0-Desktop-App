@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { checkRateLimit } from '../_utils/rateLimiter.js';
 import { getClientIp } from '../_utils/urlSafety.js';
-import { parseAuthHeader } from '../_utils/adminAuth.js';
+import { parseChartAuthHeader } from '../_utils/adminAuth.js';
 import { timingSafeEqualString } from '../_utils/feedUtils.js';
 import { readAllDerived } from '../_utils/boostStore.js';
 import {
@@ -14,8 +14,10 @@ import type { DerivedBoost } from '../_utils/boostRecord.js';
 /**
  * The music chart: what listeners played and boosted on feeds made with MSP.
  *
- * **Admin-only for now.** It shipped public in #130; Chad took it private on 2026-09-26
- * while charts are still being worked out. It is gated exactly like coverage.ts, and the
+ * **Private for now.** It shipped public in #130; Chad took it private on 2026-09-26
+ * while charts are still being worked out. It opens to an admin (MSP_ADMIN_KEY or
+ * MSP_ADMIN_PUBKEYS, as coverage.ts does) or to a key on the chart-only list
+ * MSP_CHART_PUBKEYS (`parseChartAuthHeader`), which grants nothing else, and the
  * response is `private, no-store` — a CDN copy of an authenticated response would be
  * served to anyone. Publishing it again means reverting both, together.
  *
@@ -202,9 +204,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const adminKey = req.headers['x-admin-key'];
   const hasLegacyAdmin = !!process.env.MSP_ADMIN_KEY && typeof adminKey === 'string' &&
     timingSafeEqualString(adminKey, process.env.MSP_ADMIN_KEY);
-  const nostrAdmin = await parseAuthHeader(req.headers['authorization'] as string | undefined);
+  const nostrViewer = await parseChartAuthHeader(req.headers['authorization'] as string | undefined);
 
-  if (!hasLegacyAdmin && !nostrAdmin.valid) {
+  if (!hasLegacyAdmin && !nostrViewer.valid) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

@@ -7,7 +7,8 @@ import { foldSummary, listenerText } from '../utils/chartText';
 import type { ChartView } from '../utils/chartText';
 
 /**
- * The music chart — admin-only for now, like its API (see api/boosts/chart.ts).
+ * The music chart — private for now, like its API (see api/boosts/chart.ts): admins and
+ * the keys on MSP_CHART_PUBKEYS can read it.
  * Until an admin signs in, the page shows nothing about the chart at all.
  *
  * It is written for people new to Value for Value music: every term on the page is

@@ -1,5 +1,6 @@
 import { createHash, randomBytes, createHmac } from 'crypto';
 import * as secp from '@noble/secp256k1';
+import { nip19 } from 'nostr-tools';
 
 // Configure @noble/secp256k1 v3 with Node.js crypto
 secp.hashes.sha256 = (...msgs: Uint8Array[]) => {
@@ -77,6 +78,36 @@ export function isAdminPubkey(pubkey: string): boolean {
     return false;
   }
   return allowedPubkeys.includes(pubkey.toLowerCase());
+}
+
+/** A list entry as a lowercase hex pubkey: hex as given, or an npub decoded. Null if neither. */
+function toHexPubkey(entry: string): string | null {
+  if (/^[0-9a-f]{64}$/i.test(entry)) return entry.toLowerCase();
+  if (!entry.toLowerCase().startsWith('npub1')) return null;
+  try {
+    const decoded = nip19.decode(entry);
+    return decoded.type === 'npub' ? decoded.data.toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Keys that may read the music chart and nothing else (MSP_CHART_PUBKEYS).
+ *
+ * MSP_ADMIN_PUBKEYS is the only other way in, and it carries far more than the chart:
+ * listing, restoring and deleting every hosted feed, and the node's sats totals in the
+ * coverage report. This list lets a collaborator see /charts without any of that.
+ * Comma-separated npubs or hex — an npub is what people share, and the admin list, which
+ * takes hex only, silently never matches one. An entry that is neither is skipped.
+ */
+export function isChartViewerPubkey(pubkey: string): boolean {
+  const target = pubkey.toLowerCase();
+  return (process.env.MSP_CHART_PUBKEYS || '')
+    .split(',')
+    .map(entry => entry.trim())
+    .filter(Boolean)
+    .some(entry => toHexPubkey(entry) === target);
 }
 
 // Validate NIP-98 auth event for feed ownership (no admin check)
@@ -165,4 +196,18 @@ export async function parseAuthHeader(authHeader: string | undefined): Promise<{
   } catch {
     return { valid: false, error: 'Failed to parse auth event' };
   }
+}
+
+/**
+ * NIP-98 access to the music chart: a signed, recent event from an admin or from a key on
+ * the chart-only list (isChartViewerPubkey). The signature and age checks are the ones
+ * every other NIP-98 caller uses; only the list differs.
+ */
+export async function parseChartAuthHeader(authHeader: string | undefined): Promise<{ valid: boolean; pubkey?: string; error?: string }> {
+  const auth = await parseFeedAuthHeader(authHeader);
+  if (!auth.valid || !auth.pubkey) return auth;
+  if (!isAdminPubkey(auth.pubkey) && !isChartViewerPubkey(auth.pubkey)) {
+    return { valid: false, error: 'Not allowed to view the chart' };
+  }
+  return auth;
 }
