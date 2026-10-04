@@ -203,6 +203,8 @@ Uses React Context + useReducer pattern (not Redux). Four separate stores:
 
 Actions are dispatched via reducer pattern. The `FeedAction` union type in `feedStore.tsx` defines all available actions. The `feedReducer`, `FeedState`, and `initialState` are exported for direct testing.
 
+**Feed check state is a port, so the fork owns a building copy.** Web PR MSP-2.0#157 added `FeedState.feedCheck`, four actions (`OPEN_FEED_CHECK`, `CLOSE_FEED_CHECK`, `RUN_LINK_CHECK`, `LINK_CHECK_RESULT`) and the link-run effect in `FeedProvider`. `feedStore.tsx` is forked, so the sync drops that change, while `FeedCheckPanel.tsx` (new) and `PublisherEditor/index.tsx` (not forked) arrive and render the panel — the same half-landed shape as issue #21. The port carries the store change, its feed-check tests, and the panel's `App.css` block (also forked). `feedChecks.ts`, `linkCheck.ts`, `mediaProbe.ts` and their tests are **byte-identical** to the web repo, so the sync merges them cleanly; if upstream edits them before this lands, re-copy them, or the add/add conflict keeps the stale copy. The link check probes through `<audio>`/`<video>`/`<img>`, not `fetch`, so it needs no API base and stays inside the Tauri CSP's `media-src`/`img-src`. Not ported: the album/video wiring in `App.tsx` and `Editor.tsx` (both forked) — in this app the panel shows only in the publisher editor, and nothing opens it after an import.
+
 ### Core Data Types (src/types/feed.ts)
 - `Album` - Feed metadata + array of `Track`s, includes optional `artistNpub`
 - `Track` - Individual items with optional per-track value recipients

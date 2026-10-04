@@ -8,6 +8,9 @@ import { saveToDesktop, loadFromDesktop, DESKTOP_KEYS } from '../utils/desktopSt
 import { isTauri } from '../utils/api';
 import { hydrateHostedCredentials } from '../utils/hostedFeed';
 import { hydrateNostrUser } from '../utils/nostr';
+import { bindSourceFindings, type FeedIssue, type FeedSnapshot } from '../utils/feedChecks';
+import { collectLinkTargets, runLinkCheck, LINK_CHECK_LIMIT, type LinkResult, type LinkTarget } from '../utils/linkCheck';
+import { probeLink } from '../utils/mediaProbe';
 import { nextTrackPubDate, resequenceTrackDates, trackOrderIssue } from '../utils/trackOrder';
 import { catalogRole, withRole } from '../utils/publisherRole';
 
@@ -60,7 +63,33 @@ export type FeedAction =
   // Video feed actions
   | { type: 'SET_VIDEO_FEED'; payload: Album }
   | { type: 'UPDATE_VIDEO_FEED'; payload: Partial<Album> }
-  | { type: 'CREATE_NEW_VIDEO_FEED' };
+  | { type: 'CREATE_NEW_VIDEO_FEED' }
+  // Feed check panel
+  | { type: 'OPEN_FEED_CHECK'; payload?: { sourceFindings?: FeedIssue[] } }
+  | { type: 'CLOSE_FEED_CHECK' }
+  | { type: 'RUN_LINK_CHECK' }
+  | { type: 'LINK_CHECK_RESULT'; payload: { runId: number; url: string; result: LinkResult } };
+
+/**
+ * The Feed check panel's state. It lives here rather than in the Editor because
+ * the Editor is keyed on podcastGuid and remounts on every keystroke in the GUID
+ * field — local state would vanish exactly while the user fixes a "GUID isn't a
+ * UUID" item. Not persisted: findings describe one import, and after a reload
+ * "Check feed" still gives the live checks and a fresh link run.
+ */
+export interface FeedCheckState {
+  open: boolean;
+  /** The feed type the findings and links belong to. Switching type hides them. */
+  feedType: FeedType | null;
+  /** feedInspect.ts findings from the last import, bound to track ids. */
+  sourceFindings: FeedIssue[];
+  /** The link check in progress. Its id gates LINK_CHECK_RESULT. */
+  linkRun: { id: number; targets: LinkTarget[] } | null;
+  /** Results of the current run, by URL. */
+  links: Record<string, LinkResult>;
+  /** Monotonic; survives resets so a late result from an old run can never match a new one. */
+  runSeq: number;
+}
 
 // State interface
 export interface FeedState {
@@ -74,8 +103,17 @@ export interface FeedState {
   // know they're looking at a different feed — the podcastGuid can't serve as
   // that signal because the user can type into the GUID field.
   publisherFeedInstance: number;
+  feedCheck: FeedCheckState;
 }
 
+export const emptyFeedCheck = (runSeq = 0): FeedCheckState => ({
+  open: false,
+  feedType: null,
+  sourceFindings: [],
+  linkRun: null,
+  links: {},
+  runSeq
+});
 
 // Initial state - try to load from localStorage first
 export const initialState: FeedState = {
@@ -84,7 +122,8 @@ export const initialState: FeedState = {
   videoFeed: videoStorage.load() || null,
   publisherFeed: publisherStorage.load() || null,
   isDirty: false,
-  publisherFeedInstance: 0
+  publisherFeedInstance: 0,
+  feedCheck: emptyFeedCheck()
 };
 
 // Helper to get the current active album (album or videoFeed based on feedType)
@@ -101,6 +140,23 @@ function updateActiveFeed(state: FeedState, albumUpdate: Album): FeedState {
     return { ...state, videoFeed: albumUpdate, isDirty: true };
   }
   return { ...state, album: albumUpdate, isDirty: true };
+}
+
+// What the Feed check reads: the feed the user is looking at.
+function feedSnapshot(state: FeedState): FeedSnapshot {
+  return { feedType: state.feedType, album: getActiveAlbum(state), publisherFeed: state.publisherFeed };
+}
+
+// A whole feed was swapped in, so the last feed's findings and links no longer apply.
+function withFeedCheckReset(state: FeedState): FeedState {
+  return { ...state, feedCheck: emptyFeedCheck(state.feedCheck.runSeq) };
+}
+
+// Start a link run over the feed's current links, dropping the previous run's results.
+function startLinkRun(state: FeedState, check: FeedCheckState): FeedCheckState {
+  const id = check.runSeq + 1;
+  const targets = collectLinkTargets(feedSnapshot(state)).slice(0, LINK_CHECK_LIMIT);
+  return { ...check, runSeq: id, linkRun: { id, targets }, links: {} };
 }
 
 // Keep a value block's splits summing to 100 after a recipient edit. Editing a
@@ -135,7 +191,7 @@ export function feedReducer(state: FeedState, action: FeedAction): FeedState {
   switch (action.type) {
     case 'SET_ALBUM':
       feedTypeStorage.save('album');
-      return { ...state, album: action.payload, feedType: 'album', isDirty: false };
+      return withFeedCheckReset({ ...state, album: action.payload, feedType: 'album', isDirty: false });
 
     case 'UPDATE_ALBUM':
       return updateActiveFeed(state, { ...activeAlbum, ...action.payload });
@@ -498,22 +554,31 @@ export function feedReducer(state: FeedState, action: FeedAction): FeedState {
     }
 
     case 'RESET':
-      return initialState;
+      return { ...initialState, feedCheck: emptyFeedCheck(state.feedCheck.runSeq) };
 
     // Publisher feed actions
     case 'SET_FEED_TYPE':
       feedTypeStorage.save(action.payload);
       return { ...state, feedType: action.payload };
 
-    case 'SET_PUBLISHER_FEED':
+    case 'SET_PUBLISHER_FEED': {
       feedTypeStorage.save('publisher');
-      return {
+      const next: FeedState = {
         ...state,
         publisherFeed: action.payload,
         feedType: 'publisher',
         isDirty: false,
         publisherFeedInstance: state.publisherFeedInstance + 1
       };
+      // PublishSection re-dispatches the SAME feed after a publish rewrites its
+      // catalog URLs. That is not a new feed, so the Feed check keeps its findings
+      // and links. An import of a feed with the same GUID still gets fresh ones:
+      // handleImport follows SET_* with OPEN_FEED_CHECK, which replaces them.
+      const sameFeed = state.feedType === 'publisher'
+        && !!state.publisherFeed
+        && state.publisherFeed.podcastGuid === action.payload.podcastGuid;
+      return sameFeed ? next : withFeedCheckReset(next);
+    }
 
     case 'UPDATE_PUBLISHER_FEED':
       if (!state.publisherFeed) return state;
@@ -595,13 +660,13 @@ export function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
     case 'CREATE_NEW_PUBLISHER_FEED':
       feedTypeStorage.save('publisher');
-      return {
+      return withFeedCheckReset({
         ...state,
         publisherFeed: createEmptyPublisherFeed(),
         feedType: 'publisher',
         isDirty: true,
         publisherFeedInstance: state.publisherFeedInstance + 1
-      };
+      });
 
     case 'ADD_PUBLISHER_RECIPIENT': {
       if (!state.publisherFeed) return state;
@@ -680,7 +745,7 @@ export function feedReducer(state: FeedState, action: FeedAction): FeedState {
     // Video feed actions
     case 'SET_VIDEO_FEED':
       feedTypeStorage.save('video');
-      return { ...state, videoFeed: action.payload, feedType: 'video', isDirty: false };
+      return withFeedCheckReset({ ...state, videoFeed: action.payload, feedType: 'video', isDirty: false });
 
     case 'UPDATE_VIDEO_FEED':
       if (!state.videoFeed) return state;
@@ -692,12 +757,40 @@ export function feedReducer(state: FeedState, action: FeedAction): FeedState {
 
     case 'CREATE_NEW_VIDEO_FEED':
       feedTypeStorage.save('video');
-      return {
+      return withFeedCheckReset({
         ...state,
         videoFeed: createEmptyVideoAlbum(),
         feedType: 'video',
         isDirty: true
-      };
+      });
+
+    // Feed check panel
+    case 'OPEN_FEED_CHECK': {
+      const check = state.feedCheck;
+      const sameFeed = check.feedType === state.feedType;
+      const findings = action.payload?.sourceFindings;
+      // Fresh findings come straight after an import, while the tracks are still in
+      // document order, so item N binds to track N.
+      const sourceFindings = findings
+        ? bindSourceFindings(findings, activeAlbum.tracks)
+        : sameFeed ? check.sourceFindings : [];
+      const opened: FeedCheckState = { ...check, open: true, feedType: state.feedType, sourceFindings };
+      // Reopening the same feed keeps its results; a new import or feed type checks again.
+      const needsRun = !!findings || !sameFeed || !check.linkRun;
+      return { ...state, feedCheck: needsRun ? startLinkRun(state, opened) : opened };
+    }
+
+    case 'CLOSE_FEED_CHECK':
+      return { ...state, feedCheck: { ...state.feedCheck, open: false } };
+
+    case 'RUN_LINK_CHECK':
+      return { ...state, feedCheck: startLinkRun(state, state.feedCheck) };
+
+    case 'LINK_CHECK_RESULT': {
+      const check = state.feedCheck;
+      if (action.payload.runId !== check.linkRun?.id) return state;
+      return { ...state, feedCheck: { ...check, links: { ...check.links, [action.payload.url]: action.payload.result } } };
+    }
 
     default:
       return state;
@@ -869,6 +962,21 @@ export function FeedProvider({ children }: { children: ReactNode }) {
     if (!hydrated) return;
     saveToDesktop(DESKTOP_KEYS.FEED_TYPE, state.feedType);
   }, [state.feedType, hydrated]);
+
+  // Feed check link run. Lives in the provider, which never remounts. A new run,
+  // or a feed swap (which clears linkRun), aborts the old one, so its results can
+  // never land on the next feed; LINK_CHECK_RESULT also checks the run id.
+  const linkRun = state.feedCheck.linkRun;
+  useEffect(() => {
+    if (!linkRun) return;
+    const controller = new AbortController();
+    void runLinkCheck(linkRun.targets, {
+      probe: probeLink,
+      signal: controller.signal,
+      onResult: (url, result) => dispatch({ type: 'LINK_CHECK_RESULT', payload: { runId: linkRun.id, url, result } })
+    });
+    return () => controller.abort();
+  }, [linkRun]);
 
   return (
     <FeedContext.Provider value={{ state, dispatch }}>

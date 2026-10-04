@@ -2079,6 +2079,121 @@ body {
   font-size: 0.875rem;
 }
 
+/* Feed check panel (components/FeedCheckPanel.tsx) */
+.feed-check-launcher {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.feed-check {
+  margin-bottom: 16px;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+}
+
+.feed-check-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.feed-check-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.feed-check-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.feed-check-links {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
+.feed-check-clean {
+  margin: 12px 0 0;
+  color: var(--success);
+  font-size: 0.875rem;
+}
+
+.feed-check-group {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+.feed-check-group h3 {
+  margin: 0 0 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.feed-check-group--error {
+  background: var(--error-bg);
+  border-color: var(--error);
+}
+
+.feed-check-group--error h3 {
+  color: var(--error);
+}
+
+.feed-check-group--warning {
+  background: var(--warning-bg);
+  border-color: var(--warning, #f59e0b);
+}
+
+.feed-check-group--warning h3 {
+  color: var(--warning, #f59e0b);
+}
+
+.feed-check-group--info {
+  background: var(--bg-tertiary);
+}
+
+.feed-check-group ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-primary);
+}
+
+.feed-check-group li {
+  margin: 4px 0;
+  line-height: 1.45;
+  /* Messages quote URLs; let them wrap instead of widening the page on a phone. */
+  overflow-wrap: anywhere;
+}
+
+.feed-check-group--info ul {
+  margin-top: 6px;
+}
+
+.feed-check-where {
+  font-weight: 600;
+}
+
+.feed-check-toggle {
+  min-height: 24px;
+  padding: 2px 0;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
 .connect-option {
   padding: 16px;
   background: var(--bg-tertiary);
