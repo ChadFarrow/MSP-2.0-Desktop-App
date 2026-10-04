@@ -2,12 +2,10 @@ import { createHash, randomBytes, createHmac } from 'crypto';
 import * as secp from '@noble/secp256k1';
 import { nip19 } from 'nostr-tools';
 
-// Configure @noble/secp256k1 v3 with Node.js crypto
-secp.hashes.sha256 = (...msgs: Uint8Array[]) => {
-  const hash = createHash('sha256');
-  for (const msg of msgs) hash.update(msg);
-  return Uint8Array.from(hash.digest());
-};
+// Configure @noble/secp256k1 v3 with Node.js crypto. sha256 takes exactly one
+// message: 3.1 calls every hook as fn(a, b), so it gets a trailing undefined, and
+// hashing that throws — which schnorr.verify reports as an invalid signature.
+secp.hashes.sha256 = (msg: Uint8Array) => Uint8Array.from(createHash('sha256').update(msg).digest());
 secp.hashes.hmacSha256 = (key: Uint8Array, ...msgs: Uint8Array[]) => {
   const hmac = createHmac('sha256', key);
   for (const msg of msgs) hmac.update(msg);

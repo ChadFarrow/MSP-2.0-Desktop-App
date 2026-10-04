@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { createHash } from 'crypto';
+import * as secp from '@noble/secp256k1';
 import { finalizeEvent, generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
 import { isChartViewerPubkey, parseChartAuthHeader } from './adminAuth.js';
 
@@ -21,6 +23,19 @@ function header(secret: Uint8Array, createdAt = Math.floor(Date.now() / 1000)): 
 const admin = key();
 const viewer = key();
 const stranger = key();
+
+describe('@noble/secp256k1 hash hooks', () => {
+  // 3.0.0 calls hashes.sha256(message); 3.1.0 calls every hook as fn(a, b), so
+  // sha256 also gets a trailing undefined. A hook that fed each argument to
+  // hash.update() threw on it, and schnorr.verify turns a throw into `false` —
+  // every NIP-98 signature read as invalid. ^3.0.0 resolves to 3.1.0 on a fresh
+  // install, which is how the Desktop App fork found it.
+  it('hashes one message when called with the trailing undefined 3.1 passes', () => {
+    const message = new TextEncoder().encode('msp');
+    const sha256 = secp.hashes.sha256 as (...args: unknown[]) => Uint8Array;
+    expect(sha256(message, undefined)).toEqual(Uint8Array.from(createHash('sha256').update(message).digest()));
+  });
+});
 
 describe('isChartViewerPubkey', () => {
   afterEach(() => { delete process.env.MSP_CHART_PUBKEYS; });
