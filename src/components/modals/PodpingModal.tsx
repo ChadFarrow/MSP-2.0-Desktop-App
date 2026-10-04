@@ -185,6 +185,10 @@ export function PodpingModal({ onClose, feedGuid, medium }: PodpingModalProps) {
   };
 
   const urlError = getFeedUrlError(podpingUrl);
+  // A podping only asks indexers to re-read the file. For an MSP-hosted feed, edits in
+  // the editor reach that file only through Save → Host on MSP — pinging without
+  // uploading has indexers re-read the old version and report nothing new.
+  const isHostedUrl = podpingUrl.includes('/api/hosted/');
   const noteStyle = { marginTop: '6px', fontSize: '0.8rem', color: 'var(--text-secondary)' };
 
   return (
@@ -243,6 +247,12 @@ export function PodpingModal({ onClose, feedGuid, medium }: PodpingModalProps) {
         {!urlError && reachWarning && (
           <div style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--warning-color, #f59e0b)' }}>
             ⚠ {reachWarning} Send anyway if you're sure.
+          </div>
+        )}
+        {!urlError && isHostedUrl && (
+          <div style={noteStyle}>
+            This is an MSP-hosted feed. A podping doesn't upload your changes — if you edited
+            the feed, save it first with Save → Host on MSP (that sends a podping for you).
           </div>
         )}
       </div>

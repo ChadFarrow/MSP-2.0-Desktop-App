@@ -10,6 +10,21 @@ interface FeedInfo {
   lastUpdated?: string;
   ownerPubkey?: string;
   podcastIndexId?: number;
+  medium?: string;
+}
+
+// medium is read from the feed's own <podcast:medium> by hydrateFeed(), so the badge
+// always matches what the feed declares. Album (music) feeds get no badge — they are
+// the default, and labelling every row would bury the two that matter.
+const MEDIUM_LABELS: Record<string, string> = {
+  publisher: 'Publisher',
+  video: 'Video',
+};
+
+function MediumBadge({ medium }: { medium?: string }) {
+  const label = medium ? MEDIUM_LABELS[medium] : undefined;
+  if (!label) return null;
+  return <span className={`medium-badge medium-badge-${medium}`}>{label}</span>;
 }
 
 interface FeedListProps {
@@ -104,7 +119,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
           <tbody>
             {myFeeds.map(feed => (
               <tr key={feed.feedId}>
-                <td>{feed.title || 'Untitled'}</td>
+                <td>{feed.title || 'Untitled'}<MediumBadge medium={feed.medium} /></td>
                 <td className="feed-author">{feed.author || '-'}</td>
                 <td className="feed-id">{feed.feedId}</td>
                 <td>
@@ -168,7 +183,7 @@ export function FeedList({ onError, currentUserPubkey }: FeedListProps) {
             <tbody>
               {otherFeeds.map(feed => (
                 <tr key={feed.feedId}>
-                  <td>{feed.title || 'Untitled'}</td>
+                  <td>{feed.title || 'Untitled'}<MediumBadge medium={feed.medium} /></td>
                   <td className="feed-author">{feed.author || '-'}</td>
                   <td className="feed-id">{feed.feedId}</td>
                   <td>

@@ -207,7 +207,11 @@ export const parseRssFeed = (xmlString: string): Album => {
     const feedGuid = getAttr(publisherItem, 'feedGuid');
     const feedUrl = getAttr(publisherItem, 'feedUrl');
     if (feedGuid || feedUrl) {
-      album.publisher = { feedGuid: feedGuid || '', feedUrl: feedUrl || undefined };
+      album.publisher = {
+        feedGuid: feedGuid || '',
+        feedUrl: feedUrl || undefined,
+        rel: getAttr(publisherItem, 'rel') || undefined
+      };
     }
   }
 
@@ -589,7 +593,10 @@ function parseRemoteItem(node: unknown): RemoteItem | null {
     // Fountain's among them — imported with no titles at all. The text fallback
     // stays for feeds MSP itself wrote before the generator was corrected.
     title: getAttr(node, 'title') || getText(node) || undefined,
-    image: getAttr(node, 'feedImg') || getAttr(node, 'image') || undefined
+    image: getAttr(node, 'feedImg') || getAttr(node, 'image') || undefined,
+    // Read so that a parse→regenerate (Download Feed, processCatalogFeed) keeps
+    // the role a feed states instead of silently dropping it.
+    rel: getAttr(node, 'rel') || undefined
   };
 }
 
@@ -624,7 +631,8 @@ function parsePublisherReference(node: unknown): PublisherReference | undefined 
     if (feedGuid || feedUrl) {
       return {
         feedGuid: feedGuid || '',
-        feedUrl: feedUrl || undefined
+        feedUrl: feedUrl || undefined,
+        rel: getAttr(candidate, 'rel') || undefined
       };
     }
   }
