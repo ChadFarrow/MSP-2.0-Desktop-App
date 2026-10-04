@@ -1054,3 +1054,167 @@ describe('podcast:publisher parsing', () => {
     expect(xml).toContain('aaaaaaaa-0000-0000-0000-000000000002');
   });
 });
+
+describe('harmless extras round-trip', () => {
+  // A feed carrying spec-valid tags MSP doesn't edit. Each one used to be
+  // dropped on import, so a parse→regenerate quietly deleted it.
+  function buildFeedWithExtras(explicit = 'true'): string {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+  <channel>
+    <title>Extras</title>
+    <itunes:author>Artist</itunes:author>
+    <description>A feed with extras</description>
+    <language>en</language>
+    <podcast:medium>music</podcast:medium>
+    <podcast:guid>c7d1b2a0-1111-4222-8333-444455556666</podcast:guid>
+    <podcast:locked>yes</podcast:locked>
+    <podcast:txt purpose="npub">npub1artist</podcast:txt>
+    <podcast:txt purpose="applepodcastsverify">abc-123</podcast:txt>
+    <itunes:category text="Music">
+      <itunes:category text="Music History"/>
+    </itunes:category>
+    <itunes:explicit>${explicit}</itunes:explicit>
+    <podcast:value type="lightning" method="lnaddress">
+      <podcast:valueRecipient name="Artist" address="artist@getalby.com" split="95" type="lnaddress"/>
+      <podcast:valueRecipient name="Host" address="host@getalby.com" split="5" type="lnaddress" fee="true"/>
+    </podcast:value>
+    <item>
+      <title>Track 1</title>
+      <guid isPermaLink="false">track-guid-1</guid>
+      <enclosure url="https://example.com/t1.mp3" length="123456" type="audio/mpeg"/>
+      <itunes:duration>03:45</itunes:duration>
+      <podcast:value type="lightning" method="lnaddress">
+        <podcast:valueRecipient name="Artist" address="artist@getalby.com" split="95" type="lnaddress"/>
+        <podcast:valueRecipient name="Host" address="host@getalby.com" split="5" type="lnaddress" fee="true"/>
+        <podcast:valueTimeSplit startTime="60" duration="30" remotePercentage="90">
+          <podcast:remoteItem feedGuid="aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee" itemGuid="guest-track"/>
+        </podcast:valueTimeSplit>
+      </podcast:value>
+    </item>
+  </channel>
+</rss>`;
+  }
+
+  it('keeps the recipient fee attribute', () => {
+    const album = parseRssFeed(buildFeedWithExtras());
+    expect(album.value.recipients[1].fee).toBe(true);
+    expect(album.value.recipients[0].fee).toBeUndefined();
+    const xml = generateRssFeed(album);
+    expect(xml).toContain('name="Host" address="host@getalby.com" split="5" type="lnaddress" fee="true" />');
+    expect(xml).not.toContain('name="Artist" address="artist@getalby.com" split="95" type="lnaddress" fee=');
+  });
+
+  it('keeps <podcast:valueTimeSplit> inside the item value block', () => {
+    const album = parseRssFeed(buildFeedWithExtras());
+    const track = album.tracks[0];
+    // The item block differs from the channel's only by its time split, so it must
+    // still count as an override — otherwise the channel block is written instead.
+    expect(track.overrideValue).toBe(true);
+    const xml = generateRssFeed(album);
+    const item = xml.slice(xml.indexOf('<item>'), xml.indexOf('</item>'));
+    expect(item).toMatch(
+      /<podcast:value [^>]*>\s*<podcast:valueRecipient name="Artist"[^>]*\/>\s*<podcast:valueRecipient name="Host"[^>]*fee="true" \/>\s*<podcast:valueTimeSplit startTime="60" duration="30" remotePercentage="90">\s*<podcast:remoteItem feedGuid="aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee" itemGuid="guest-track" \/>\s*<\/podcast:valueTimeSplit>\s*<\/podcast:value>/
+    );
+  });
+
+  it('writes the npub txt once and keeps every other podcast:txt', () => {
+    const album = parseRssFeed(buildFeedWithExtras());
+    expect(album.artistNpub).toBe('npub1artist');
+    const xml = generateRssFeed(album);
+    expect(xml.match(/purpose="npub"/g)).toHaveLength(1);
+    expect(xml).toContain('<podcast:txt purpose="applepodcastsverify">abc-123</podcast:txt>');
+  });
+
+  it('keeps a second npub txt rather than dropping it', () => {
+    const xml = buildFeedWithExtras().replace(
+      '<podcast:txt purpose="applepodcastsverify">abc-123</podcast:txt>',
+      '<podcast:txt purpose="npub">npub1other</podcast:txt>'
+    );
+    const out = generateRssFeed(parseRssFeed(xml));
+    expect(out).toContain('<podcast:txt purpose="npub">npub1artist</podcast:txt>');
+    expect(out).toContain('<podcast:txt purpose="npub">npub1other</podcast:txt>');
+    expect(out.match(/purpose="npub"/g)).toHaveLength(2);
+  });
+
+  it('keeps every podcast:txt on a publisher feed', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+  <channel>
+    <title>Label</title>
+    <podcast:medium>publisher</podcast:medium>
+    <podcast:guid>c7d1b2a0-1111-4222-8333-444455556666</podcast:guid>
+    <podcast:txt purpose="applepodcastsverify">abc-123</podcast:txt>
+    <podcast:txt>free text</podcast:txt>
+  </channel>
+</rss>`;
+    const out = generatePublisherRssFeed(parsePublisherRssFeed(xml));
+    expect(out).toContain('<podcast:txt purpose="applepodcastsverify">abc-123</podcast:txt>');
+    expect(out).toContain('<podcast:txt>free text</podcast:txt>');
+  });
+
+  it('keeps nested itunes:category subcategories', () => {
+    const album = parseRssFeed(buildFeedWithExtras());
+    expect(album.categories).toEqual(['Music']);
+    expect(album.subcategories).toEqual({ Music: ['Music History'] });
+    const xml = generateRssFeed(album);
+    expect(xml).toMatch(
+      /<itunes:category text="Music">\s*<itunes:category text="Music History" \/>\s*<\/itunes:category>/
+    );
+  });
+
+  it('writes a plain category self-closing when it has no subcategories', () => {
+    const album = parseRssFeed(buildFeedWithExtras());
+    album.subcategories = undefined;
+    expect(generateRssFeed(album)).toContain('<itunes:category text="Music" />');
+  });
+
+  it('reads the legacy itunes:explicit words', () => {
+    for (const word of ['yes', 'Yes', 'explicit', 'true']) {
+      expect(parseRssFeed(buildFeedWithExtras(word)).explicit).toBe(true);
+    }
+    for (const word of ['no', 'clean', 'false']) {
+      expect(parseRssFeed(buildFeedWithExtras(word)).explicit).toBe(false);
+    }
+  });
+
+  it('reads the legacy explicit words at item level too', () => {
+    const xml = buildFeedWithExtras().replace(
+      '<itunes:duration>03:45</itunes:duration>',
+      '<itunes:duration>03:45</itunes:duration>\n      <itunes:explicit>yes</itunes:explicit>'
+    );
+    expect(parseRssFeed(xml).tracks[0].explicit).toBe(true);
+  });
+
+  it('passes number-shaped values through exactly as written', () => {
+    const xml = buildFeedWithExtras()
+      .replace('abc-123', '0012345')
+      .replace('itemGuid="guest-track"', 'itemGuid="0012345"')
+      .replace('<itunes:duration>03:45</itunes:duration>',
+        '<itunes:duration>03:45</itunes:duration>\n      <custom:id xmlns:custom="https://example.com/ns" big="12345678901234567890123">5e10</custom:id>');
+    const out = generateRssFeed(parseRssFeed(xml));
+    expect(out).toContain('<podcast:txt purpose="applepodcastsverify">0012345</podcast:txt>');
+    expect(out).toContain('itemGuid="0012345"');
+    expect(out).toContain('big="12345678901234567890123"');
+    expect(out).toContain('>5e10</custom:id>');
+  });
+
+  it('survives a category named like a built-in object key', () => {
+    const xml = buildFeedWithExtras().replace(
+      '<itunes:category text="Music">',
+      '<itunes:category text="constructor"><itunes:category text="Sub"/></itunes:category>\n    <itunes:category text="Music">'
+    );
+    const album = parseRssFeed(xml);
+    expect(album.subcategories).toEqual({ constructor: ['Sub'], Music: ['Music History'] });
+    expect(generateRssFeed(album)).toMatch(/<itunes:category text="constructor">\s*<itunes:category text="Sub" \/>/);
+    album.subcategories = { Music: ['Music History'] };
+    expect(generateRssFeed(album)).toContain('<itunes:category text="constructor" />');
+  });
+
+  it('keeps <podcast:locked> when the feed names no owner', () => {
+    const album = parseRssFeed(buildFeedWithExtras());
+    expect(album.locked).toBe(true);
+    expect(album.lockedOwner).toBe('');
+    expect(generateRssFeed(album)).toContain('<podcast:locked>yes</podcast:locked>');
+  });
+});
