@@ -8,6 +8,7 @@ import { PublisherFeedReminderSection } from './PublisherFeedReminderSection';
 import { DownloadCatalogSection } from './DownloadCatalogSection';
 import { PublishSection } from './PublishSection';
 import { getCatalogFeedsStatus } from '../../../utils/publisherPublish';
+import { FeedCheckPanel } from '../../FeedCheckPanel';
 
 export function PublisherEditor() {
   const { state, dispatch } = useFeed();
@@ -32,6 +33,7 @@ export function PublisherEditor() {
   return (
     <div className="main-content">
       <div className="editor-panel">
+        <FeedCheckPanel />
         <PublisherInfoSection publisherFeed={publisherFeed} dispatch={dispatch} />
         <PublisherArtworkSection publisherFeed={publisherFeed} dispatch={dispatch} />
         <CatalogFeedsSection publisherFeed={publisherFeed} dispatch={dispatch} />

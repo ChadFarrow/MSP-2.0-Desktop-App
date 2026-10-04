@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { regenerateAlbumGuids } from './regenerateGuids';
+import { regenerateAlbumGuids, withoutIdentityPassthrough } from './regenerateGuids';
 import { createEmptyAlbum, createEmptyTrack, type Album } from '../types/feed';
 
 function sourceAlbum(): Album {
@@ -54,5 +54,27 @@ describe('regenerateAlbumGuids', () => {
     expect(a.podcastGuid).not.toBe(b.podcastGuid);
     const overlap = a.tracks.map((t) => t.guid).filter((g) => b.tracks.some((t) => t.guid === g));
     expect(overlap).toEqual([]);
+  });
+
+  it('drops the source feed\'s identity passthrough but keeps the rest', () => {
+    const src = sourceAlbum();
+    src.unknownChannelElements = {
+      'podcast:txt': { '#text': 'abc-123', '@_purpose': 'applepodcastsverify' },
+      'atom:link': [
+        { '@_rel': 'self', '@_href': 'https://source.example/feed.xml' },
+        { '@_rel': 'hub', '@_href': 'https://pubsubhubbub.example' }
+      ],
+      'content:encoded': 'notes'
+    };
+    expect(regenerateAlbumGuids(src).unknownChannelElements).toEqual({
+      'atom:link': { '@_rel': 'hub', '@_href': 'https://pubsubhubbub.example' },
+      'content:encoded': 'notes'
+    });
+    expect(src.unknownChannelElements['podcast:txt']).toBeDefined();
+  });
+
+  it('returns undefined when only identity passthrough was there', () => {
+    expect(withoutIdentityPassthrough({ 'podcast:txt': { '#text': 'x' } })).toBeUndefined();
+    expect(withoutIdentityPassthrough(undefined)).toBeUndefined();
   });
 });

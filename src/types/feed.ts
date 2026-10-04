@@ -40,6 +40,10 @@ export interface ValueRecipient {
   type: 'node' | 'lnaddress';
   customKey?: string;
   customValue?: string;
+  // Spec attribute: this split is a fee and is not subject to the proportional
+  // sharing of the others. MSP has no editor for it — it is kept so an imported
+  // feed's fee recipient survives a re-save.
+  fee?: boolean;
 }
 
 export interface ValueBlock {
@@ -47,6 +51,9 @@ export interface ValueBlock {
   method: 'keysend';
   suggested?: string;
   recipients: ValueRecipient[];
+  // Children of <podcast:value> other than recipients — <podcast:valueTimeSplit>
+  // in practice. Not edited, only carried through so a re-save keeps them.
+  unknownElements?: Record<string, unknown>;
 }
 
 export interface Funding {
@@ -125,6 +132,9 @@ export interface BaseChannelData {
   locked: boolean;
   lockedOwner: string;
   categories: string[];
+  // Nested <itunes:category> children, keyed by their parent category name.
+  // No editor UI — carried through from import so a re-save keeps them.
+  subcategories?: Record<string, string[]>;
   keywords: string;
   explicit: boolean;
   ownerName: string;
@@ -200,6 +210,7 @@ export interface Album {
 
   // iTunes
   categories: string[];
+  subcategories?: Record<string, string[]>;
   keywords: string;
   explicit: boolean;
   ownerName: string;
@@ -259,6 +270,7 @@ export interface PublisherFeed {
 
   // iTunes
   categories: string[];
+  subcategories?: Record<string, string[]>;
   keywords: string;
   explicit: boolean;
   ownerName: string;

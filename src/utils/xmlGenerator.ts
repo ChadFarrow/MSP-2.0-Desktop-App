@@ -61,17 +61,15 @@ const collectNamespacePrefixes = (obj: unknown, prefixes: Set<string>): void => 
 };
 
 // Collect all namespaces needed for unknown elements in an album
-const collectAlbumNamespaces = (album: { unknownChannelElements?: Record<string, unknown>; tracks: { unknownItemElements?: Record<string, unknown> }[] }): Set<string> => {
+const collectAlbumNamespaces = (album: Album): Set<string> => {
   const prefixes = new Set<string>();
 
-  if (album.unknownChannelElements) {
-    collectNamespacePrefixes(album.unknownChannelElements, prefixes);
-  }
+  collectNamespacePrefixes(album.unknownChannelElements, prefixes);
+  collectNamespacePrefixes(album.value?.unknownElements, prefixes);
 
   for (const track of album.tracks) {
-    if (track.unknownItemElements) {
-      collectNamespacePrefixes(track.unknownItemElements, prefixes);
-    }
+    collectNamespacePrefixes(track.unknownItemElements, prefixes);
+    collectNamespacePrefixes(track.value?.unknownElements, prefixes);
   }
 
   return prefixes;
@@ -213,6 +211,7 @@ const generateRecipientXml = (recipient: ValueRecipient, level: number): string 
   ];
   if (recipient.customKey) attrs.push(`customKey="${escapeXml(recipient.customKey)}"`);
   if (recipient.customValue) attrs.push(`customValue="${escapeXml(recipient.customValue)}"`);
+  if (recipient.fee) attrs.push('fee="true"');
 
   return `${indent(level)}<podcast:valueRecipient ${attrs.join(' ')} />`;
 };
@@ -235,6 +234,11 @@ const generateValueXml = (value: ValueBlock, level: number): string => {
 
   lines.push(`${indent(level)}<podcast:value ${attrs.join(' ')}>`);
   value.recipients.forEach(r => lines.push(generateRecipientXml(r, level + 1)));
+  // Carried-through children such as <podcast:valueTimeSplit>, kept from import.
+  if (value.unknownElements) {
+    const unknownXml = generateUnknownXml(value.unknownElements, level + 1);
+    if (unknownXml) lines.push(unknownXml);
+  }
   lines.push(`${indent(level)}</podcast:value>`);
 
   return lines.join('\n');
@@ -319,9 +323,11 @@ const generateCommonChannelElements = (data: BaseChannelData, medium: string, le
   lines.push(`${indent(level)}<pubDate>${formatRFC822Date(data.pubDate)}</pubDate>`);
   lines.push(`${indent(level)}<lastBuildDate>${formatRFC822Date(data.lastBuildDate)}</lastBuildDate>`);
 
-  // Locked
-  if (data.locked && data.lockedOwner) {
-    lines.push(`${indent(level)}<podcast:locked owner="${escapeXml(data.lockedOwner)}">yes</podcast:locked>`);
+  // Locked. The owner attribute is optional in the spec; requiring it dropped an
+  // imported <podcast:locked>yes</podcast:locked> that named no owner.
+  if (data.locked) {
+    const ownerAttr = data.lockedOwner ? ` owner="${escapeXml(data.lockedOwner)}"` : '';
+    lines.push(`${indent(level)}<podcast:locked${ownerAttr}>yes</podcast:locked>`);
   }
 
   // GUID
@@ -336,9 +342,22 @@ const generateCommonChannelElements = (data: BaseChannelData, medium: string, le
   }
 
   // Categories (default to Music for music feeds)
+  // Subcategories nest inside their parent, written on its first occurrence only.
   const categories = data.categories.length > 0 ? data.categories : ['Music'];
+  const nestedWritten = new Set<string>();
   categories.forEach(cat => {
-    lines.push(`${indent(level)}<itunes:category text="${escapeXml(cat)}" />`);
+    // hasOwn: a category named "constructor" must not read Object's own property.
+    const subs = !nestedWritten.has(cat) && data.subcategories && Object.hasOwn(data.subcategories, cat)
+      ? data.subcategories[cat]
+      : [];
+    if (subs.length === 0) {
+      lines.push(`${indent(level)}<itunes:category text="${escapeXml(cat)}" />`);
+      return;
+    }
+    nestedWritten.add(cat);
+    lines.push(`${indent(level)}<itunes:category text="${escapeXml(cat)}">`);
+    subs.forEach(sub => lines.push(`${indent(level + 1)}<itunes:category text="${escapeXml(sub)}" />`));
+    lines.push(`${indent(level)}</itunes:category>`);
   });
 
   // Keywords

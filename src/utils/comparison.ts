@@ -22,7 +22,11 @@ export function areValueBlocksEqual(a: ValueBlock, b: ValueBlock): boolean {
 
 /**
  * Compare two value blocks by index for strict equality
- * Checks name, address, split, and type in order
+ * Checks name, address, split, type and fee in order, plus any carried-through
+ * children (<podcast:valueTimeSplit>). The parser uses this to decide whether an
+ * item's block overrides the channel's; a block differing only by its time splits
+ * must count as different, or the generator writes the channel block and the
+ * splits are lost.
  */
 export function areValueBlocksStrictEqual(a: ValueBlock, b: ValueBlock): boolean {
   if (a.recipients.length !== b.recipients.length) return false;
@@ -31,11 +35,11 @@ export function areValueBlocksStrictEqual(a: ValueBlock, b: ValueBlock): boolean
     const ra = a.recipients[i];
     const rb = b.recipients[i];
     if (ra.name !== rb.name || ra.address !== rb.address ||
-        ra.split !== rb.split || ra.type !== rb.type) {
+        ra.split !== rb.split || ra.type !== rb.type || !!ra.fee !== !!rb.fee) {
       return false;
     }
   }
-  return true;
+  return JSON.stringify(a.unknownElements ?? null) === JSON.stringify(b.unknownElements ?? null);
 }
 
 /**

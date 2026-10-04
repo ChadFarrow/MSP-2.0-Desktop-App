@@ -47,7 +47,9 @@ const KNOWN_CHANNEL_KEYS = new Set([
   'podcast:funding',
   'podcast:publisher',
   'podcast:remoteItem',  // For publisher feeds
-  'podcast:txt',  // For npub and other txt tags
+  // 'podcast:txt' is deliberately absent. Listing it made every txt tag vanish on
+  // import (verification tokens included) when only the npub one is modelled;
+  // parseRssFeed consumes that one entry and the rest round-trip as unknown.
   'podcast:image'
 ]);
 
@@ -82,15 +84,30 @@ const KNOWN_ITEM_KEYS = new Set([
   'podcast:value'
 ]);
 
+/**
+ * The one parser configuration every feed read uses. Exported so the import-time
+ * inspector (feedInspect.ts) sees exactly the tree the importer does.
+ *
+ * Values stay strings: number coercion is off for both text and attributes.
+ * With it on, fast-xml-parser rewrote anything number-shaped, and everything
+ * that round-trips through a passthrough came back changed on save — a
+ * `podcast:txt` token `0012345` as `12345`, a valueTimeSplit `itemGuid="0012345"`
+ * as `12345` (a different payment target), `5e10` as `50000000000`, a 23-digit
+ * id rounded to `1.2345678901234568e+22`. Modelled fields all go through
+ * getText/getAttr and parseInt, which read strings the same way.
+ */
+export const createFeedXmlParser = (): XMLParser => new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  textNodeName: '#text',
+  parseAttributeValue: false,
+  parseTagValue: false,
+  trimValues: true
+});
+
 // Parse XML string to Album object
 export const parseRssFeed = (xmlString: string): Album => {
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: '@_',
-    textNodeName: '#text',
-    parseAttributeValue: true,
-    trimValues: true
-  });
+  const parser = createFeedXmlParser();
 
   const result = parser.parse(xmlString);
   const channel = result?.rss?.channel;
@@ -123,19 +140,13 @@ export const parseRssFeed = (xmlString: string): Album => {
     album.lockedOwner = getAttr(locked, 'owner') || '';
   }
 
-  // Categories - handle both content format and text attribute format
-  const categories = channel['itunes:category'];
-  if (categories) {
-    const catArray = Array.isArray(categories) ? categories : [categories];
-    album.categories = catArray.map(c => getText(c) || getAttr(c, 'text')).filter(Boolean) as string[];
-  }
+  // Categories (and subcategories) come from parseCommonChannelElements.
 
   // Keywords
   album.keywords = getText(channel['itunes:keywords']) || '';
 
   // Explicit
-  const explicitVal = channel['itunes:explicit'];
-  album.explicit = explicitVal === true || explicitVal === 'true' || getText(explicitVal) === 'true';
+  album.explicit = parseExplicit(channel['itunes:explicit']);
 
   // Owner
   const owner = channel['itunes:owner'];
@@ -215,16 +226,15 @@ export const parseRssFeed = (xmlString: string): Album => {
     }
   }
 
-  // Artist Npub (from podcast:txt with purpose="npub")
+  // Artist Npub (from podcast:txt with purpose="npub"). Only the first non-empty
+  // npub is modelled — the generator writes artistNpub back out — so only that
+  // entry leaves the passthrough below. Every other txt (verification tokens, a
+  // second npub, free text) round-trips untouched.
   const txtTags = channel['podcast:txt'];
-  if (txtTags) {
-    const txtArray = Array.isArray(txtTags) ? txtTags : [txtTags];
-    for (const txt of txtArray) {
-      if (getAttr(txt, 'purpose') === 'npub') {
-        album.artistNpub = getText(txt) || '';
-        break;
-      }
-    }
+  const txtArray: unknown[] = txtTags ? (Array.isArray(txtTags) ? txtTags : [txtTags]) : [];
+  const npubIndex = txtArray.findIndex(txt => getAttr(txt, 'purpose') === 'npub' && getText(txt));
+  if (npubIndex >= 0) {
+    album.artistNpub = getText(txtArray[npubIndex]);
   }
 
   // Capture unknown channel elements
@@ -233,18 +243,14 @@ export const parseRssFeed = (xmlString: string): Album => {
   // Keep only the podroll entries in the passthrough. Any publisher-medium one
   // was consumed into album.publisher just above, and the generator writes that
   // back out as a <podcast:publisher> block — leaving it here too would emit it
-  // twice. Drop the key entirely when nothing but the publisher ref was there.
-  if (album.unknownChannelElements?.['podcast:remoteItem']) {
-    if (podrollItems.length > 0) {
-      album.unknownChannelElements['podcast:remoteItem'] =
-        podrollItems.length === 1 ? podrollItems[0] : podrollItems;
-    } else {
-      delete album.unknownChannelElements['podcast:remoteItem'];
-      if (Object.keys(album.unknownChannelElements).length === 0) {
-        album.unknownChannelElements = undefined;
-      }
-    }
-  }
+  // twice.
+  album.unknownChannelElements = keepPassthrough(album.unknownChannelElements, 'podcast:remoteItem', podrollItems);
+  // Same rule for the npub txt consumed into artistNpub.
+  album.unknownChannelElements = keepPassthrough(
+    album.unknownChannelElements,
+    'podcast:txt',
+    txtArray.filter((_, i) => i !== npubIndex)
+  );
 
   // Tracks
   const items = channel.item;
@@ -344,6 +350,61 @@ function captureUnknownElements(obj: Record<string, unknown>, knownKeys: Set<str
 
   // Return undefined if no unknown elements found
   return Object.keys(unknown).length > 0 ? unknown : undefined;
+}
+
+/**
+ * Leave only `remaining` under `key` in a passthrough map — the entries the caller
+ * did NOT consume into a modelled field. An element is either modelled or passed
+ * through, never both: the generator writes the modelled one back out, so leaving
+ * it here as well would emit it twice. Returns undefined once the map is empty,
+ * matching captureUnknownElements.
+ */
+function keepPassthrough(
+  elements: Record<string, unknown> | undefined,
+  key: string,
+  remaining: unknown[]
+): Record<string, unknown> | undefined {
+  if (!elements || !(key in elements)) return elements;
+  if (remaining.length > 0) {
+    elements[key] = remaining.length === 1 ? remaining[0] : remaining;
+  } else {
+    delete elements[key];
+  }
+  return Object.keys(elements).length > 0 ? elements : undefined;
+}
+
+// itunes:explicit is "true"/"false" today. Apple's older vocabulary was "yes" /
+// "explicit" against "no" / "clean", and reading only "true" turned every legacy
+// explicit feed clean on import.
+function parseExplicit(node: unknown): boolean {
+  if (node === true) return true;
+  if (typeof node === 'boolean') return false;
+  const value = getText(node).trim().toLowerCase();
+  return value === 'true' || value === 'yes' || value === 'explicit';
+}
+
+// <itunes:category> in both shapes — the text attribute (spec form) or element
+// text — with nested subcategories kept, keyed by their parent's name.
+function parseCategories(node: unknown): { categories: string[]; subcategories?: Record<string, string[]> } {
+  if (!node) return { categories: [] };
+  const nodes = Array.isArray(node) ? node : [node];
+  const categories: string[] = [];
+  const subcategories: Record<string, string[]> = {};
+  for (const category of nodes) {
+    const name = getAttr(category, 'text') || getText(category);
+    if (!name) continue;
+    categories.push(name);
+    const nested = typeof category === 'object' && category !== null
+      ? (category as Record<string, unknown>)['itunes:category']
+      : undefined;
+    if (!nested) continue;
+    const subs = (Array.isArray(nested) ? nested : [nested])
+      .map(sub => getAttr(sub, 'text') || getText(sub))
+      .filter(Boolean);
+    // hasOwn, not `??`: a category named "constructor" would otherwise read Object's.
+    if (subs.length > 0) subcategories[name] = [...(Object.hasOwn(subcategories, name) ? subcategories[name] : []), ...subs];
+  }
+  return Object.keys(subcategories).length > 0 ? { categories, subcategories } : { categories };
 }
 
 // Intermediate type for parsing a single person tag (has one role)
@@ -446,26 +507,40 @@ function parseRecipient(node: unknown): ValueRecipient | null {
     };
   }
 
+  const isFee = getAttr(node, 'fee').toLowerCase() === 'true';
+
   return {
     name: getAttr(node, 'name') || '',
     address,
     split,
     type: address ? detectAddressType(address) : 'node',
     customKey: getAttr(node, 'customKey') || undefined,
-    customValue: getAttr(node, 'customValue') || undefined
+    customValue: getAttr(node, 'customValue') || undefined,
+    ...(isFee ? { fee: true } : {})
   };
 }
+
+// '#text' too, or a block with stray text would hand the generator a '#text' key
+// to emit as an element.
+const VALUE_BLOCK_KNOWN_KEYS = new Set(['podcast:valueRecipient', '#text']);
 
 // Parse value block
 function parseValueBlock(node: unknown): ValueBlock {
   const recipients = (node as Record<string, unknown>)?.['podcast:valueRecipient'];
   const recipientArray = recipients ? (Array.isArray(recipients) ? recipients : [recipients]) : [];
+  // Everything else inside the block (<podcast:valueTimeSplit>) is carried through.
+  // An array means the feed has several value blocks; there is no single block to
+  // carry, and capturing its indexes would emit <0> and <1> elements.
+  const unknownElements = node && typeof node === 'object' && !Array.isArray(node)
+    ? captureUnknownElements(node as Record<string, unknown>, VALUE_BLOCK_KNOWN_KEYS)
+    : undefined;
 
   return {
     type: 'lightning',
     method: 'keysend',
     suggested: getAttr(node, 'suggested') || undefined,
-    recipients: recipientArray.map(parseRecipient).filter(Boolean) as ValueRecipient[]
+    recipients: recipientArray.map(parseRecipient).filter(Boolean) as ValueRecipient[],
+    ...(unknownElements ? { unknownElements } : {})
   };
 }
 
@@ -490,19 +565,13 @@ function parseCommonChannelElements(channel: Record<string, unknown>): Omit<Base
   const lockedOwner = lockedNode ? getAttr(lockedNode, 'owner') || '' : '';
 
   // Categories
-  const categoriesNode = channel['itunes:category'];
-  let categories: string[] = [];
-  if (categoriesNode) {
-    const catArray = Array.isArray(categoriesNode) ? categoriesNode : [categoriesNode];
-    categories = catArray.map(c => getAttr(c, 'text')).filter(Boolean) as string[];
-  }
+  const { categories, subcategories } = parseCategories(channel['itunes:category']);
 
   // Keywords
   const keywords = getText(channel['itunes:keywords']) || '';
 
   // Explicit
-  const explicitVal = channel['itunes:explicit'];
-  const explicit = explicitVal === true || explicitVal === 'true' || getText(explicitVal) === 'true';
+  const explicit = parseExplicit(channel['itunes:explicit']);
 
   // Owner
   const owner = channel['itunes:owner'];
@@ -556,6 +625,7 @@ function parseCommonChannelElements(channel: Record<string, unknown>): Omit<Base
     locked,
     lockedOwner,
     categories,
+    ...(subcategories ? { subcategories } : {}),
     keywords,
     explicit,
     ownerName,
@@ -685,8 +755,7 @@ function parseTrack(node: unknown, trackNumber: number, albumValue: ValueBlock, 
   }
 
   // Explicit
-  const trackExplicit = item['itunes:explicit'];
-  track.explicit = trackExplicit === true || trackExplicit === 'true' || getText(trackExplicit) === 'true';
+  track.explicit = parseExplicit(item['itunes:explicit']);
 
   // Track image (check itunes:image first, then podcast:images as fallback)
   const itunesImage = item['itunes:image'];
@@ -854,13 +923,7 @@ export const fetchFeedFromUrl = async (url: string): Promise<string> => {
 
 // Detect if XML is a video feed based on medium tag
 export const isVideoFeed = (xmlString: string): boolean => {
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: '@_',
-    textNodeName: '#text',
-    parseAttributeValue: true,
-    trimValues: true
-  });
+  const parser = createFeedXmlParser();
 
   try {
     const result = parser.parse(xmlString);
@@ -876,13 +939,7 @@ export const isVideoFeed = (xmlString: string): boolean => {
 
 // Detect if XML is a publisher feed based on medium tag
 export const isPublisherFeed = (xmlString: string): boolean => {
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: '@_',
-    textNodeName: '#text',
-    parseAttributeValue: true,
-    trimValues: true
-  });
+  const parser = createFeedXmlParser();
 
   try {
     const result = parser.parse(xmlString);
@@ -898,13 +955,7 @@ export const isPublisherFeed = (xmlString: string): boolean => {
 
 // Parse XML string to PublisherFeed object
 export const parsePublisherRssFeed = (xmlString: string): PublisherFeed => {
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: '@_',
-    textNodeName: '#text',
-    parseAttributeValue: true,
-    trimValues: true
-  });
+  const parser = createFeedXmlParser();
 
   const result = parser.parse(xmlString);
   const channel = result?.rss?.channel;
