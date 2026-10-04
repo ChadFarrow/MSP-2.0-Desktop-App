@@ -430,7 +430,7 @@ export function NostrConnectModal({ onClose, excludePubkey }: NostrConnectModalP
               {!connectUri ? (
                 <>
                   <p className="connect-description">
-                    Connect using a remote signer like Primal (iOS/Android), Amber (Android), or any NIP-46 compatible app.
+                    Connect using a remote signer like Primal (iOS/Android), Amber (Android), Clave (iOS), or any NIP-46 compatible app.
                   </p>
 
                   <div className="connect-option">
@@ -473,7 +473,7 @@ export function NostrConnectModal({ onClose, excludePubkey }: NostrConnectModalP
               ) : (
                 <div className="connect-qr-container">
                   <p className="connect-description">
-                    Scan this QR code with your Nostr signer app (Amber, etc.)
+                    Scan this QR code with your Nostr signer app (Amber, Primal, Clave, etc.)
                   </p>
 
                   <div className="qr-code-wrapper">

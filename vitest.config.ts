@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 /*
@@ -13,6 +13,15 @@ import react from '@vitejs/plugin-react';
  * (api/verify-feed-url.test.ts). Matching upstream's environment here is what makes
  * an upstream api test land green instead of needing a per-file edit every sync.
  */
+
+/*
+ * Upstream src/ tests that are written for node, like the api tests above. They stub
+ * `globalThis.localStorage` themselves, which jsdom plus setup.ts forbids — setup.ts
+ * defines window.localStorage as a read-only mock — so under `src` they fail before a
+ * single test runs. Listed one by one, so every other src test keeps jsdom.
+ */
+const NODE_SRC_TESTS = ['src/utils/nostrSigner.test.ts'];
+
 export default defineConfig({
   plugins: [react()],
   test: {
@@ -29,6 +38,7 @@ export default defineConfig({
           globals: true,
           setupFiles: ['./src/test/setup.ts'],
           include: ['src/**/*.test.{ts,tsx}'],
+          exclude: [...configDefaults.exclude, ...NODE_SRC_TESTS],
         },
       },
       {
@@ -40,6 +50,15 @@ export default defineConfig({
           // only part of it api tests actually rely on.
           setupFiles: ['./src/test/setup.node.ts'],
           include: ['api/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
+          name: 'src-node',
+          environment: 'node',
+          globals: true,
+          setupFiles: ['./src/test/setup.node.ts'],
+          include: NODE_SRC_TESTS,
         },
       },
     ],
