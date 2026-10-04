@@ -299,9 +299,11 @@ async function processCatalogFeed(
     const album = parseRssFeed(xml);
 
     // Add/update publisher reference
+    // rel mirrors this album's entry in the publisher feed, so both sides agree.
     album.publisher = {
       feedGuid: publisherGuid,
-      feedUrl: publisherFeedUrl
+      feedUrl: publisherFeedUrl,
+      rel: item.rel
     };
 
     // Update build date to reflect the modification

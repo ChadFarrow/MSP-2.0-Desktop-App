@@ -264,6 +264,8 @@ const generateRemoteItemXml = (item: RemoteItem, level: number): string => {
   // and dropping it would blank them on the next import. Unknown attributes are
   // ignored by conforming parsers, so it costs other readers nothing.
   if (item.image) attrs.push(`feedImg="${escapeXml(item.image)}"`);
+  // The publisher's role (utils/publisherRole.ts). Written only when stated.
+  if (item.rel?.trim()) attrs.push(`rel="${escapeXml(item.rel.trim())}"`);
 
   return `${indent(level)}<podcast:remoteItem ${attrs.join(' ')} />`;
 };
@@ -278,6 +280,8 @@ const generatePublisherXml = (publisher: PublisherReference, level: number): str
   const attrs: string[] = [`medium="publisher"`];
   if (publisher.feedGuid) attrs.push(`feedGuid="${escapeXml(publisher.feedGuid)}"`);
   if (publisher.feedUrl) attrs.push(`feedUrl="${escapeXml(publisher.feedUrl)}"`);
+  // The same role as the publisher feed states for this album (utils/publisherRole.ts).
+  if (publisher.rel?.trim()) attrs.push(`rel="${escapeXml(publisher.rel.trim())}"`);
 
   lines.push(`${indent(level + 1)}<podcast:remoteItem ${attrs.join(' ')} />`);
   lines.push(`${indent(level)}</podcast:publisher>`);

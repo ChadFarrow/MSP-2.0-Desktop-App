@@ -203,6 +203,26 @@ export function AdminPage() {
         .btn-delete-other:hover {
           background-color: #dc3545;
         }
+        .medium-badge {
+          display: inline-block;
+          margin-left: 0.5rem;
+          padding: 0.1rem 0.45rem;
+          border-radius: 999px;
+          border: 1px solid var(--border-color);
+          background: var(--bg-tertiary);
+          font-size: 0.75em;
+          font-weight: 600;
+          white-space: nowrap;
+          vertical-align: middle;
+        }
+        .medium-badge-publisher {
+          color: #8b5cf6;
+          border-color: #8b5cf6;
+        }
+        .medium-badge-video {
+          color: #0ea5e9;
+          border-color: #0ea5e9;
+        }
         .rss-link {
           color: #ff9900;
           text-decoration: none;

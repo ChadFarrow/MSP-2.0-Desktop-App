@@ -62,6 +62,9 @@ export interface RemoteItem {
   medium?: string;
   title?: string;
   image?: string;
+  // The publisher's role, e.g. "artist" or "label". Not in the spec yet — see
+  // utils/publisherRole.ts. Absent means not stated.
+  rel?: string;
 }
 
 // Podcasting 2.0 additional images (<podcast:image>). These are EXTRA images
@@ -143,6 +146,9 @@ export interface BaseChannelData {
 export interface PublisherReference {
   feedGuid: string;
   feedUrl?: string;
+  // Same value as the rel on this album's entry in the publisher feed — see
+  // utils/publisherRole.ts. Absent means not stated.
+  rel?: string;
 }
 
 export interface Track {

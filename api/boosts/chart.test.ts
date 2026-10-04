@@ -7,7 +7,7 @@ const { mockReadAllDerived, mockParseAuthHeader } = vi.hoisted(() => ({
   mockParseAuthHeader: vi.fn()
 }));
 vi.mock('../_utils/boostStore.js', () => ({ readAllDerived: mockReadAllDerived }));
-vi.mock('../_utils/adminAuth.js', () => ({ parseAuthHeader: mockParseAuthHeader }));
+vi.mock('../_utils/adminAuth.js', () => ({ parseChartAuthHeader: mockParseAuthHeader }));
 
 import handler from './chart.js';
 import { __resetRateLimiterForTests } from '../_utils/rateLimiter.js';
