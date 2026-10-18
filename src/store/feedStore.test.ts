@@ -831,9 +831,9 @@ describe('feedReducer feed check', () => {
   });
 });
 
-describe('feedReducer SET_ALTERNATE_ENCLOSURE_LENGTH', () => {
-  // A size lookup lands up to ~10 s after it starts. It names the track and the
-  // version by id, so it lands right whatever the user did meanwhile.
+describe('feedReducer SET_ALTERNATE_ENCLOSURE_MEASURED', () => {
+  // A size or height lookup lands up to ~10 s after it starts. It names the
+  // track and the version by id, so it lands right whatever the user did meanwhile.
   const FLAC = 'https://example.com/1.flac';
   const withVersion = (version: Partial<AlternateEnclosure> = {}): FeedState => {
     const album = albumWith(['Sat, 01 Feb 2025 00:02:00 GMT', 'Sat, 01 Feb 2025 00:01:00 GMT']);
@@ -841,7 +841,7 @@ describe('feedReducer SET_ALTERNATE_ENCLOSURE_LENGTH', () => {
     return stateWithAlbum(album);
   };
   const measured = (state: FeedState, trackId: string, url = FLAC) => feedReducer(state, {
-    type: 'SET_ALTERNATE_ENCLOSURE_LENGTH', payload: { trackId, versionId: 'v', url, length: '31200000' }
+    type: 'SET_ALTERNATE_ENCLOSURE_MEASURED', payload: { trackId, versionId: 'v', url, field: 'length', value: '31200000' }
   });
 
   it('writes the size to that version, wherever its track is now', () => {
@@ -865,5 +865,16 @@ describe('feedReducer SET_ALTERNATE_ENCLOSURE_LENGTH', () => {
     }
     const state = withVersion();
     expect(measured(state, 'no-such-track')).toBe(state);
+  });
+
+  it('writes a measured video height the same way, unless one was typed', () => {
+    const MP4 = 'https://example.com/1.mp4';
+    const height = (state: FeedState) => feedReducer(state, {
+      type: 'SET_ALTERNATE_ENCLOSURE_MEASURED', payload: { trackId: state.album.tracks[1].id, versionId: 'v', url: MP4, field: 'height', value: '1080' }
+    });
+    const video = withVersion({ type: 'video/mp4', length: '58390859', sources: [{ uri: MP4 }] });
+    expect(height(video).album.tracks[1].alternateEnclosures![0]).toMatchObject({ height: '1080', length: '58390859' });
+    const typed = withVersion({ type: 'video/mp4', height: '720', sources: [{ uri: MP4 }] });
+    expect(height(typed)).toBe(typed);
   });
 });

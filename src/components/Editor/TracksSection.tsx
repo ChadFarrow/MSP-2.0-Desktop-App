@@ -438,9 +438,9 @@ export function TracksSection({ tracks, isVideo, dispatch }: TracksSectionProps)
                     type: 'UPDATE_TRACK',
                     payload: { index, track: { alternateEnclosures: alternateEnclosures.length > 0 ? alternateEnclosures : undefined } }
                   })}
-                  onMeasured={(versionId, url, length) => dispatch({
-                    type: 'SET_ALTERNATE_ENCLOSURE_LENGTH',
-                    payload: { trackId: track.id, versionId, url, length }
+                  onMeasured={(versionId, url, field, value) => dispatch({
+                    type: 'SET_ALTERNATE_ENCLOSURE_MEASURED',
+                    payload: { trackId: track.id, versionId, url, field, value }
                   })}
                 />
               )}

@@ -305,6 +305,22 @@ describe('getShouldFixIssues', () => {
     expect(getShouldFixIssues(albumFeed(album))).toEqual([]);
   });
 
+  it('flags a music video Height that is not a number of pixels', () => {
+    const album = goodAlbum();
+    album.tracks[0].alternateEnclosures = [{ id: 'a', type: 'video/mp4', height: '1080p', sources: [{ uri: 'https://example.com/1.mp4' }] }];
+    const issues = getShouldFixIssues(albumFeed(album));
+    expect(codes(issues)).toEqual(['alt-enclosure-height']);
+    expect(issues[0].message).toContain('"1080p"');
+    album.tracks[0].alternateEnclosures[0].height = '1080';
+    expect(getShouldFixIssues(albumFeed(album))).toEqual([]);
+  });
+
+  it('does not check the height of an audio version, which has no Height field', () => {
+    const album = goodAlbum();
+    album.tracks[0].alternateEnclosures = [{ id: 'a', type: 'audio/flac', height: 'n/a', sources: [{ uri: 'https://example.com/1.flac' }] }];
+    expect(getShouldFixIssues(albumFeed(album))).toEqual([]);
+  });
+
   it('flags an alternate version whose own URL is blank, even with other addresses', () => {
     // The generator leaves such a version out, so the check must say so.
     const album = goodAlbum();

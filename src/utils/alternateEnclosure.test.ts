@@ -3,7 +3,7 @@ import { parseRssFeed, migrateStoredAlternateEnclosures } from './xmlParser';
 import { albumStorage, videoStorage } from './storage';
 import { generateRssFeed } from './xmlGenerator';
 import { regenerateAlbumGuids } from './regenerateGuids';
-import { urlChange, typeChange, createSizeMeasurer } from './alternateEnclosure';
+import { urlChange, typeChange, createMeasurer } from './alternateEnclosure';
 import { createEmptyAlbum, createEmptyTrack } from '../types/feed';
 import type { AlternateEnclosure, Track } from '../types/feed';
 
@@ -337,6 +337,20 @@ describe('urlChange', () => {
     expect(urlChange(version({ type: 'audio/mp4', typeSetByHand: true }), 'https://example.com/1.m4a')).not.toHaveProperty('type');
   });
 
+  it('sets a video type from a video extension, so a version can be a music video', () => {
+    expect(urlChange(version(), 'https://example.com/video.mp4').type).toBe('video/mp4');
+    expect(urlChange(version(), 'https://example.com/video.webm?dl=1').type).toBe('video/webm');
+    // only the extension the URL ends with counts
+    expect(urlChange(version(), 'https://example.com/a.mov/song.flac').type).toBe('audio/flac');
+  });
+
+  it('a type picked by hand drops the height unless it is a video type', () => {
+    const video = version({ type: 'video/mp4', height: '1080' });
+    expect(typeChange(video, 'audio/flac')).toMatchObject({ type: 'audio/flac', height: undefined });
+    expect(typeChange(video, 'audio/flac')).toHaveProperty('height');
+    expect(typeChange(video, 'video/webm')).not.toHaveProperty('height');
+  });
+
   it('a type picked by hand drops codecs from another type', () => {
     expect(typeChange(version({ codecs: 'mp4a.40.2' }), 'audio/flac')).toEqual({ type: 'audio/flac', typeSetByHand: true, codecs: undefined });
     expect(typeChange(version({ codecs: 'mp4a.40.2' }), 'audio/mpeg')).toEqual({ type: 'audio/mpeg', typeSetByHand: true });
@@ -348,14 +362,15 @@ describe('urlChange', () => {
   });
 });
 
-describe('createSizeMeasurer', () => {
-  // A HEAD request the test answers by hand. Whether the size still belongs to
-  // the version when it lands is the reducer's call (SET_ALTERNATE_ENCLOSURE_LENGTH).
+describe('createMeasurer', () => {
+  // A lookup (a HEAD request for the size, the video's metadata for the height)
+  // the test answers by hand. Whether the value still belongs to the version
+  // when it lands is the reducer's call (SET_ALTERNATE_ENCLOSURE_MEASURED).
   function setup() {
     const writes: [string, string, string][] = [];
     const requests: { url: string; answer: (size: number | null) => void }[] = [];
-    const measure = createSizeMeasurer({
-      write: (id, url, length) => writes.push([id, url, length]),
+    const measure = createMeasurer({
+      write: (id, url, value) => writes.push([id, url, value]),
       detect: url => new Promise(resolve => requests.push({ url, answer: resolve }))
     });
     return { writes, requests, measure };

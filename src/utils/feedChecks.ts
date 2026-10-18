@@ -11,7 +11,7 @@ import type { Album, FeedType, PublisherFeed, Track } from '../types/feed';
 import { getValueRecipientErrors } from './valueValidation';
 import { hhmmssToSeconds } from './audioUtils';
 import { trackOrderIssue } from './trackOrder';
-import { editsAlternateVersions, NON_WEB_SOURCE_RE } from './alternateEnclosure';
+import { editsAlternateVersions, isVideoType, NON_WEB_SOURCE_RE } from './alternateEnclosure';
 import { collectLinkTargets, summarizeLinks, type LinkResult, type LinkSummary, type LinkTarget } from './linkCheck';
 
 export type IssueLevel = 'must' | 'should' | 'outdated';
@@ -43,6 +43,7 @@ export type IssueCode =
   | 'transcript-type'
   | 'alt-enclosure-no-url'
   | 'alt-enclosure-length'
+  | 'alt-enclosure-height'
   | 'channel-link-missing'
   | 'track-order'
   // Should fix — link check
@@ -281,6 +282,11 @@ export function getShouldFixIssues(feed: FeedSnapshot): FeedIssue[] {
       const length = enc.length?.trim();
       if (length && !/^\d+$/.test(length)) {
         should('alt-enclosure-length', 'tracks', `${name} File Size is "${length}". Enter the size in bytes, digits only (e.g. 31200000), or leave it empty.`, track.id);
+      }
+      // Only a video version shows a Height field.
+      const height = enc.height?.trim();
+      if (isVideoType(enc.type) && height && !/^\d+$/.test(height)) {
+        should('alt-enclosure-height', 'tracks', `${name} Height is "${height}". Enter the height in pixels, digits only (e.g. 1080), or leave it empty.`, track.id);
       }
     });
 

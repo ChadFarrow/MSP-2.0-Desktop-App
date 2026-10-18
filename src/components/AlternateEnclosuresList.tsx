@@ -1,28 +1,32 @@
 import { useRef } from 'react';
 import type { AlternateEnclosure } from '../types/feed';
 import { createEmptyAlternateEnclosure } from '../types/feed';
-import { AUDIO_EXTENSION_LIST, AUDIO_FILE_TYPES, isKnownAudioFormat } from '../utils/audioUtils';
-import { createSizeMeasurer, typeChange, urlChange } from '../utils/alternateEnclosure';
+import { AUDIO_EXTENSION_LIST, AUDIO_FILE_TYPES, detectMediaSize, isKnownAudioFormat } from '../utils/audioUtils';
+import { createMeasurer, isVideoType, typeChange, urlChange, type MeasuredField } from '../utils/alternateEnclosure';
+import { detectVideoHeight, matchVideoExtension, VIDEO_EXTENSION_LIST, VIDEO_FILE_TYPES } from '../utils/videoUtils';
 import { FIELD_INFO } from '../data/fieldInfo';
 import { InfoIcon } from './InfoIcon';
 
 interface AlternateEnclosuresListProps {
   enclosures: AlternateEnclosure[];
   onChange: (enclosures: AlternateEnclosure[]) => void;
-  // A measured file size. It lands up to ~10 s after the lookup starts, when
-  // this editor may be gone and its props stale, so the caller writes it by
-  // track id and version id (SET_ALTERNATE_ENCLOSURE_LENGTH), never through
-  // onChange, whose index came from an old render.
-  onMeasured: (versionId: string, url: string, length: string) => void;
+  // A measured file size or video height. It lands up to ~10 s after the
+  // lookup starts, when this editor may be gone and its props stale, so the
+  // caller writes it by track id and version id
+  // (SET_ALTERNATE_ENCLOSURE_MEASURED), never through onChange, whose index
+  // came from an old render.
+  onMeasured: (versionId: string, url: string, field: MeasuredField, value: string) => void;
 }
 
 // The spec caps title at 32 characters.
 const TITLE_MAX_LEN = 32;
+const KNOWN_TYPES = [...AUDIO_FILE_TYPES, ...VIDEO_FILE_TYPES];
 
 /**
  * Editor for a track's <podcast:alternateEnclosure> list: a title, file type,
- * file size and URL per version. The type follows the URL's extension until
- * the user picks one, and the size is measured from the host. Rows are keyed
+ * file size and URL per version, and a height for a video (the song's music
+ * video). The type follows the URL's extension until the user picks one, and
+ * the size and height are measured from the file. Rows are keyed
  * and updated by `id`, never by index. The rules live in
  * utils/alternateEnclosure.ts, where they are unit-tested.
  *
@@ -33,15 +37,20 @@ export function AlternateEnclosuresList({ enclosures, onChange, onMeasured }: Al
   const update = (id: string, patch: Partial<AlternateEnclosure>) =>
     onChange(enclosures.map(enc => (enc.id === id ? { ...enc, ...patch } : enc)));
 
-  // One measurer per instance, made on first use (from an event handler, never
-  // during render), so its in-flight set spans every call. It keeps the first
-  // onMeasured, which is safe because that names this track by id. Unlike the
-  // main file there is no size estimate: length is optional here, and one from
-  // the main file's duration would be wrong for a lossless or low-bitrate copy.
-  const measurer = useRef<ReturnType<typeof createSizeMeasurer> | null>(null);
-  const measure = (id: string, url: string) => {
-    measurer.current ??= createSizeMeasurer({ write: onMeasured });
-    return measurer.current(id, url);
+  // One measurer per value and instance, made on first use (from an event
+  // handler, never during render), so each in-flight set spans every call. They
+  // keep the first onMeasured, which is safe because that names this track by
+  // id. Unlike the main file there is no size estimate: length is optional
+  // here, and one from the main file's duration would be wrong for a lossless
+  // or low-bitrate copy.
+  const measurers = useRef<Record<MeasuredField, ReturnType<typeof createMeasurer>> | null>(null);
+  const measureMissing = (version: AlternateEnclosure, url: string) => {
+    measurers.current ??= {
+      length: createMeasurer({ detect: detectMediaSize, write: (id, at, value) => onMeasured(id, at, 'length', value) }),
+      height: createMeasurer({ detect: url => detectVideoHeight(url), write: (id, at, value) => onMeasured(id, at, 'height', value) })
+    };
+    if (!version.length) measurers.current.length(version.id, url);
+    if (isVideoType(version.type) && !version.height) measurers.current.height(version.id, url);
   };
 
   const add = () => onChange([...enclosures, createEmptyAlternateEnclosure()]);
@@ -53,7 +62,7 @@ export function AlternateEnclosuresList({ enclosures, onChange, onMeasured }: Al
       <div className="repeatable-list">
         {enclosures.map((enc, index) => {
           const url = enc.sources[0]?.uri || '';
-          const isVideoVersion = enc.type.startsWith('video/');
+          const isVideoVersion = isVideoType(enc.type);
           return (
             <div key={enc.id} className="repeatable-item">
               <div className="repeatable-item-content">
@@ -63,7 +72,7 @@ export function AlternateEnclosuresList({ enclosures, onChange, onMeasured }: Al
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="e.g., Lossless"
+                      placeholder="e.g., Lossless or Music Video"
                       maxLength={TITLE_MAX_LEN}
                       value={enc.title || ''}
                       onChange={e => update(enc.id, { title: e.target.value || undefined })}
@@ -75,14 +84,27 @@ export function AlternateEnclosuresList({ enclosures, onChange, onMeasured }: Al
                       className="form-select"
                       aria-label={`Alternate version ${index + 1} file type`}
                       value={enc.type}
-                      onChange={e => update(enc.id, typeChange(enc, e.target.value))}
+                      onChange={e => {
+                        const patch = typeChange(enc, e.target.value);
+                        update(enc.id, patch);
+                        // Picked as a video: read the height from the file already there.
+                        if (isVideoType(e.target.value)) measureMissing({ ...enc, ...patch }, url);
+                      }}
                     >
-                      {AUDIO_FILE_TYPES.map(t => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
-                      ))}
-                      {/* An imported feed may carry any type (a video version, an
-                          unusual MIME). Show it rather than snapping to MP3. */}
-                      {!AUDIO_FILE_TYPES.some(t => t.value === enc.type) && (
+                      <optgroup label="Audio">
+                        {AUDIO_FILE_TYPES.map(t => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
+                      </optgroup>
+                      {/* A music video of the song */}
+                      <optgroup label="Video">
+                        {VIDEO_FILE_TYPES.map(t => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
+                      </optgroup>
+                      {/* An imported feed may carry any type (a streaming playlist,
+                          an unusual MIME). Show it rather than snapping to MP3. */}
+                      {!KNOWN_TYPES.some(t => t.value === enc.type) && (
                         <option value={enc.type}>{enc.type}</option>
                       )}
                     </select>
@@ -98,6 +120,19 @@ export function AlternateEnclosuresList({ enclosures, onChange, onMeasured }: Al
                       onChange={e => update(enc.id, { length: e.target.value.trim() || undefined })}
                     />
                   </div>
+                  {isVideoVersion && (
+                    <div className="form-group">
+                      <label className="form-label">Height (pixels)<InfoIcon text={FIELD_INFO.alternateEnclosureHeight} /></label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className="form-input"
+                        placeholder="e.g., 1080"
+                        value={enc.height || ''}
+                        onChange={e => update(enc.id, { height: e.target.value.trim() || undefined })}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="form-group" style={{ marginTop: '1rem' }}>
                   <label className="form-label">
@@ -107,7 +142,7 @@ export function AlternateEnclosuresList({ enclosures, onChange, onMeasured }: Al
                     type="url"
                     className="form-input"
                     aria-label={`Alternate version ${index + 1} URL`}
-                    placeholder="https://example.com/track.flac"
+                    placeholder={isVideoVersion ? 'https://example.com/music-video.mp4' : 'https://example.com/track.flac'}
                     value={url}
                     onChange={e => update(enc.id, urlChange(enc, e.target.value))}
                     onPaste={e => {
@@ -116,14 +151,14 @@ export function AlternateEnclosuresList({ enclosures, onChange, onMeasured }: Al
                       e.preventDefault();
                       const patch = urlChange(enc, pasted);
                       update(enc.id, patch);
-                      // Not when the paste kept the size or brought the old one back.
-                      if (!{ ...enc, ...patch }.length) measure(enc.id, pasted);
+                      // Not what the paste kept or brought back with the old URL.
+                      measureMissing({ ...enc, ...patch }, pasted);
                     }}
-                    onBlur={e => { if (!enc.length) measure(enc.id, e.target.value); }}
+                    onBlur={e => measureMissing(enc, e.target.value)}
                   />
-                  {!isVideoVersion && url.trim() && !isKnownAudioFormat(url) && (
+                  {url.trim() && !isKnownAudioFormat(url) && !matchVideoExtension(url) && (
                     <div style={{ color: 'var(--warning, #b8860b)', fontSize: '0.85em', marginTop: '4px' }}>
-                      URL doesn't end with a recognized audio extension ({AUDIO_EXTENSION_LIST}). Podcast apps may not play it.
+                      URL doesn't end with a recognized audio extension ({AUDIO_EXTENSION_LIST}) or video extension ({VIDEO_EXTENSION_LIST}). Podcast apps may not play it.
                     </div>
                   )}
                   {enc.sources.length > 1 && (
@@ -133,11 +168,13 @@ export function AlternateEnclosuresList({ enclosures, onChange, onMeasured }: Al
                   )}
                   {url.trim() && (
                     isVideoVersion ? (
+                      // preload="none": a URL being typed must not fetch the
+                      // file on every keystroke. The height is read on paste/blur.
                       <video
                         key={url}
                         src={url}
                         controls
-                        preload="metadata"
+                        preload="none"
                         style={{ width: '100%', marginTop: '8px', maxHeight: '300px' }}
                         onError={e => { (e.target as HTMLVideoElement).style.display = 'none'; }}
                       />
