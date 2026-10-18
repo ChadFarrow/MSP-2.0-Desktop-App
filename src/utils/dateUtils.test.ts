@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatReleasedDate, parseReleasedDate } from './dateUtils';
+import { formatReleasedDate, parseReleasedDate, toDateTimeLocalValue, fromDateTimeLocalValue } from './dateUtils';
 
 /**
  * These two functions are the two ends of one wire: formatReleasedDate writes the
@@ -69,5 +69,64 @@ describe('round trip', () => {
       const original = new Date(Date.UTC(2026, month, 5)).toUTCString();
       expect(parseReleasedDate(formatReleasedDate(original)), `month ${month + 1}`).toBe(original);
     }
+  });
+});
+
+/**
+ * The track Pub Date field is an <input type="datetime-local">, whose value is local
+ * wall-clock time with no offset. It used to show the UTC time (toISOString) while reading
+ * the input back as local time, so at UTC+2 each pick moved the stored date two hours back,
+ * and a cleared segment stored "Invalid Date", whose next render threw and blanked the app.
+ * Expectations are built with the local Date constructor, so these pass in any timezone.
+ */
+describe('toDateTimeLocalValue', () => {
+  it('shows the local time the user picked, not the UTC time', () => {
+    const picked = new Date(2026, 9, 18, 22, 44).toUTCString();
+    expect(toDateTimeLocalValue(picked)).toBe('2026-10-18T22:44');
+  });
+
+  it('does not roll the day, month or year at midnight', () => {
+    expect(toDateTimeLocalValue(new Date(2026, 9, 19, 0, 30).toUTCString())).toBe('2026-10-19T00:30');
+    expect(toDateTimeLocalValue(new Date(2026, 11, 31, 23, 59).toUTCString())).toBe('2026-12-31T23:59');
+    expect(toDateTimeLocalValue(new Date(2027, 0, 1, 0, 0).toUTCString())).toBe('2027-01-01T00:00');
+  });
+
+  it('returns empty for a date it cannot read, so the field can always render', () => {
+    expect(toDateTimeLocalValue('Invalid Date')).toBe('');
+    expect(toDateTimeLocalValue('not a date')).toBe('');
+    expect(toDateTimeLocalValue('')).toBe('');
+  });
+});
+
+describe('fromDateTimeLocalValue', () => {
+  it('reads the value as local time and stores it as RFC822 UTC', () => {
+    expect(fromDateTimeLocalValue('2026-10-18T22:44')).toBe(new Date(2026, 9, 18, 22, 44).toUTCString());
+  });
+
+  it('returns null for an empty or half-typed value instead of an invalid date', () => {
+    expect(fromDateTimeLocalValue('')).toBeNull();
+    expect(fromDateTimeLocalValue('garbage')).toBeNull();
+    // A year typed digit by digit passes through 0002, 0020 and 0202. RFC822 reads a
+    // year below 100 as 20xx, so storing one would jump the field to another century.
+    expect(fromDateTimeLocalValue('0002-10-18T22:44')).toBeNull();
+    expect(fromDateTimeLocalValue('0202-10-18T22:44')).toBeNull();
+  });
+});
+
+describe('datetime-local round trip', () => {
+  it('gives back what the field showed, so re-rendering never moves it', () => {
+    for (const value of ['2026-10-18T22:44', '2026-10-19T00:30', '2026-03-29T03:15', '2027-01-01T00:00']) {
+      const stored = fromDateTimeLocalValue(value);
+      expect(stored, value).not.toBeNull();
+      expect(toDateTimeLocalValue(stored!), value).toBe(value);
+    }
+  });
+
+  it('does not drift over repeated edits', () => {
+    let stored = new Date(2026, 9, 18, 22, 44).toUTCString();
+    for (let i = 0; i < 5; i++) {
+      stored = fromDateTimeLocalValue(toDateTimeLocalValue(stored))!;
+    }
+    expect(stored).toBe(new Date(2026, 9, 18, 22, 44).toUTCString());
   });
 });

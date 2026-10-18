@@ -13,6 +13,7 @@ import { Section } from '../Section';
 import { Toggle } from '../Toggle';
 import { AddRecipientSelect } from '../AddRecipientSelect';
 import { PodcastImagesList } from '../PodcastImagesList';
+import { PubDateInput } from '../PubDateInput';
 
 interface TracksSectionProps {
   tracks: Track[];
@@ -279,14 +280,9 @@ export function TracksSection({ tracks, isVideo, dispatch }: TracksSectionProps)
               </div>
               <div className="form-group">
                 <label className="form-label">Pub Date<InfoIcon text={FIELD_INFO.trackPubDate} /></label>
-                <input
-                  type="datetime-local"
-                  className="form-input"
-                  value={track.pubDate ? new Date(track.pubDate).toISOString().slice(0, 16) : ''}
-                  onChange={e => dispatch({
-                    type: 'UPDATE_TRACK',
-                    payload: { index, track: { pubDate: new Date(e.target.value).toUTCString() } }
-                  })}
+                <PubDateInput
+                  value={track.pubDate}
+                  onChange={pubDate => dispatch({ type: 'UPDATE_TRACK', payload: { index, track: { pubDate } } })}
                 />
               </div>
               <div className="form-group">
