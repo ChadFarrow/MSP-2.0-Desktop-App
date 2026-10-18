@@ -11,6 +11,7 @@ import type { Album, FeedType, PublisherFeed, Track } from '../types/feed';
 import { getValueRecipientErrors } from './valueValidation';
 import { hhmmssToSeconds } from './audioUtils';
 import { trackOrderIssue } from './trackOrder';
+import { editsAlternateVersions, NON_WEB_SOURCE_RE } from './alternateEnclosure';
 import { collectLinkTargets, summarizeLinks, type LinkResult, type LinkSummary, type LinkTarget } from './linkCheck';
 
 export type IssueLevel = 'must' | 'should' | 'outdated';
@@ -40,6 +41,8 @@ export type IssueCode =
   | 'url-http'
   | 'video-audio-type'
   | 'transcript-type'
+  | 'alt-enclosure-no-url'
+  | 'alt-enclosure-length'
   | 'channel-link-missing'
   | 'track-order'
   // Should fix — link check
@@ -261,6 +264,26 @@ export function getShouldFixIssues(feed: FeedSnapshot): FeedIssue[] {
       should('video-audio-type', 'tracks', `Its file type is ${track.enclosureType}, an audio type. Paste the video URL again so MSP sets the video type.`, track.id);
     }
 
+    // Only what the editor shows can be reported: it edits alternate versions on
+    // album tracks only (editsAlternateVersions), and of each version only the
+    // first source (its URL). Imported mirrors are kept as they are.
+    (editsAlternateVersions(album) ? track.alternateEnclosures || [] : []).forEach((enc, n) => {
+      const name = `Alternate version ${n + 1}${enc.title?.trim() ? ` ("${enc.title.trim()}")` : ''}`;
+      const url = enc.sources[0]?.uri?.trim();
+      if (!url) {
+        // The generator leaves a version without one out, whatever mirrors it has.
+        should('alt-enclosure-no-url', 'tracks', `${name} has no file URL, so MSP leaves it out of the feed. Add the URL or remove the version.`, track.id);
+      }
+      // ipfs:// and the like are valid sources, not web addresses gone wrong.
+      if (!NON_WEB_SOURCE_RE.test(url ?? '')) {
+        issues.push(...urlIssues(url, `${name} URL`, 'tracks', track.id));
+      }
+      const length = enc.length?.trim();
+      if (length && !/^\d+$/.test(length)) {
+        should('alt-enclosure-length', 'tracks', `${name} File Size is "${length}". Enter the size in bytes, digits only (e.g. 31200000), or leave it empty.`, track.id);
+      }
+    });
+
     if (track.transcriptUrl?.trim() && track.transcriptType === 'application/srt') {
       should('transcript-type', 'tracks', 'Lyrics type is application/srt, which is not in the Podcasting 2.0 spec. Choose "SubRip (.srt)" in the lyrics type list.', track.id);
     }
@@ -299,6 +322,7 @@ export function linkIssues(targets: LinkTarget[], links: Record<string, LinkResu
     const where: { area: IssueArea; trackId?: string } =
       target.roles.includes('artwork') || !trackId ? { area: 'artwork' } : { area: 'tracks', trackId };
     const label = target.roles.includes('enclosure') ? (isVideo ? 'The video file' : 'The audio file')
+      : target.roles.includes('alternate') ? 'An alternate version'
       : target.roles.includes('artwork') ? coverLabel
         : target.roles.includes('trackArt') ? `The ${isVideo ? 'video' : 'track'} art`
           : 'An extra image (podcast:image)';

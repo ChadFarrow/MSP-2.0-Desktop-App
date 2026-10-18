@@ -1218,3 +1218,17 @@ describe('harmless extras round-trip', () => {
     expect(generateRssFeed(album)).toContain('<podcast:locked>yes</podcast:locked>');
   });
 });
+
+describe('OP3 prefix stripping', () => {
+  it('keeps an uppercase scheme after the prefix as it is', () => {
+    const xml = makeFeedXml('<title>Test</title><podcast:medium>music</podcast:medium>', `
+      <item>
+        <title>Track 1</title>
+        <guid>t1</guid>
+        <enclosure url="https://op3.dev/e/HTTP://example.com/track1.mp3" length="5000000" type="audio/mpeg"/>
+      </item>`);
+    const album = parseRssFeed(xml);
+    expect(album.op3).toBe(true);
+    expect(album.tracks[0].enclosureUrl).toBe('HTTP://example.com/track1.mp3');
+  });
+});

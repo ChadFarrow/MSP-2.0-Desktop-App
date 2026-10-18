@@ -13,6 +13,7 @@ import { Section } from '../Section';
 import { Toggle } from '../Toggle';
 import { AddRecipientSelect } from '../AddRecipientSelect';
 import { PodcastImagesList } from '../PodcastImagesList';
+import { AlternateEnclosuresList } from '../AlternateEnclosuresList';
 
 interface TracksSectionProps {
   tracks: Track[];
@@ -427,6 +428,22 @@ export function TracksSection({ tracks, isVideo, dispatch }: TracksSectionProps)
                   </select>
                 </div>
               </div>
+              {/* Audio versions on album tracks first; video feeds come later.
+                  isVideo is isVideoMedium(album.medium), the same test as
+                  editsAlternateVersions(), which the Feed check uses. */}
+              {!isVideo && (
+                <AlternateEnclosuresList
+                  enclosures={track.alternateEnclosures || []}
+                  onChange={alternateEnclosures => dispatch({
+                    type: 'UPDATE_TRACK',
+                    payload: { index, track: { alternateEnclosures: alternateEnclosures.length > 0 ? alternateEnclosures : undefined } }
+                  })}
+                  onMeasured={(versionId, url, length) => dispatch({
+                    type: 'SET_ALTERNATE_ENCLOSURE_LENGTH',
+                    payload: { trackId: track.id, versionId, url, length }
+                  })}
+                />
+              )}
               <div className="form-group">
                 <Toggle
                   checked={track.explicit}

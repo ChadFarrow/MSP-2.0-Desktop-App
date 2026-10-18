@@ -5,9 +5,10 @@
 import type { FeedSnapshot } from './feedChecks';
 import type { PodcastImage } from '../types/feed';
 import { isVideoUrl } from './videoUtils';
+import { editsAlternateVersions } from './alternateEnclosure';
 
 export type LinkKind = 'audio' | 'video' | 'image';
-export type LinkRole = 'enclosure' | 'artwork' | 'trackArt' | 'extraImage';
+export type LinkRole = 'enclosure' | 'alternate' | 'artwork' | 'trackArt' | 'extraImage';
 
 /** One URL to check, with everything in the feed that uses it. */
 export interface LinkTarget {
@@ -73,6 +74,15 @@ export function collectLinkTargets(feed: FeedSnapshot): LinkTarget[] {
       || (feed.feedType === 'video' && !track.enclosureType?.startsWith('audio/'))
       || isVideoUrl(track.enclosureUrl ?? '');
     add(track.enclosureUrl, isVideo ? 'video' : 'audio', 'enclosure', track.id, track.enclosureType || undefined);
+    // An alternate version's own URL (its first source), wherever the editor
+    // shows it: the same reach as the live rules, so nothing is reported that
+    // the user has no field to fix.
+    if (editsAlternateVersions(album)) {
+      for (const enclosure of track.alternateEnclosures ?? []) {
+        const kind = enclosure.type.startsWith('video/') ? 'video' : 'audio';
+        add(enclosure.sources[0]?.uri, kind, 'alternate', track.id, enclosure.type);
+      }
+    }
     add(track.trackArtUrl, 'image', 'trackArt', track.id);
     addImages(track.podcastImages, track.id);
   }

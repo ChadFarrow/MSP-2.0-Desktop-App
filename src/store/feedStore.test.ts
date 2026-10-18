@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { feedReducer, emptyFeedCheck } from './feedStore';
 import type { FeedState, FeedAction } from './feedStore';
-import type { Album } from '../types/feed';
+import type { Album, AlternateEnclosure } from '../types/feed';
 import type { FeedIssue } from '../utils/feedChecks';
 import { LINK_CHECK_LIMIT } from '../utils/linkCheck';
 import {
@@ -828,5 +828,42 @@ describe('feedReducer feed check', () => {
     expect(state.feedCheck.feedType).toBe('publisher');
     expect(state.feedCheck.sourceFindings).toEqual([]);
     expect(state.feedCheck.linkRun?.id).toBe(2);
+  });
+});
+
+describe('feedReducer SET_ALTERNATE_ENCLOSURE_LENGTH', () => {
+  // A size lookup lands up to ~10 s after it starts. It names the track and the
+  // version by id, so it lands right whatever the user did meanwhile.
+  const FLAC = 'https://example.com/1.flac';
+  const withVersion = (version: Partial<AlternateEnclosure> = {}): FeedState => {
+    const album = albumWith(['Sat, 01 Feb 2025 00:02:00 GMT', 'Sat, 01 Feb 2025 00:01:00 GMT']);
+    album.tracks[1].alternateEnclosures = [{ id: 'v', type: 'audio/flac', sources: [{ uri: FLAC }], ...version }];
+    return stateWithAlbum(album);
+  };
+  const measured = (state: FeedState, trackId: string, url = FLAC) => feedReducer(state, {
+    type: 'SET_ALTERNATE_ENCLOSURE_LENGTH', payload: { trackId, versionId: 'v', url, length: '31200000' }
+  });
+
+  it('writes the size to that version, wherever its track is now', () => {
+    let state = withVersion();
+    const trackId = state.album.tracks[1].id;
+    state = feedReducer(state, { type: 'REORDER_TRACKS', payload: { fromIndex: 1, toIndex: 0 } });
+    state = measured(state, trackId);
+    expect(state.album.tracks[0].alternateEnclosures![0].length).toBe('31200000');
+    expect(state.album.tracks[1].alternateEnclosures).toBeUndefined();
+    expect(state.isDirty).toBe(true);
+  });
+
+  it('matches the URL without its surrounding spaces', () => {
+    const state = withVersion({ sources: [{ uri: ` ${FLAC} ` }] });
+    expect(measured(state, state.album.tracks[1].id).album.tracks[1].alternateEnclosures![0].length).toBe('31200000');
+  });
+
+  it('changes nothing if, meanwhile, the URL changed, a size was typed, or the version or track went', () => {
+    for (const state of [withVersion({ sources: [{ uri: 'https://example.com/2.flac' }] }), withVersion({ length: '42' }), withVersion({ id: 'w' })]) {
+      expect(measured(state, state.album.tracks[1].id)).toBe(state);
+    }
+    const state = withVersion();
+    expect(measured(state, 'no-such-track')).toBe(state);
   });
 });

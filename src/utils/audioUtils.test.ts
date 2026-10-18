@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getAudioMimeType, isKnownAudioFormat, hhmmssToSeconds, detectMediaSize, resolveMediaSize } from './audioUtils';
+import { getAudioMimeType, isKnownAudioFormat, hhmmssToSeconds, detectMediaSize, resolveMediaSize, AUDIO_FILE_TYPES, AUDIO_EXTENSION_LIST } from './audioUtils';
 
 describe('getAudioMimeType', () => {
   it('detects mp3 as audio/mpeg', () => {
@@ -160,5 +160,30 @@ describe('resolveMediaSize', () => {
     await withFetch(blocked, async () => {
       expect(await resolveMediaSize('https://example.com/a.mp3', null)).toBe(5_000_000);
     });
+  });
+});
+
+describe('AUDIO_FILE_TYPES', () => {
+  it('lists every type getAudioMimeType can produce, once, MP3 first', () => {
+    const produced = ['mp3', 'm4a', 'm4b', 'aac', 'flac', 'wav', 'opus', 'oga', 'ogg', 'aiff', 'aif', 'wma', 'unknown']
+      .map(ext => getAudioMimeType(`https://example.com/a.${ext}`));
+    const listed = AUDIO_FILE_TYPES.map(t => t.value);
+    expect(new Set(listed).size).toBe(listed.length);
+    expect(new Set(produced)).toEqual(new Set(listed));
+    expect(AUDIO_FILE_TYPES[0]).toEqual({ value: 'audio/mpeg', label: 'MP3 (audio/mpeg)' });
+    expect(AUDIO_FILE_TYPES.find(t => t.value === 'audio/aiff')!.label).toBe('AIFF / AIF (audio/aiff)');
+  });
+
+  it('names the MIME type, so audio/mp4 does not read as an M4B-only type', () => {
+    expect(AUDIO_FILE_TYPES.find(t => t.value === 'audio/mp4')!.label).toBe('M4B (audio/mp4)');
+  });
+});
+
+describe('AUDIO_EXTENSION_LIST', () => {
+  it('names every extension isKnownAudioFormat accepts', () => {
+    expect(AUDIO_EXTENSION_LIST).toBe('mp3, m4a, m4b, aac, flac, wav, opus, oga, ogg, aiff, aif, wma');
+    for (const ext of AUDIO_EXTENSION_LIST.split(', ')) {
+      expect(isKnownAudioFormat(`https://example.com/a.${ext}`)).toBe(true);
+    }
   });
 });
