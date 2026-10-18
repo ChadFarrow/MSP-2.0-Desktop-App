@@ -9,6 +9,45 @@ export function formatRFC822Date(date: Date | string): string {
 }
 
 /**
+ * Format a stored pubDate for an <input type="datetime-local">: YYYY-MM-DDTHH:mm.
+ *
+ * **Local time, deliberately.** That input's value is the user's wall-clock time with no
+ * offset, and fromDateTimeLocalValue reads it back as local time. The track Pub Date field
+ * used to show toISOString() (UTC) while reading the input as local, so at UTC+2 the field
+ * showed two hours early and every pick moved the stored date two hours back — an artist
+ * who fought it until it looked right published tracks dated two hours in the future, which
+ * Podcast Index hides. The two functions must round-trip exactly, or a controlled re-render
+ * moves the field under the user's cursor.
+ *
+ * Returns '' for a date it can't read (an imported feed's pubDate is stored as raw text),
+ * so rendering the field can never throw.
+ */
+export function toDateTimeLocalValue(date: string): string {
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number, width = 2) => String(n).padStart(width, '0');
+  return `${pad(d.getFullYear(), 4)}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/**
+ * Read an <input type="datetime-local"> value back into an RFC-822 pubDate. The inverse of
+ * toDateTimeLocalValue.
+ *
+ * Returns null when the value isn't a usable date, and the caller keeps the previous one.
+ * A cleared segment makes the value '', which used to be stored as "Invalid Date" and threw
+ * on the next render, blanking the whole app. A year below 1000 is one still being typed
+ * (0002, 0020, 0202 on the way to 2026): RFC-822 reads a year below 100 as 20xx, so storing
+ * it would jump the field to another century mid-keystroke.
+ */
+export function fromDateTimeLocalValue(value: string): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (isNaN(d.getTime()) || d.getFullYear() < 1000) return null;
+  return formatRFC822Date(d);
+}
+
+/**
  * Format a Unix timestamp to a human-readable date string for display
  */
 export function formatTimestamp(timestamp: number): string {
