@@ -56,6 +56,26 @@ describe('collectLinkTargets', () => {
     expect(collectLinkTargets(snapshot(a, 'video')).filter(t => t.roles.includes('enclosure')).map(t => t.kind)).toEqual(['video', 'video']);
   });
 
+  it('lists the URL of each alternate version, but not its imported mirrors', () => {
+    const a = album({
+      tracks: [track(1, {
+        alternateEnclosures: [{
+          id: 'v', type: 'audio/flac',
+          sources: [{ uri: 'https://example.com/1.flac' }, { uri: 'https://mirror.example.com/1.flac' }]
+        }]
+      })]
+    });
+    const alt = collectLinkTargets(snapshot(a)).filter(t => t.roles.includes('alternate'));
+    expect(alt.map(t => [t.url, t.kind, t.mimeType, t.trackIds])).toEqual([['https://example.com/1.flac', 'audio', 'audio/flac', [a.tracks[0].id]]]);
+  });
+
+  it('skips alternate versions in a video feed, which has no editor for them yet', () => {
+    const a = album({ medium: 'video', tracks: [track(1, { enclosureType: 'video/mp4', alternateEnclosures: [{ id: 'v', type: 'video/webm', sources: [{ uri: 'https://example.com/1.webm' }] }] })] });
+    expect(collectLinkTargets(snapshot(a, 'video')).some(t => t.roles.includes('alternate'))).toBe(false);
+    // also when that feed sits in the album slot (Load from Nostr)
+    expect(collectLinkTargets(snapshot(a)).some(t => t.roles.includes('alternate'))).toBe(false);
+  });
+
   it('lists a publisher feed\'s artwork only', () => {
     const feed: FeedSnapshot = {
       feedType: 'publisher',
@@ -163,6 +183,13 @@ describe('linkIssues', () => {
     const a = album({ tracks: [], podcastImages: [{ href: 'https://example.com/banner.jpg' }] });
     const feed = snapshot(a);
     expect(linkIssues(collectLinkTargets(feed), { 'https://example.com/banner.jpg': { status: 'ok', width: 3000, height: 750 } }, feed)).toEqual([]);
+  });
+
+  it('names a broken alternate version as one', () => {
+    const a = album({ tracks: [track(1, { alternateEnclosures: [{ id: 'v', type: 'audio/flac', sources: [{ uri: 'https://example.com/1.flac' }] }] })] });
+    const feed = snapshot(a);
+    const issues = linkIssues(collectLinkTargets(feed), { 'https://example.com/1.flac': { status: 'broken' } }, feed);
+    expect(issues).toEqual([expect.objectContaining({ code: 'link-broken', area: 'tracks', trackId: a.tracks[0].id, message: expect.stringMatching(/^An alternate version didn't load/) })]);
   });
 
   it('reports a broken enclosure against its track, once', () => {

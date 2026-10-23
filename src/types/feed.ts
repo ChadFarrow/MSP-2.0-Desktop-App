@@ -74,6 +74,52 @@ export interface RemoteItem {
   rel?: string;
 }
 
+// Alternate enclosure types (podcast:alternateEnclosure)
+export interface AlternateEnclosureSource {
+  uri: string;
+  contentType?: string;
+  // Attributes MSP has no field for, carried through from import unchanged.
+  unknownAttributes?: Record<string, string>;
+}
+
+// Everything on an alternate version that describes one particular file.
+export interface AlternateEnclosureFile {
+  source: AlternateEnclosureSource;  // the first <podcast:source>, as it was
+  type: string;
+  length?: string;
+  bitrate?: string;
+  height?: string;
+  codecs?: string;
+  integrity?: unknown;               // the 'podcast:integrity' passthrough entry
+}
+
+export interface AlternateEnclosure {
+  id: string;
+  type: string;                    // Required: MIME type
+  length?: string;                 // File size in bytes
+  bitrate?: string;                // bits/sec
+  height?: string;                 // Video height
+  lang?: string;                   // BCP 47 language tag
+  title?: string;                  // Max 32 chars
+  rel?: string;                    // Grouping ID, max 32 chars
+  codecs?: string;                 // RFC 6381
+  default?: boolean;
+  sources: AlternateEnclosureSource[];
+  // Attributes MSP has no field for, carried through from import unchanged.
+  unknownAttributes?: Record<string, string>;
+  // Editor only, never written to XML: the user picked the type, so a URL edit
+  // no longer sets it from the extension. Kept on the version, not in the
+  // component, so it survives collapsing the track and a reload.
+  typeSetByHand?: boolean;
+  // Editor only, never written to XML: what described the file at the URL the
+  // version had before the user edited it, so an edit that returns to that URL
+  // gets it back. Set by urlChange() in utils/alternateEnclosure.ts.
+  originalFile?: AlternateEnclosureFile;
+  // Children other than <podcast:source> (<podcast:integrity>, anything newer),
+  // carried through from import unchanged.
+  unknownElements?: Record<string, unknown>;
+}
+
 // Podcasting 2.0 additional images (<podcast:image>). These are EXTRA images
 // (banner/canvas/social/etc.) — the primary cover stays in imageUrl/trackArtUrl.
 export interface PodcastImage {
@@ -187,6 +233,7 @@ export interface Track {
   persons: Person[];
   overrideValue: boolean;
   value?: ValueBlock;
+  alternateEnclosures?: AlternateEnclosure[];
   unknownItemElements?: Record<string, unknown>;
 }
 
@@ -528,6 +575,18 @@ export const createEmptyRemoteItem = (): RemoteItem => ({
   feedUrl: '',
   title: '',
   medium: 'music'
+});
+
+// Default empty alternate enclosure source
+export const createEmptyAlternateEnclosureSource = (): AlternateEnclosureSource => ({
+  uri: ''
+});
+
+// Default empty alternate enclosure
+export const createEmptyAlternateEnclosure = (mimeType = 'audio/mpeg'): AlternateEnclosure => ({
+  id: crypto.randomUUID(),
+  type: mimeType,
+  sources: [createEmptyAlternateEnclosureSource()]
 });
 
 // Default empty publisher reference

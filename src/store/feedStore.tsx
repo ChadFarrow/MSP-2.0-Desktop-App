@@ -13,6 +13,7 @@ import { collectLinkTargets, runLinkCheck, LINK_CHECK_LIMIT, type LinkResult, ty
 import { probeLink } from '../utils/mediaProbe';
 import { nextTrackPubDate, resequenceTrackDates, trackOrderIssue } from '../utils/trackOrder';
 import { catalogRole, withRole } from '../utils/publisherRole';
+import { withMeasured, type MeasuredField } from '../utils/alternateEnclosure';
 
 export type { FeedType };
 
@@ -34,6 +35,8 @@ export type FeedAction =
   | { type: 'REMOVE_FUNDING'; payload: number }
   | { type: 'ADD_TRACK'; payload?: Track }
   | { type: 'UPDATE_TRACK'; payload: { index: number; track: Partial<Track> } }
+  // A size or height lookup that lands late: by id, never by index (see withMeasured).
+  | { type: 'SET_ALTERNATE_ENCLOSURE_MEASURED'; payload: { trackId: string; versionId: string; url: string; field: MeasuredField; value: string } }
   | { type: 'REMOVE_TRACK'; payload: number }
   | { type: 'REORDER_TRACKS'; payload: { fromIndex: number; toIndex: number } }
   | { type: 'FIX_TRACK_ORDER' }
@@ -354,6 +357,19 @@ export function feedReducer(state: FeedState, action: FeedAction): FeedState {
           i === action.payload.index ? { ...t, ...action.payload.track } : t
         )
       });
+
+    case 'SET_ALTERNATE_ENCLOSURE_MEASURED': {
+      // The lookup started up to ~10 s ago; the track may have moved, been
+      // collapsed or edited since. Unchanged state when the value no longer fits.
+      const { trackId, versionId, url, field, value } = action.payload;
+      const track = activeAlbum.tracks.find(t => t.id === trackId);
+      const enclosures = track && withMeasured(track.alternateEnclosures ?? [], versionId, url, field, value);
+      if (!enclosures) return state;
+      return updateActiveFeed(state, {
+        ...activeAlbum,
+        tracks: activeAlbum.tracks.map(t => (t.id === trackId ? { ...t, alternateEnclosures: enclosures } : t))
+      });
+    }
 
     case 'REMOVE_TRACK':
       return updateActiveFeed(state, {

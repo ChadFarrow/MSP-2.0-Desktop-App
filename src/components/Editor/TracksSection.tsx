@@ -14,6 +14,7 @@ import { Toggle } from '../Toggle';
 import { AddRecipientSelect } from '../AddRecipientSelect';
 import { PodcastImagesList } from '../PodcastImagesList';
 import { PubDateInput } from '../PubDateInput';
+import { AlternateEnclosuresList } from '../AlternateEnclosuresList';
 
 interface TracksSectionProps {
   tracks: Track[];
@@ -423,6 +424,22 @@ export function TracksSection({ tracks, isVideo, dispatch }: TracksSectionProps)
                   </select>
                 </div>
               </div>
+              {/* Audio versions on album tracks first; video feeds come later.
+                  isVideo is isVideoMedium(album.medium), the same test as
+                  editsAlternateVersions(), which the Feed check uses. */}
+              {!isVideo && (
+                <AlternateEnclosuresList
+                  enclosures={track.alternateEnclosures || []}
+                  onChange={alternateEnclosures => dispatch({
+                    type: 'UPDATE_TRACK',
+                    payload: { index, track: { alternateEnclosures: alternateEnclosures.length > 0 ? alternateEnclosures : undefined } }
+                  })}
+                  onMeasured={(versionId, url, field, value) => dispatch({
+                    type: 'SET_ALTERNATE_ENCLOSURE_MEASURED',
+                    payload: { trackId: track.id, versionId, url, field, value }
+                  })}
+                />
+              )}
               <div className="form-group">
                 <Toggle
                   checked={track.explicit}

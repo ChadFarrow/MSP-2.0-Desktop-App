@@ -20,6 +20,7 @@ import {
   linkNostrToFeed,
   type HostedFeedInfo
 } from '../../utils/hostedFeed';
+import { createOrClaimHostedFeed, type HostedOwner } from '../../utils/claimHostedFeed';
 import { albumStorage, videoStorage, publisherStorage, pendingHostedStorage } from '../../utils/storage';
 import { saveFeedLocal, hasLocalStorage } from '../../utils/localFeedStorage';
 import { useNostr } from '../../store/nostrStore';
@@ -514,11 +515,56 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               throw new Error('No edit token available');
             }
 
-            let hostedResult;
             let newInfo: HostedFeedInfo;
             const shouldLinkNostr = isLoggedIn && nostrState.user?.pubkey;
+            // No local record doesn't mean a new feed: the record is per site address
+            // (and the desktop app has its own), so a feed saved elsewhere arrives here
+            // and the create 409s. Then save it as its signed-in owner instead (see
+            // claimHostedFeed.ts). Nostr only: this modal's later saves authorize by
+            // edit token or Nostr, so a record claimed by email, with no token, could
+            // not be saved again.
+            const owners: HostedOwner[] = shouldLinkNostr ? ['nostr'] : [];
+            const outcome = await createOrClaimHostedFeed({
+              create: () => shouldLinkNostr
+                ? createHostedFeedWithNostr(hostedXml, currentFeedTitle, currentFeedGuid, tokenToUse, isDraft)
+                : createHostedFeed(hostedXml, currentFeedTitle, currentFeedGuid, tokenToUse, isDraft),
+              owners,
+              update: () => updateHostedFeedWithNostr(currentFeedGuid, hostedXml, currentFeedTitle, isDraft)
+            });
+
+            if (outcome.kind === 'claimed') {
+              const updateResult = outcome.result;
+              // No edit token: the pending one was never accepted by the server, and
+              // the owning identity is what authorizes later saves (as after an import
+              // from "My Hosted Feeds").
+              const claimedInfo: HostedFeedInfo = {
+                feedId: currentFeedGuid,
+                editToken: '',
+                createdAt: Date.now(),
+                lastUpdated: Date.now(),
+                isDraft: updateResult.isDraft || undefined,
+                ...(updateResult.podcastIndexId ? { podcastIndexId: updateResult.podcastIndexId } : {}),
+                ownerPubkey: nostrState.user!.pubkey,
+                linkedAt: Date.now()
+              };
+              saveHostedFeedInfo(currentFeedGuid, claimedInfo);
+              setHostedInfo(claimedInfo);
+              setHostedUrl(buildHostedUrl(currentFeedGuid));
+              setPendingToken(null);
+              setLegacyHostedInfo(null);
+              if (isDraft) {
+                showSuccessAndClose('Feed updated as draft!');
+              } else if (updateResult.podcastIndexId) {
+                setPodcastIndexPending(true);
+                setMessage({ type: 'success', text: 'Feed updated! Podcast Index notified.' });
+              } else {
+                showSuccessAndClose('Feed updated!');
+              }
+              break;
+            }
+
+            const hostedResult = outcome.result;
             if (shouldLinkNostr) {
-              hostedResult = await createHostedFeedWithNostr(hostedXml, currentFeedTitle, currentFeedGuid, tokenToUse, isDraft);
               newInfo = {
                 feedId: hostedResult.feedId,
                 editToken: tokenToUse,
@@ -529,7 +575,6 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                 ...(hostedResult.isDraft && { isDraft: true })
               };
             } else {
-              hostedResult = await createHostedFeed(hostedXml, currentFeedTitle, currentFeedGuid, tokenToUse, isDraft);
               newInfo = {
                 feedId: hostedResult.feedId,
                 editToken: tokenToUse,

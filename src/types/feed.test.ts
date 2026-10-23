@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createEmptyAlbum, createEmptyVideoAlbum, createEmptyTrack, PODCAST_IMAGE_PURPOSES, fillPersonalSplitDefault, rebalancePersonalForSupport, createSupportRecipients, isCommunitySupport } from './feed';
+import { createEmptyAlbum, createEmptyVideoAlbum, createEmptyTrack, PODCAST_IMAGE_PURPOSES, fillPersonalSplitDefault, rebalancePersonalForSupport, createSupportRecipients, isCommunitySupport, createEmptyAlternateEnclosure } from './feed';
 import type { ValueRecipient } from './feed';
 
 const support = createSupportRecipients(); // MSP 1 + Podcast Index 1
@@ -97,5 +97,14 @@ describe('MSP 2.0 support address', () => {
   it('does not count chadf@getalby.com under any other name', () => {
     const own: ValueRecipient = { name: 'Chad F', address: 'chadf@getalby.com', split: 50, type: 'lnaddress' };
     expect(isCommunitySupport(own)).toBe(false);
+  });
+});
+
+describe('createEmptyAlternateEnclosure', () => {
+  it('starts a new version as audio, since the editor offers audio versions only', () => {
+    const enc = createEmptyAlternateEnclosure();
+    expect(enc.type).toBe('audio/mpeg');
+    expect(enc.sources).toEqual([{ uri: '' }]);
+    expect(createEmptyAlternateEnclosure().id).not.toBe(enc.id);
   });
 });

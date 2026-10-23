@@ -111,6 +111,20 @@ export function generateEditToken(): string {
 }
 
 /**
+ * A refused hosted-feed request. `status` is the HTTP status, so callers can tell
+ * "already exists" (409) from "not yours" (401/403) without matching message text.
+ */
+export class HostedFeedError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'HostedFeedError';
+    this.status = status;
+  }
+}
+
+/**
  * Create a new hosted feed
  */
 export async function createHostedFeed(
@@ -128,7 +142,7 @@ export async function createHostedFeed(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Failed to create feed' }));
-    throw new Error(error.error || 'Failed to create feed');
+    throw new HostedFeedError(error.error || 'Failed to create feed', response.status);
   }
 
   return response.json();
@@ -163,7 +177,7 @@ export async function updateHostedFeed(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Failed to update feed' }));
-    throw new Error(error.error || 'Failed to update feed');
+    throw new HostedFeedError(error.error || 'Failed to update feed', response.status);
   }
 
   return response.json();
@@ -183,7 +197,7 @@ export async function deleteHostedFeed(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Failed to delete feed' }));
-    throw new Error(error.error || 'Failed to delete feed');
+    throw new HostedFeedError(error.error || 'Failed to delete feed', response.status);
   }
 }
 
@@ -282,7 +296,7 @@ export async function createHostedFeedWithNostr(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Failed to create feed' }));
-    throw new Error(error.error || 'Failed to create feed');
+    throw new HostedFeedError(error.error || 'Failed to create feed', response.status);
   }
 
   return response.json();
@@ -315,7 +329,7 @@ export async function updateHostedFeedWithNostr(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Failed to update feed' }));
-    throw new Error(error.error || 'Failed to update feed');
+    throw new HostedFeedError(error.error || 'Failed to update feed', response.status);
   }
 
   return response.json();
@@ -344,7 +358,7 @@ export async function createHostedFeedWithEmail(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Failed to create feed' }));
-    throw new Error(error.error || 'Failed to create feed');
+    throw new HostedFeedError(error.error || 'Failed to create feed', response.status);
   }
 
   return response.json();
@@ -371,7 +385,7 @@ export async function updateHostedFeedWithEmail(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Failed to update feed' }));
-    throw new Error(error.error || 'Failed to update feed');
+    throw new HostedFeedError(error.error || 'Failed to update feed', response.status);
   }
 
   return response.json();
@@ -392,7 +406,7 @@ export async function deleteHostedFeedWithEmail(feedId: string): Promise<void> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Failed to delete feed' }));
-    throw new Error(error.error || 'Failed to delete feed');
+    throw new HostedFeedError(error.error || 'Failed to delete feed', response.status);
   }
 }
 
@@ -427,7 +441,7 @@ export async function linkNostrToFeed(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Failed to link Nostr identity' }));
-    throw new Error(error.error || 'Failed to link Nostr identity');
+    throw new HostedFeedError(error.error || 'Failed to link Nostr identity', response.status);
   }
 
   return response.json();
