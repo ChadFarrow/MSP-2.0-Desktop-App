@@ -9,6 +9,7 @@ import { getFeedUrlError, normalizeFeedUrl } from '../../../utils/urlValidation'
 import { verifyFeedUrl, isGuardRefusal, FORCED_SUBMIT_NOTE } from '../../../utils/verifyFeedUrl';
 import { PUBLISHER_ROLES, catalogRole } from '../../../utils/publisherRole';
 import { getPlatformHost, isMspHosted, linkBackMessage, platformRefusal, platformWarning } from '../../../utils/publisherControl';
+import { buildHostedUrl } from '../../../utils/hostedFeed';
 import type { LinkBackState } from './useLinkBackStatus';
 import { InfoIcon } from '../../InfoIcon';
 import { Section } from '../../Section';
@@ -174,7 +175,10 @@ export function CatalogFeedsSection({ publisherFeed, dispatch, linkBack }: Catal
     const newItem = {
       ...createEmptyRemoteItem(),
       feedGuid: feed.feedId,
-      feedUrl: `${window.location.origin}/api/hosted/${feed.feedId}.xml`,
+      // The canonical address, not this page's origin: the URL is written into the
+      // published catalog, and a preview, an alias or the desktop app's webview
+      // would otherwise put an address there that apps can't or shouldn't use.
+      feedUrl: buildHostedUrl(feed.feedId),
       title: feed.title || 'Untitled Feed',
       medium: feed.medium
     };
