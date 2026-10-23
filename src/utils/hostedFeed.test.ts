@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createHostedFeed, updateHostedFeed } from './hostedFeed';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { buildHostedUrl, createHostedFeed, updateHostedFeed } from './hostedFeed';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -28,5 +28,21 @@ describe('hosted feed request errors', () => {
       status: 403,
       message: 'Failed to update feed'
     });
+  });
+});
+
+describe('buildHostedUrl', () => {
+  // The URL ends up inside published feeds (a catalog's remoteItem, the URL sent
+  // to Podcast Index), so it never depends on the page it was made on.
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('uses the canonical domain when VITE_CANONICAL_URL is unset', () => {
+    vi.stubEnv('VITE_CANONICAL_URL', '');
+    expect(buildHostedUrl('abc')).toBe('https://musicsideproject.com/api/hosted/abc.xml');
+  });
+
+  it('takes VITE_CANONICAL_URL without its trailing slash', () => {
+    vi.stubEnv('VITE_CANONICAL_URL', 'https://example.org/');
+    expect(buildHostedUrl('abc')).toBe('https://example.org/api/hosted/abc.xml');
   });
 });
