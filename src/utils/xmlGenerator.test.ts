@@ -141,6 +141,17 @@ describe('OP3 analytics prefix', () => {
     expect(xml).toContain('url="https://op3.dev/e,pg=test-guid-123/example.com/track1.mp3"');
   });
 
+  it('strips an uppercase HTTPS scheme before prefixing', () => {
+    const album = createEmptyAlbum();
+    album.op3 = true;
+    album.podcastGuid = 'test-guid-123';
+    album.tracks[0].enclosureUrl = 'HTTPS://example.com/track1.mp3';
+
+    const xml = generateRssFeed(album);
+
+    expect(xml).toContain('url="https://op3.dev/e,pg=test-guid-123/example.com/track1.mp3"');
+  });
+
   it('prefixes HTTP enclosure URLs keeping full URL', () => {
     const album = createEmptyAlbum();
     album.title = 'Test Album';

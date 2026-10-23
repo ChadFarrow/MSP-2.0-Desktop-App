@@ -8,6 +8,8 @@ import { checkSignerConnection } from '../../../utils/nostrSigner';
 import { getFeedUrlError, normalizeFeedUrl } from '../../../utils/urlValidation';
 import { verifyFeedUrl, isGuardRefusal, FORCED_SUBMIT_NOTE } from '../../../utils/verifyFeedUrl';
 import { PUBLISHER_ROLES, catalogRole } from '../../../utils/publisherRole';
+import { getPlatformHost, isMspHosted, linkBackMessage, platformRefusal, platformWarning } from '../../../utils/publisherControl';
+import type { LinkBackState } from './useLinkBackStatus';
 import { InfoIcon } from '../../InfoIcon';
 import { Section } from '../../Section';
 import { apiFetch, resolveApiUrl } from '../../../utils/api';
@@ -39,9 +41,10 @@ const PUBLISHER_FIELD_INFO = {
 interface CatalogFeedsSectionProps {
   publisherFeed: PublisherFeed;
   dispatch: React.Dispatch<FeedAction>;
+  linkBack: LinkBackState;
 }
 
-export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSectionProps) {
+export function CatalogFeedsSection({ publisherFeed, dispatch, linkBack }: CatalogFeedsSectionProps) {
   const { state: nostrState } = useNostr();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -86,7 +89,9 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
               ...item,
               image: feed.image || item.image,
               title: feed.title || item.title,
-              feedUrl: feed.url || item.feedUrl
+              // PI's stored URLs can carry stray whitespace; this value ends up in
+              // <podcast:remoteItem feedUrl>, so clean it on the way in.
+              feedUrl: feed.url ? normalizeFeedUrl(feed.url) : item.feedUrl
             }
           }
         });
@@ -166,16 +171,15 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
     const alreadyExists = publisherFeed.remoteItems.some(item => item.feedGuid === feed.feedId);
     if (alreadyExists) return;
 
-    dispatch({
-      type: 'ADD_REMOTE_ITEM',
-      payload: {
-        ...createEmptyRemoteItem(),
-        feedGuid: feed.feedId,
-        feedUrl: `${window.location.origin}/api/hosted/${feed.feedId}.xml`,
-        title: feed.title || 'Untitled Feed',
-        medium: feed.medium
-      }
-    });
+    const newItem = {
+      ...createEmptyRemoteItem(),
+      feedGuid: feed.feedId,
+      feedUrl: `${window.location.origin}/api/hosted/${feed.feedId}.xml`,
+      title: feed.title || 'Untitled Feed',
+      medium: feed.medium
+    };
+    dispatch({ type: 'ADD_REMOTE_ITEM', payload: newItem });
+    void linkBack.checkItems([newItem]);
 
     // Remove from displayed list
     setMyFeeds(prev => prev.filter(f => f.feedId !== feed.feedId));
@@ -210,17 +214,18 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
   };
 
   const handleAddFromSearch = (result: SearchResult) => {
-    dispatch({
-      type: 'ADD_REMOTE_ITEM',
-      payload: {
-        ...createEmptyRemoteItem(),
-        feedGuid: result.podcastGuid,
-        feedUrl: result.url,
-        title: result.title,
-        image: result.image,
-        medium: 'music'
-      }
-    });
+    // The button is disabled for these; this is the backstop.
+    if (getPlatformHost(result.url)) return;
+    const newItem = {
+      ...createEmptyRemoteItem(),
+      feedGuid: result.podcastGuid,
+      feedUrl: normalizeFeedUrl(result.url),
+      title: result.title,
+      image: result.image,
+      medium: 'music'
+    };
+    dispatch({ type: 'ADD_REMOTE_ITEM', payload: newItem });
+    void linkBack.checkItems([newItem]);
     setSearchResults(prev => prev.filter(r => r.id !== result.id));
   };
 
@@ -354,7 +359,9 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
               </button>
             </div>
             <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-            {searchResults.map(result => (
+            {searchResults.map(result => {
+              const platform = getPlatformHost(result.url);
+              return (
               <div
                 key={result.id}
                 style={{
@@ -377,16 +384,25 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
                   }}
                   onError={e => (e.target as HTMLImageElement).style.display = 'none'}
                 />
-                <span style={{ flex: 1, fontWeight: 500 }}>{result.title}</span>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontWeight: 500 }}>{result.title}</span>
+                  {platform && (
+                    <p style={{ color: 'var(--warning)', fontSize: '12px', marginTop: '4px' }}>
+                      {platformRefusal(platform)}
+                    </p>
+                  )}
+                </div>
                 <button
                   className="btn btn-primary"
                   onClick={() => handleAddFromSearch(result)}
-                  style={{ padding: '6px 16px' }}
+                  disabled={!!platform}
+                  style={{ padding: '6px 16px', flexShrink: 0 }}
                 >
-                  Add
+                  {platform ? "Can't add" : 'Add'}
                 </button>
               </div>
-            ))}
+              );
+            })}
             </div>
           </div>
         )}
@@ -541,8 +557,23 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
         )}
       </div>
 
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+        <button
+          className="btn btn-secondary"
+          onClick={() => void linkBack.checkAll()}
+          disabled={linkBack.checkingAll || publisherFeed.remoteItems.length === 0}
+          title="Check whether each album's feed points back to this publisher feed"
+        >
+          {linkBack.checkingAll ? 'Checking…' : 'Check links back'}
+        </button>
+      </div>
+
       <div className="repeatable-list">
-        {publisherFeed.remoteItems.map((item, index) => (
+        {publisherFeed.remoteItems.map((item, index) => {
+          const feedUrlError = item.feedUrl ? getFeedUrlError(item.feedUrl) : null;
+          const platform = getPlatformHost(item.feedUrl);
+          const linkStatus = platform ? undefined : linkBack.statusFor(item);
+          return (
           // feedGuid is duplicate-guarded on add, so it's a stable identity for
           // reorderable items; index keys would leak DOM state (e.g. the
           // onError-hidden artwork img) across items on reorder
@@ -642,8 +673,35 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
                       className="form-input"
                       value={item.feedUrl || ''}
                       disabled
-                      style={{ backgroundColor: 'var(--bg-secondary)', cursor: 'default', opacity: 1 }}
+                      style={{
+                        backgroundColor: 'var(--bg-secondary)',
+                        cursor: 'default',
+                        opacity: 1,
+                        borderColor: feedUrlError ? 'var(--error, #ef4444)' : undefined
+                      }}
                     />
+                    {feedUrlError && (
+                      <p style={{ color: 'var(--error, #ef4444)', fontSize: '12px', marginTop: '4px' }}>
+                        ⚠ This feed's URL (as registered in Podcast Index) has a problem: {feedUrlError} Some apps may fail to fetch it — consider re-hosting the feed at a clean URL and re-submitting.
+                      </p>
+                    )}
+                    {platform && (
+                      <p style={{ color: 'var(--warning)', fontSize: '12px', marginTop: '4px' }}>
+                        ⚠ {platformWarning(platform)}
+                      </p>
+                    )}
+                    {linkStatus === 'checking' && (
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px' }}>Checking…</p>
+                    )}
+                    {linkStatus && linkStatus !== 'checking' && (
+                      <p style={{
+                        color: linkStatus.status === 'linked' ? 'var(--text-secondary)' : 'var(--warning)',
+                        fontSize: '12px',
+                        marginTop: '4px'
+                      }}>
+                        {linkStatus.status === 'linked' ? '✓ ' : ''}{linkBackMessage(linkStatus, isMspHosted(item.feedUrl ?? ''))}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -657,7 +715,8 @@ export function CatalogFeedsSection({ publisherFeed, dispatch }: CatalogFeedsSec
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
         <button
           className="add-item-btn"
           onClick={() => dispatch({ type: 'ADD_REMOTE_ITEM', payload: { ...createEmptyRemoteItem(), medium: 'music' } })}

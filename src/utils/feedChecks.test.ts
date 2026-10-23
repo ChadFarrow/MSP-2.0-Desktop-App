@@ -255,6 +255,79 @@ describe('getShouldFixIssues', () => {
     expect(getShouldFixIssues(albumFeed(album))).toEqual([]);
   });
 
+  it('flags an alternate version with no URL, and checks the URL it has', () => {
+    const album = goodAlbum();
+    album.tracks[0].alternateEnclosures = [{ id: 'a', type: 'audio/flac', title: 'Lossless', sources: [{ uri: ' ' }] }];
+    const issues = getShouldFixIssues(albumFeed(album));
+    expect(codes(issues)).toEqual(['alt-enclosure-no-url']);
+    expect(issues[0].message).toContain('Alternate version 1 ("Lossless")');
+    album.tracks[0].alternateEnclosures[0].sources = [{ uri: 'http://example.com/1.flac' }];
+    expect(codes(getShouldFixIssues(albumFeed(album)))).toEqual(['url-http']);
+  });
+
+  it('does not check imported mirrors, which have no field to fix them in', () => {
+    // ipfs:// is a valid <podcast:source>; flagging it would leave the user
+    // nothing to do but delete the whole version.
+    const album = goodAlbum();
+    album.tracks[0].alternateEnclosures = [{
+      id: 'a', type: 'audio/flac',
+      sources: [{ uri: 'https://example.com/1.flac' }, { uri: 'ipfs://bafymirror' }, { uri: 'http://mirror.example.com/1.flac' }]
+    }];
+    expect(getShouldFixIssues(albumFeed(album))).toEqual([]);
+  });
+
+  it('skips alternate versions in a video feed, whose editor has no field for them yet', () => {
+    const album = { ...goodAlbum(), medium: 'video' as const, tracks: [{ ...goodAlbum().tracks[0], enclosureType: 'video/mp4', enclosureUrl: 'https://example.com/1.mp4' }] };
+    album.tracks[0].alternateEnclosures = [{ id: 'a', type: 'video/mp4', length: 'big', sources: [{ uri: 'http://example.com/1.webm' }] }];
+    expect(getShouldFixIssues(albumFeed(album, 'video'))).toEqual([]);
+  });
+
+  it('skips them too for a video feed loaded into the album slot, as the editor does', () => {
+    // Load from Nostr puts any feed in the album slot; the editor goes by medium.
+    const album = { ...goodAlbum(), medium: 'video' as const };
+    album.tracks[0].alternateEnclosures = [{ id: 'a', type: 'video/mp4', length: 'big', sources: [{ uri: 'http://example.com/1.webm' }] }];
+    expect(codes(getShouldFixIssues(albumFeed(album))).filter(code => code.startsWith('alt-') || code.startsWith('url-'))).toEqual([]);
+  });
+
+  it('accepts an ipfs:// version URL, but not one with no scheme', () => {
+    const album = goodAlbum();
+    album.tracks[0].alternateEnclosures = [{ id: 'a', type: 'audio/flac', sources: [{ uri: 'ipfs://bafyexample' }] }];
+    expect(getShouldFixIssues(albumFeed(album))).toEqual([]);
+    album.tracks[0].alternateEnclosures[0].sources = [{ uri: 'example.com/1.flac' }];
+    expect(codes(getShouldFixIssues(albumFeed(album)))).toEqual(['url-scheme']);
+  });
+
+  it('flags an alternate File Size that is not a number of bytes', () => {
+    const album = goodAlbum();
+    album.tracks[0].alternateEnclosures = [{ id: 'a', type: 'audio/flac', length: '31 MB', sources: [{ uri: 'https://example.com/1.flac' }] }];
+    expect(codes(getShouldFixIssues(albumFeed(album)))).toEqual(['alt-enclosure-length']);
+    album.tracks[0].alternateEnclosures[0].length = '31200000';
+    expect(getShouldFixIssues(albumFeed(album))).toEqual([]);
+  });
+
+  it('flags a music video Height that is not a number of pixels', () => {
+    const album = goodAlbum();
+    album.tracks[0].alternateEnclosures = [{ id: 'a', type: 'video/mp4', height: '1080p', sources: [{ uri: 'https://example.com/1.mp4' }] }];
+    const issues = getShouldFixIssues(albumFeed(album));
+    expect(codes(issues)).toEqual(['alt-enclosure-height']);
+    expect(issues[0].message).toContain('"1080p"');
+    album.tracks[0].alternateEnclosures[0].height = '1080';
+    expect(getShouldFixIssues(albumFeed(album))).toEqual([]);
+  });
+
+  it('does not check the height of an audio version, which has no Height field', () => {
+    const album = goodAlbum();
+    album.tracks[0].alternateEnclosures = [{ id: 'a', type: 'audio/flac', height: 'n/a', sources: [{ uri: 'https://example.com/1.flac' }] }];
+    expect(getShouldFixIssues(albumFeed(album))).toEqual([]);
+  });
+
+  it('flags an alternate version whose own URL is blank, even with other addresses', () => {
+    // The generator leaves such a version out, so the check must say so.
+    const album = goodAlbum();
+    album.tracks[0].alternateEnclosures = [{ id: 'a', type: 'audio/flac', sources: [{ uri: '' }, { uri: 'https://mirror.example.com/1.flac' }] }];
+    expect(codes(getShouldFixIssues(albumFeed(album)))).toEqual(['alt-enclosure-no-url']);
+  });
+
   it('flags a missing channel link on album and publisher feeds', () => {
     expect(codes(getShouldFixIssues(albumFeed({ ...goodAlbum(), link: '' })))).toEqual(['channel-link-missing']);
     expect(codes(getShouldFixIssues(publisherFeedSnapshot({ ...goodPublisher(), link: ' ' })))).toEqual(['channel-link-missing']);
@@ -272,6 +345,46 @@ describe('getShouldFixIssues', () => {
     const feed = albumFeed({ ...createEmptyAlbum(), link: 'https://a.example', tracks: [{ ...createEmptyTrack(1), duration: '' }] });
     const should = getShouldFixIssues(feed);
     expect(should).toEqual([]);
+  });
+
+  describe('catalog albums on Wavlake or Fountain', () => {
+    const remote = (title: string, feedUrl: string) => ({ feedGuid: `${title}-guid`, feedUrl, title, medium: 'music' });
+    const MSP = remote('On MSP', 'https://musicsideproject.com/api/hosted/27735a10-3775-503d-b038-70b4b7d536ab.xml');
+    const SELF = remote('Self-hosted', 'https://headstarts.uk/msp/longy/Lady/Lady-You-Shot-Me.xml');
+
+    it('flags Wavlake and Fountain catalog albums in one item', () => {
+      const publisher = {
+        ...goodPublisher(),
+        remoteItems: [
+          remote('iMerica', 'https://wavlake.com/feed/music/ac9d7848-0cd0-4f3e-bc51-37d76ecc79cf'),
+          remote('Potential', 'https://www.wavlake.com/feed/139015e5-9123-48bd-9b5b-0a085915d8ac'),
+          remote('NMNU', 'https://feeds.fountain.fm/WmsWR5Ohttd6cuxfRdHt'),
+          MSP,
+          SELF
+        ]
+      };
+      const issues = getShouldFixIssues(publisherFeedSnapshot(publisher)).filter(i => i.code === 'publisher-item-platform');
+      expect(issues).toHaveLength(1);
+      expect(issues[0].area).toBe('catalog');
+      expect(issues[0].level).toBe('should');
+      expect(issues[0].message).toContain('3 catalog albums');
+      for (const title of ['iMerica', 'Potential', 'NMNU']) expect(issues[0].message).toContain(title);
+    });
+
+    it('lists at most three titles', () => {
+      const titles = 'ABCDEFGHIJK'.split('');
+      const publisher = {
+        ...goodPublisher(),
+        remoteItems: titles.map(t => remote(t, `https://wavlake.com/feed/music/${t}`))
+      };
+      const [issue] = getShouldFixIssues(publisherFeedSnapshot(publisher)).filter(i => i.code === 'publisher-item-platform');
+      expect(issue.message).toContain('A, B, C and 8 more');
+    });
+
+    it('does not flag MSP or self-hosted albums', () => {
+      const publisher = { ...goodPublisher(), remoteItems: [MSP, SELF] };
+      expect(codes(getShouldFixIssues(publisherFeedSnapshot(publisher)))).not.toContain('publisher-item-platform');
+    });
   });
 });
 

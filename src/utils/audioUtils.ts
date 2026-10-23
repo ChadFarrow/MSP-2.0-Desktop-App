@@ -25,6 +25,24 @@ function matchAudioExtension(url: string): string | null {
 }
 
 /**
+ * Every type getAudioMimeType() can produce, once, in table order (MP3 first),
+ * labelled by its extensions and the type itself ("M4B (audio/mp4)"), so a
+ * type that serves several extensions isn't read as one of them only — for a
+ * file-type dropdown that must offer whatever a URL sets. Built from the table
+ * so the two can't drift apart.
+ */
+export const AUDIO_FILE_TYPES: ReadonlyArray<{ value: string; label: string }> = (() => {
+  const extensions = new Map<string, string[]>();
+  for (const [ext, mime] of AUDIO_MIME_BY_EXTENSION) {
+    extensions.set(mime, [...(extensions.get(mime) ?? []), ext.slice(1).toUpperCase()]);
+  }
+  return [...extensions].map(([value, exts]) => ({ value, label: `${exts.join(' / ')} (${value})` }));
+})();
+
+/** The extensions isKnownAudioFormat() accepts, for a warning ("mp3, m4a, ..."). */
+export const AUDIO_EXTENSION_LIST = AUDIO_MIME_BY_EXTENSION.map(([ext]) => ext.slice(1)).join(', ');
+
+/**
  * Detect audio MIME type from URL extension. Falls back to audio/mpeg.
  */
 export function getAudioMimeType(url: string): string {
@@ -32,7 +50,7 @@ export function getAudioMimeType(url: string): string {
 }
 
 /**
- * True when the URL ends with a recognized audio extension (mp3, flac, wav, m4a, aac, ogg, opus, aiff, wma).
+ * True when the URL ends with a recognized audio extension (AUDIO_EXTENSION_LIST).
  */
 export function isKnownAudioFormat(url: string): boolean {
   return matchAudioExtension(url) !== null;

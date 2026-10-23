@@ -11,6 +11,8 @@ import type { Album, FeedType, PublisherFeed, Track } from '../types/feed';
 import { getValueRecipientErrors } from './valueValidation';
 import { hhmmssToSeconds } from './audioUtils';
 import { trackOrderIssue } from './trackOrder';
+import { editsAlternateVersions, isVideoType, NON_WEB_SOURCE_RE } from './alternateEnclosure';
+import { getPlatformHost } from './publisherControl';
 import { collectLinkTargets, summarizeLinks, type LinkResult, type LinkSummary, type LinkTarget } from './linkCheck';
 
 export type IssueLevel = 'must' | 'should' | 'outdated';
@@ -40,8 +42,12 @@ export type IssueCode =
   | 'url-http'
   | 'video-audio-type'
   | 'transcript-type'
+  | 'alt-enclosure-no-url'
+  | 'alt-enclosure-length'
+  | 'alt-enclosure-height'
   | 'channel-link-missing'
   | 'track-order'
+  | 'publisher-item-platform'
   // Should fix — link check
   | 'link-broken'
   | 'artwork-not-square'
@@ -225,6 +231,17 @@ export function getShouldFixIssues(feed: FeedSnapshot): FeedIssue[] {
       should('channel-link-missing', 'feed', 'Website is empty. RSS 2.0 requires a channel <link>, so validators report the feed as invalid without one.');
     }
     issues.push(...urlIssues(publisher.imageUrl, 'Publisher artwork URL', 'artwork'));
+    // One item for all of them: RemoteItem has no stable id, so per-album items
+    // couldn't follow a reorder. Each row in Catalog Feeds carries the detail.
+    const onPlatform = publisher.remoteItems.filter(item => getPlatformHost(item.feedUrl));
+    if (onPlatform.length > 0) {
+      const titles = onPlatform.map(item => item.title || item.feedUrl);
+      const named = titles.length > 3 ? `${titles.slice(0, 3).join(', ')} and ${titles.length - 3} more` : titles.join(', ');
+      const count = onPlatform.length === 1 ? '1 catalog album is' : `${onPlatform.length} catalog albums are`;
+      should('publisher-item-platform', 'catalog',
+        `${count} hosted on Wavlake or Fountain (${named}). You can't edit those feeds, so they can't reliably point back to this publisher feed. ` +
+        "Each one's row in Catalog Feeds says how to move it; keep its GUID when you do.");
+    }
     return issues;
   }
 
@@ -260,6 +277,31 @@ export function getShouldFixIssues(feed: FeedSnapshot): FeedIssue[] {
     if (isVideo && track.enclosureType?.startsWith('audio/')) {
       should('video-audio-type', 'tracks', `Its file type is ${track.enclosureType}, an audio type. Paste the video URL again so MSP sets the video type.`, track.id);
     }
+
+    // Only what the editor shows can be reported: it edits alternate versions on
+    // album tracks only (editsAlternateVersions), and of each version only the
+    // first source (its URL). Imported mirrors are kept as they are.
+    (editsAlternateVersions(album) ? track.alternateEnclosures || [] : []).forEach((enc, n) => {
+      const name = `Alternate version ${n + 1}${enc.title?.trim() ? ` ("${enc.title.trim()}")` : ''}`;
+      const url = enc.sources[0]?.uri?.trim();
+      if (!url) {
+        // The generator leaves a version without one out, whatever mirrors it has.
+        should('alt-enclosure-no-url', 'tracks', `${name} has no file URL, so MSP leaves it out of the feed. Add the URL or remove the version.`, track.id);
+      }
+      // ipfs:// and the like are valid sources, not web addresses gone wrong.
+      if (!NON_WEB_SOURCE_RE.test(url ?? '')) {
+        issues.push(...urlIssues(url, `${name} URL`, 'tracks', track.id));
+      }
+      const length = enc.length?.trim();
+      if (length && !/^\d+$/.test(length)) {
+        should('alt-enclosure-length', 'tracks', `${name} File Size is "${length}". Enter the size in bytes, digits only (e.g. 31200000), or leave it empty.`, track.id);
+      }
+      // Only a video version shows a Height field.
+      const height = enc.height?.trim();
+      if (isVideoType(enc.type) && height && !/^\d+$/.test(height)) {
+        should('alt-enclosure-height', 'tracks', `${name} Height is "${height}". Enter the height in pixels, digits only (e.g. 1080), or leave it empty.`, track.id);
+      }
+    });
 
     if (track.transcriptUrl?.trim() && track.transcriptType === 'application/srt') {
       should('transcript-type', 'tracks', 'Lyrics type is application/srt, which is not in the Podcasting 2.0 spec. Choose "SubRip (.srt)" in the lyrics type list.', track.id);
@@ -299,6 +341,7 @@ export function linkIssues(targets: LinkTarget[], links: Record<string, LinkResu
     const where: { area: IssueArea; trackId?: string } =
       target.roles.includes('artwork') || !trackId ? { area: 'artwork' } : { area: 'tracks', trackId };
     const label = target.roles.includes('enclosure') ? (isVideo ? 'The video file' : 'The audio file')
+      : target.roles.includes('alternate') ? 'An alternate version'
       : target.roles.includes('artwork') ? coverLabel
         : target.roles.includes('trackArt') ? `The ${isVideo ? 'video' : 'track'} art`
           : 'An extra image (podcast:image)';

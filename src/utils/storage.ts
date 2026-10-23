@@ -1,5 +1,6 @@
 // Centralized localStorage utilities for MSP 2.0
-import type { Album, Person, PersonRole, PersonGroup, PublisherFeed, FeedType } from '../types/feed';
+import type { Album, Person, PersonRole, PersonGroup, PublisherFeed, FeedType, Track } from '../types/feed';
+import { migrateStoredAlternateEnclosures } from './xmlParser';
 import type { NostrUser } from '../types/nostr';
 
 // Storage keys
@@ -47,13 +48,13 @@ function migrateAlbum(album: Album & { persons?: OldPerson[]; tracks?: Array<{ p
   if (album.persons) {
     album.persons = album.persons.map(migratePerson);
   }
-  // Migrate track-level persons
+  // Migrate track-level persons and alternate versions
   if (album.tracks) {
     album.tracks = album.tracks.map(track => {
       if (track.persons) {
         track.persons = track.persons.map(migratePerson);
       }
-      return track;
+      return migrateStoredAlternateEnclosures(track as Track, album.op3);
     });
   }
   return album as Album;

@@ -1,4 +1,5 @@
-import type { Album } from '../types/feed';
+import type { Album, AlternateEnclosure } from '../types/feed';
+import { OP3_PREFIX_RE, stripOp3Prefix } from './xmlParser';
 
 /**
  * Drop the passthrough elements that claim a feed's identity: every
@@ -27,6 +28,21 @@ export function withoutIdentityPassthrough(
 }
 
 /**
+ * Alternate sources without their OP3 prefix. An import strips it only when the
+ * main enclosures carried OP3 too, so a feed whose alternates alone had it keeps
+ * a prefix naming the source feed's GUID — which a new feed must not count
+ * downloads against. Does not mutate the input.
+ */
+function withoutOp3Prefix(enclosures: AlternateEnclosure[]): AlternateEnclosure[] {
+  return enclosures.map(enclosure => ({
+    ...enclosure,
+    sources: enclosure.sources.map(source =>
+      OP3_PREFIX_RE.test(source.uri) ? { ...source, uri: stripOp3Prefix(source.uri) } : source
+    ),
+  }));
+}
+
+/**
  * Return a copy of an album/video feed with a fresh feed-level GUID and a fresh
  * GUID for every track.
  *
@@ -34,7 +50,8 @@ export function withoutIdentityPassthrough(
  * inherits another feed's track identities. Reusing a track's `<guid>` across two
  * different feeds makes podcast apps and Podcast Index treat unrelated tracks as
  * the same episode (the bug that produced the Live at Rockpile / Amnesia collision).
- * The source's identity passthrough (verification txt tags, self link) goes too.
+ * The source's identity passthrough (verification txt tags, self link) goes too,
+ * and so does an OP3 prefix left on an alternate source.
  *
  * Does not mutate the input. Publisher feeds are handled separately — their
  * `remoteItems` reference real external feeds, so only the feed GUID is renewed.
@@ -44,6 +61,10 @@ export function regenerateAlbumGuids(album: Album): Album {
     ...album,
     podcastGuid: crypto.randomUUID(),
     unknownChannelElements: withoutIdentityPassthrough(album.unknownChannelElements),
-    tracks: album.tracks.map((track) => ({ ...track, guid: crypto.randomUUID() })),
+    tracks: album.tracks.map((track) => ({
+      ...track,
+      guid: crypto.randomUUID(),
+      ...(track.alternateEnclosures ? { alternateEnclosures: withoutOp3Prefix(track.alternateEnclosures) } : {}),
+    })),
   };
 }
