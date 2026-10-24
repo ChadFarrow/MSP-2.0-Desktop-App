@@ -8,7 +8,8 @@ import { createAdminAuthHeader } from '../../../utils/adminAuth';
 import { checkSignerConnection } from '../../../utils/nostrSigner';
 import { getFeedUrlError, normalizeFeedUrl } from '../../../utils/urlValidation';
 import { verifyFeedUrl, isGuardRefusal, FORCED_SUBMIT_NOTE } from '../../../utils/verifyFeedUrl';
-import { PUBLISHER_ROLES, catalogRole } from '../../../utils/publisherRole';
+import { PUBLISHER_ROLES, catalogRole, withRole } from '../../../utils/publisherRole';
+import { RolePicker } from '../../RolePicker';
 import { getPlatformHost, isMspHosted, linkBackMessage, platformRefusal, platformWarning } from '../../../utils/publisherControl';
 import { buildHostedUrl } from '../../../utils/hostedFeed';
 import type { LinkBackState } from './useLinkBackStatus';
@@ -40,7 +41,8 @@ const PUBLISHER_FIELD_INFO = {
   remoteItemFeedUrl: 'The URL of the RSS feed (optional but recommended). This helps apps find the feed if they cannot resolve the GUID.',
   remoteItemTitle: 'A display title for this feed (optional). If not provided, apps will fetch the title from the feed itself.',
   remoteItemPinned: 'Recommend this release as the first listen for someone new to your music. Written as <podcast:pinned feedGuid>: the proposed Podcasting 2.0 tag only pins an episode of the same feed, so naming a catalog feed is MSP\'s own extension, and no app reads it yet. The catalog order is not changed.',
-  publisherRole: 'Tells apps whether this publisher is the artist of these feeds or a label. MSP writes it as rel on each catalog feed, and on the publisher reference of each album when you publish. "Not stated" writes nothing. rel is proposed in podcast-namespace discussion #579.',
+  publisherRole: 'Sets one role on every catalog feed at once, for example Artist or Label. You can also set the roles of each feed below, for example Artist and Producer for one album. MSP writes them as rel on each catalog feed, and on the publisher reference of each album when you publish. "Not stated" writes nothing. rel is proposed in podcast-namespace PR #793. Beta feature.',
+  itemRole: 'What this publisher is to this feed. The feed should name this publisher with the same roles, so the two feeds agree. With none on, MSP writes nothing. Beta feature.',
 };
 
 interface CatalogFeedsSectionProps {
@@ -52,6 +54,8 @@ interface CatalogFeedsSectionProps {
 export function CatalogFeedsSection({ publisherFeed, dispatch, linkBack }: CatalogFeedsSectionProps) {
   const { state: nostrState } = useNostr();
   const { showBeta } = useExperimental();
+  // Read three times by the catalog-wide role control, so computed once.
+  const role = catalogRole(publisherFeed.remoteItems);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -296,25 +300,33 @@ export function CatalogFeedsSection({ publisherFeed, dispatch, linkBack }: Catal
         </strong>
       </p>
 
-      {/* Publisher role, written as rel on both sides of each link (utils/publisherRole.ts) */}
-      <div className="form-group" style={{ marginBottom: '20px' }}>
-        <label className="form-label">This publisher is<InfoIcon text={PUBLISHER_FIELD_INFO.publisherRole} /></label>
-        <select
-          className="form-select"
-          value={catalogRole(publisherFeed.remoteItems) ?? 'mixed'}
-          // The role lives on the catalog items, so there is nothing to hold it yet.
-          disabled={publisherFeed.remoteItems.length === 0}
-          title={publisherFeed.remoteItems.length === 0 ? 'Add a catalog feed first' : undefined}
-          onChange={e => dispatch({ type: 'SET_PUBLISHER_ROLE', payload: e.target.value })}
-        >
-          {catalogRole(publisherFeed.remoteItems) === null && (
-            <option value="mixed" disabled>Mixed (the imported feeds state different roles)</option>
-          )}
-          {PUBLISHER_ROLES.map(role => (
-            <option key={role.value} value={role.value}>{role.label}</option>
-          ))}
-        </select>
-      </div>
+      {/* Publisher role, written as rel on both sides of each link (utils/publisherRole.ts).
+          Beta: shown with Show Beta Features on, or when a catalog feed already
+          states a role, so the toggle never hides what MSP writes. */}
+      {(showBeta || role !== '') && (
+        <div className="form-group beta-field" style={{ marginBottom: '20px' }}>
+          <label className="form-label">This publisher is <BetaTag /><InfoIcon text={PUBLISHER_FIELD_INFO.publisherRole} /></label>
+          <select
+            className="form-select"
+            value={role ?? 'mixed'}
+            // The role lives on the catalog items, so there is nothing to hold it yet.
+            disabled={publisherFeed.remoteItems.length === 0}
+            title={publisherFeed.remoteItems.length === 0 ? 'Add a catalog feed first' : undefined}
+            onChange={e => dispatch({ type: 'SET_PUBLISHER_ROLE', payload: e.target.value })}
+          >
+            {role === null && (
+              <option value="mixed" disabled>Mixed (the feeds state different roles)</option>
+            )}
+            {/* A set of roles, or an imported token, that is not one of the choices. */}
+            {role && !PUBLISHER_ROLES.some(choice => choice.value === role) && (
+              <option value={role} disabled>{role}</option>
+            )}
+            {PUBLISHER_ROLES.map(choice => (
+              <option key={choice.value} value={choice.value}>{choice.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Search UI */}
       <div style={{ marginBottom: '20px' }}>
@@ -708,10 +720,19 @@ export function CatalogFeedsSection({ publisherFeed, dispatch, linkBack }: Catal
                         fontSize: '12px',
                         marginTop: '4px'
                       }}>
-                        {linkStatus.status === 'linked' ? '✓ ' : ''}{linkBackMessage(linkStatus, isMspHosted(item.feedUrl ?? ''))}
+                        {linkStatus.status === 'linked' ? '✓ ' : ''}{linkBackMessage(linkStatus, isMspHosted(item.feedUrl ?? ''), showBeta)}
                       </p>
                     )}
                   </div>
+                  {/* The roles of this one link (podcast-namespace PR #793). Beta, and
+                      shown when the feed already states one, as the toggle below. */}
+                  {(showBeta || item.rel) && (
+                    <RolePicker
+                      rel={item.rel}
+                      info={PUBLISHER_FIELD_INFO.itemRole}
+                      onChange={rel => dispatch({ type: 'UPDATE_REMOTE_ITEM', payload: { index, item: withRole(item, rel) } })}
+                    />
+                  )}
                   {/* Shown when the catalog already has a recommendation, so turning the
                       beta toggle off can never hide one that will be written. */}
                   {(showBeta || item.pinned) && (

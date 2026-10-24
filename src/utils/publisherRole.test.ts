@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { catalogRole, withRole } from './publisherRole';
+import { catalogRole, normalizeRel, roleTokens, withRole, withRoleToken } from './publisherRole';
 import { generateRssFeed, generatePublisherRssFeed } from './xmlGenerator';
 import { parseRssFeed, parsePublisherRssFeed } from './xmlParser';
 import { createEmptyAlbum, createEmptyPublisherFeed, createEmptyRemoteItem } from '../types/feed';
@@ -31,9 +31,59 @@ describe('catalogRole', () => {
   });
 });
 
+describe('catalogRole with token sets (podcast-namespace PR #793)', () => {
+  it('reads the same roles in another order, case or separator as one role', () => {
+    expect(catalogRole([item('a', 'producer artist'), item('b', 'Artist, producer')])).toBe('artist producer');
+  });
+
+  it('is null when the token sets differ', () => {
+    expect(catalogRole([item('a', 'artist producer'), item('b', 'artist')])).toBeNull();
+  });
+});
+
+describe('roleTokens', () => {
+  it('splits on spaces and commas, and drops duplicates', () => {
+    expect(roleTokens('artist,  producer artist')).toEqual(['artist', 'producer']);
+  });
+
+  it('matches a known token in any letter case, and keeps an unknown one as written', () => {
+    expect(roleTokens('Artist Composer composer')).toEqual(['artist', 'Composer']);
+  });
+
+  it('gives known tokens in the order of the proposal, then unknown ones', () => {
+    expect(roleTokens('composer sponsor label')).toEqual(['label', 'sponsor', 'composer']);
+  });
+
+  it('is empty when no role is stated', () => {
+    expect(roleTokens(undefined)).toEqual([]);
+    expect(roleTokens('  ')).toEqual([]);
+    expect(normalizeRel(undefined)).toBe('');
+  });
+});
+
+describe('withRoleToken', () => {
+  it('turns a token on, in the canonical order', () => {
+    expect(withRoleToken('producer', 'artist', true)).toBe('artist producer');
+  });
+
+  it('does not add an imported token a second time in another case', () => {
+    // An imported rel="Artist" plus the Artist checkbox used to give "artist Artist".
+    expect(withRoleToken('Artist', 'artist', true)).toBe('artist');
+  });
+
+  it('turns a known or an unknown token off, and gives "" when none is left', () => {
+    expect(withRoleToken('artist Composer', 'composer', false)).toBe('artist');
+    expect(withRoleToken('Artist', 'artist', false)).toBe('');
+  });
+});
+
 describe('withRole', () => {
   it('sets the role', () => {
     expect(withRole(item('a'), 'artist').rel).toBe('artist');
+  });
+
+  it("works on an album's publisher reference too", () => {
+    expect(withRole({ feedGuid: 'p', rel: 'label' }, '')).toEqual({ feedGuid: 'p' });
   });
 
   it('removes rel for "Not stated" rather than writing an empty value', () => {

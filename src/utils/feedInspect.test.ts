@@ -187,6 +187,20 @@ describe('inspectFeedXml', () => {
       expect(inspectFeedXml(canonical)).toEqual([]);
     });
 
+    it('two different publishers in one <podcast:publisher> are kept, so they are not reported', () => {
+      const artist = '11111111-2222-4333-8444-555555555555';
+      const label = '66666666-7777-4888-9999-000000000000';
+      const xml = edit('<item>', '<podcast:publisher>' +
+        `<podcast:remoteItem medium="publisher" feedGuid="${artist}" rel="artist"/>` +
+        `<podcast:remoteItem medium="publisher" feedGuid="${label}" rel="label"/>` +
+        '</podcast:publisher>\n    <item>');
+      expect(inspectFeedXml(xml)).toEqual([]);
+      expect(generateRssFeed(parseRssFeed(xml))).toMatch(new RegExp(
+        `<podcast:publisher>\\s*<podcast:remoteItem medium="publisher" feedGuid="${artist}" rel="artist" />` +
+        `\\s*<podcast:remoteItem medium="publisher" feedGuid="${label}" rel="label" />\\s*</podcast:publisher>`
+      ));
+    });
+
     it('the legacy MSP node split moves to the MSP 2.0 address', () => {
       const xml = edit('</podcast:value>\n    <item>',
         `<podcast:valueRecipient name="MSP" address="${LEGACY_MSP_NODE_PUBKEY}" split="1" type="node"/></podcast:value>\n    <item>`);
