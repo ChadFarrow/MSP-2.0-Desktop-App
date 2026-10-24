@@ -45,7 +45,7 @@ import './App.css';
 function AppContent() {
   const { state, dispatch } = useFeed();
   const { theme, toggleTheme } = useTheme();
-  const { showExperimental, toggleExperimental } = useExperimental();
+  const { showExperimental, toggleExperimental, showBeta, toggleBeta } = useExperimental();
   const [showImportModal, setShowImportModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -292,6 +292,14 @@ function AppContent() {
                     onClick={() => { toggleExperimental(); setShowDropdown(false); }}
                   >
                     🧪 {showExperimental ? 'Hide' : 'Show'} Experimental Features
+                  </button>
+                  {/* Beta features ship to production; users opt in here. */}
+                  <button
+                    className="dropdown-item"
+                    title="Turn on editor features still in testing, marked 🧪"
+                    onClick={() => { toggleBeta(); setShowDropdown(false); }}
+                  >
+                    🧪 {showBeta ? 'Hide' : 'Show'} Beta Features
                   </button>
                   {isTauri() && (
                     <button

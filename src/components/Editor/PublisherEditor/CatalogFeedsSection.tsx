@@ -3,6 +3,7 @@ import type { PublisherFeed } from '../../../types/feed';
 import { createEmptyRemoteItem } from '../../../types/feed';
 import type { FeedAction } from '../../../store/feedStore';
 import { useNostr } from '../../../store/nostrStore';
+import { useExperimental } from '../../../store/experimentalStore';
 import { createAdminAuthHeader } from '../../../utils/adminAuth';
 import { checkSignerConnection } from '../../../utils/nostrSigner';
 import { getFeedUrlError, normalizeFeedUrl } from '../../../utils/urlValidation';
@@ -12,6 +13,7 @@ import { getPlatformHost, isMspHosted, linkBackMessage, platformRefusal, platfor
 import { buildHostedUrl } from '../../../utils/hostedFeed';
 import type { LinkBackState } from './useLinkBackStatus';
 import { InfoIcon } from '../../InfoIcon';
+import { Toggle } from '../../Toggle';
 import { Section } from '../../Section';
 import { apiFetch, resolveApiUrl } from '../../../utils/api';
 
@@ -36,6 +38,7 @@ const PUBLISHER_FIELD_INFO = {
   remoteItemFeedGuid: 'The podcast:guid of the feed you want to include in your publisher catalog. This is the unique identifier that links to the feed.',
   remoteItemFeedUrl: 'The URL of the RSS feed (optional but recommended). This helps apps find the feed if they cannot resolve the GUID.',
   remoteItemTitle: 'A display title for this feed (optional). If not provided, apps will fetch the title from the feed itself.',
+  remoteItemPinned: 'Recommend this release as the first listen for someone new to your music. Written as <podcast:pinned feedGuid>: the proposed Podcasting 2.0 tag only pins an episode of the same feed, so naming a catalog feed is MSP\'s own extension, and no app reads it yet. The catalog order is not changed.',
   publisherRole: 'Tells apps whether this publisher is the artist of these feeds or a label. MSP writes it as rel on each catalog feed, and on the publisher reference of each album when you publish. "Not stated" writes nothing. rel is proposed in podcast-namespace discussion #579.',
 };
 
@@ -47,6 +50,7 @@ interface CatalogFeedsSectionProps {
 
 export function CatalogFeedsSection({ publisherFeed, dispatch, linkBack }: CatalogFeedsSectionProps) {
   const { state: nostrState } = useNostr();
+  const { showBeta } = useExperimental();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -707,6 +711,21 @@ export function CatalogFeedsSection({ publisherFeed, dispatch, linkBack }: Catal
                       </p>
                     )}
                   </div>
+                  {/* Shown when the catalog already has a recommendation, so turning the
+                      beta toggle off can never hide one that will be written. */}
+                  {(showBeta || item.pinned) && (
+                    <div className="form-group">
+                      <Toggle
+                        checked={!!item.pinned}
+                        onChange={val => dispatch({
+                          type: 'UPDATE_REMOTE_ITEM',
+                          payload: { index, item: { ...item, pinned: val } }
+                        })}
+                        label="Recommended first listen 🧪"
+                        labelSuffix={<InfoIcon text={PUBLISHER_FIELD_INFO.remoteItemPinned} />}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

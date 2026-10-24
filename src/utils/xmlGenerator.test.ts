@@ -494,4 +494,14 @@ describe('XML escaping at every interpolation site', () => {
     expect(xml).toContain('length="123&quot; x=&quot;y"');
     expect(xml).toContain('<itunes:duration>00:03:00 &amp; more</itunes:duration>');
   });
+
+  it('escapes the guid= and feedGuid= attributes of podcast:pinned', () => {
+    const album = createEmptyAlbum();
+    album.tracks = [{ ...createEmptyTrack(1), guid: 'a & "b"', pinned: true }];
+    expect(generateRssFeed(album)).toContain('<podcast:pinned guid="a &amp; &quot;b&quot;" />');
+
+    const publisher = createEmptyPublisherFeed();
+    publisher.remoteItems = [{ feedGuid: 'a & "b"', pinned: true }];
+    expect(generatePublisherRssFeed(publisher)).toContain('<podcast:pinned feedGuid="a &amp; &quot;b&quot;" />');
+  });
 });

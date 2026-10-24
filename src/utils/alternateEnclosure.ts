@@ -1,6 +1,6 @@
 // Editing rules for a track's alternate versions (<podcast:alternateEnclosure>).
 // Kept out of AlternateEnclosuresList so they run under unit tests in node.
-import type { Album, AlternateEnclosure, AlternateEnclosureFile } from '../types/feed';
+import type { Album, AlternateEnclosure, AlternateEnclosureFile, Track } from '../types/feed';
 import { isVideoMedium } from '../types/feed';
 import { getAudioMimeType, isKnownAudioFormat } from './audioUtils';
 import { matchVideoExtension } from './videoUtils';
@@ -9,11 +9,29 @@ import { matchVideoExtension } from './videoUtils';
  * True when the editor shows Alternate Versions for this feed: album tracks
  * only, for now (audio first; video versions are a later step). The Feed check
  * and the link check use the same test, so they report nothing the user has no
- * field to fix. It goes by medium, as the editor does, not by which slot the
- * feed is in: Load from Nostr puts a video feed in the album slot.
+ * field to fix — they only report versions a track has, and
+ * showsAlternateVersions always shows those. It goes by medium, as the editor
+ * does, not by which slot the feed is in: Load from Nostr puts a video feed in
+ * the album slot.
  */
 export function editsAlternateVersions(album: Pick<Album, 'medium'>): boolean {
   return !isVideoMedium(album.medium);
+}
+
+/**
+ * Whether a track shows Alternate Versions. Adding a version is a beta feature,
+ * so an empty section (and "+ Add") needs the beta toggle. A track that already
+ * has one (from an import) shows it whatever the toggle, because the generator
+ * still writes it and the Feed check and link check still report it: hiding it
+ * would leave the user no field to fix or remove it in.
+ */
+export function showsAlternateVersions(
+  album: Pick<Album, 'medium'>,
+  track: Pick<Track, 'alternateEnclosures'>,
+  showBeta: boolean
+): boolean {
+  return editsAlternateVersions(album)
+    && (showBeta || (track.alternateEnclosures?.length ?? 0) > 0);
 }
 
 /**

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { Track } from '../../types/feed';
 import type { FeedAction } from '../../store/feedStore';
+import { useExperimental } from '../../store/experimentalStore';
 import { createEmptyTrack, TRANSCRIPT_TYPES, DEFAULT_TRANSCRIPT_TYPE } from '../../types/feed';
 import { trackOrderIssue } from '../../utils/trackOrder';
 import { FIELD_INFO } from '../../data/fieldInfo';
@@ -27,6 +28,7 @@ export function TracksSection({ tracks, isVideo, dispatch }: TracksSectionProps)
   // be out of order; offer a one-click repair rather than rewriting an import behind
   // the user's back.
   const orderIssue = useMemo(() => trackOrderIssue(tracks), [tracks]);
+  const { showBeta } = useExperimental();
 
   const [collapsedTracks, setCollapsedTracks] = useState<Record<string, boolean>>({});
   const [resolvingNaddr, setResolvingNaddr] = useState<Record<number, boolean>>({});
@@ -426,9 +428,12 @@ export function TracksSection({ tracks, isVideo, dispatch }: TracksSectionProps)
               </div>
               {/* Audio versions on album tracks first; video feeds come later.
                   isVideo is isVideoMedium(album.medium), the same test as
-                  editsAlternateVersions(), which the Feed check uses. */}
-              {!isVideo && (
+                  editsAlternateVersions(), which the Feed check uses. Adding is
+                  a beta feature; versions a track already has always show —
+                  web's showsAlternateVersions(), which takes the album. */}
+              {!isVideo && (showBeta || (track.alternateEnclosures?.length ?? 0) > 0) && (
                 <AlternateEnclosuresList
+                  canAdd={showBeta}
                   enclosures={track.alternateEnclosures || []}
                   onChange={alternateEnclosures => dispatch({
                     type: 'UPDATE_TRACK',
@@ -451,6 +456,21 @@ export function TracksSection({ tracks, isVideo, dispatch }: TracksSectionProps)
                   labelSuffix={<InfoIcon text={FIELD_INFO.trackExplicit} />}
                 />
               </div>
+              {/* Shown when the feed already has a recommendation, so turning the
+                  beta toggle off can never hide one that will be written. */}
+              {(showBeta || track.pinned) && (
+                <div className="form-group">
+                  <Toggle
+                    checked={!!track.pinned}
+                    onChange={val => dispatch({
+                      type: 'UPDATE_TRACK',
+                      payload: { index, track: { pinned: val } }
+                    })}
+                    label="Recommended first listen 🧪"
+                    labelSuffix={<InfoIcon text={FIELD_INFO.trackPinned} />}
+                  />
+                </div>
+              )}
               <div className="form-group">
                 <Toggle
                   checked={track.overrideValue}
