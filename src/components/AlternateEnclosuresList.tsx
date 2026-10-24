@@ -16,6 +16,9 @@ interface AlternateEnclosuresListProps {
   // (SET_ALTERNATE_ENCLOSURE_MEASURED), never through onChange, whose index
   // came from an old render.
   onMeasured: (versionId: string, url: string, field: MeasuredField, value: string) => void;
+  // False hides "+ Add Alternate Version" (adding is a beta feature), leaving
+  // the versions a track already has to edit or remove.
+  canAdd?: boolean;
 }
 
 // The spec caps title at 32 characters.
@@ -33,7 +36,7 @@ const KNOWN_TYPES = [...AUDIO_FILE_TYPES, ...VIDEO_FILE_TYPES];
  * Attributes the editor has no field for (default, rel, bitrate, integrity,
  * extra sources...) are kept from an imported feed and written back as is.
  */
-export function AlternateEnclosuresList({ enclosures, onChange, onMeasured }: AlternateEnclosuresListProps) {
+export function AlternateEnclosuresList({ enclosures, onChange, onMeasured, canAdd = true }: AlternateEnclosuresListProps) {
   const update = (id: string, patch: Partial<AlternateEnclosure>) =>
     onChange(enclosures.map(enc => (enc.id === id ? { ...enc, ...patch } : enc)));
 
@@ -58,7 +61,7 @@ export function AlternateEnclosuresList({ enclosures, onChange, onMeasured }: Al
 
   return (
     <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-      <label className="form-label">Alternate Versions<InfoIcon text={FIELD_INFO.alternateEnclosures} /></label>
+      <label className="form-label">Alternate Versions 🧪<InfoIcon text={FIELD_INFO.alternateEnclosures} /></label>
       <div className="repeatable-list">
         {enclosures.map((enc, index) => {
           const url = enc.sources[0]?.uri || '';
@@ -204,9 +207,11 @@ export function AlternateEnclosuresList({ enclosures, onChange, onMeasured }: Al
             </div>
           );
         })}
-        <button type="button" className="add-item-btn" onClick={add}>
-          + Add Alternate Version
-        </button>
+        {canAdd && (
+          <button type="button" className="add-item-btn" onClick={add}>
+            + Add Alternate Version
+          </button>
+        )}
       </div>
     </div>
   );

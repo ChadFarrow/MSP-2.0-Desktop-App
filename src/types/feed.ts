@@ -72,6 +72,13 @@ export interface RemoteItem {
   // The publisher's role, e.g. "artist" or "label". Not in the spec yet — see
   // utils/publisherRole.ts. Absent means not stated.
   rel?: string;
+  /**
+   * Publisher catalog only: an album recommended to new listeners,
+   * written as a channel-level <podcast:pinned feedGuid> naming this feed. That
+   * is MSP's extension — the proposal (podcast-namespace #570) only pins an
+   * episode of the same feed. See generatePinnedXml in xmlGenerator.ts.
+   */
+  pinned?: boolean;
 }
 
 // Alternate enclosure types (podcast:alternateEnclosure)
@@ -234,6 +241,13 @@ export interface Track {
   overrideValue: boolean;
   value?: ValueBlock;
   alternateEnclosures?: AlternateEnclosure[];
+  /**
+   * A track recommended to new listeners, written as a channel-level
+   * <podcast:pinned> pointing at this track's guid. Proposed tag only
+   * (podcast-namespace discussions #570 / #747), so the editor shows it behind
+   * the experimental toggle. See generatePinnedXml in xmlGenerator.ts.
+   */
+  pinned?: boolean;
   unknownItemElements?: Record<string, unknown>;
 }
 

@@ -67,6 +67,7 @@ export const FIELD_INFO = {
   transcriptUrl: "Link to a file with time-coded lyrics for display during playback, plus its format. SubRip (.srt) and WebVTT (.vtt) are the widely supported ones. Apps that don't support lyrics simply ignore it.",
   trackGuid: "Unique identifier for this track. Auto-generated, or use guidgenerator.com to create one.",
   trackExplicit: "Mark if this specific track contains explicit content.",
+  trackPinned: "Recommend this track as the first listen for someone new to your music. Written as <podcast:pinned>, a proposed Podcasting 2.0 tag — apps that don't support it yet simply ignore it, and the track order and dates are not changed.",
   overridePersons: "Enable to set different credits for this track than the album level. Track-level persons replace album-level.",
   overrideValue: "Enable to set different payment splits for this track. Used for featuring guest artists or different producers per track.",
 

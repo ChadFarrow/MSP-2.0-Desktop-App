@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { regenerateAlbumGuids, withoutIdentityPassthrough } from './regenerateGuids';
+import { generateRssFeed } from './xmlGenerator';
 import { createEmptyAlbum, createEmptyTrack, type Album } from '../types/feed';
 
 function sourceAlbum(): Album {
@@ -73,8 +74,29 @@ describe('regenerateAlbumGuids', () => {
     expect(src.unknownChannelElements['podcast:txt']).toBeDefined();
   });
 
+  it('drops pins that name none of its tracks, and moves a track\'s pin to its new guid', () => {
+    const src = sourceAlbum();
+    src.tracks[1].pinned = true;
+    src.unknownChannelElements = {
+      'podcast:pinned': { '@_guid': 'gone' },
+      'content:encoded': 'notes'
+    };
+    const copy = regenerateAlbumGuids(src);
+    expect(copy.unknownChannelElements).toEqual({ 'content:encoded': 'notes' });
+    expect(copy.tracks.map((t) => !!t.pinned)).toEqual([false, true, false]);
+
+    const xml = generateRssFeed(copy);
+    expect(xml.match(/<podcast:pinned /g)).toHaveLength(1);
+    expect(xml).toContain(`<podcast:pinned guid="${copy.tracks[1].guid}" />`);
+    expect(xml).not.toContain('gone');
+    expect(src.unknownChannelElements['podcast:pinned']).toBeDefined();
+  });
+
   it('returns undefined when only identity passthrough was there', () => {
     expect(withoutIdentityPassthrough({ 'podcast:txt': { '#text': 'x' } })).toBeUndefined();
+    expect(withoutIdentityPassthrough({
+      'podcast:pinned': [{ '@_guid': 'a' }, { '@_itemGuid': 'b' }]
+    })).toBeUndefined();
     expect(withoutIdentityPassthrough(undefined)).toBeUndefined();
   });
 });
