@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import './CatalogFeedsSection.css';
 import type { PublisherFeed } from '../../../types/feed';
 import { createEmptyRemoteItem } from '../../../types/feed';
 import type { FeedAction } from '../../../store/feedStore';
@@ -589,7 +590,7 @@ export function CatalogFeedsSection({ publisherFeed, dispatch, linkBack }: Catal
         </button>
       </div>
 
-      <div className="repeatable-list">
+      <div className="repeatable-list catalog-feed-list">
         {publisherFeed.remoteItems.map((item, index) => {
           const feedUrlError = item.feedUrl ? getFeedUrlError(item.feedUrl) : null;
           const platform = getPlatformHost(item.feedUrl);
@@ -648,8 +649,8 @@ export function CatalogFeedsSection({ publisherFeed, dispatch, linkBack }: Catal
                   </button>
                 )}
               </div>
-              {/* Form Fields */}
-              <div style={{ flex: 1 }}>
+              {/* Form Fields: below the artwork when there's no room beside it (CatalogFeedsSection.css) */}
+              <div className="catalog-feed-fields">
                 <div className="form-grid">
                   <div className="form-group" style={{ width: '80px' }}>
                     <label className="form-label">Order</label>
