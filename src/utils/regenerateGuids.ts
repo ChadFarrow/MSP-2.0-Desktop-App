@@ -5,7 +5,12 @@ import { OP3_PREFIX_RE, stripOp3Prefix } from './xmlParser';
  * Drop the passthrough elements that claim a feed's identity: every
  * `<podcast:txt>` (verification tokens such as applepodcastsverify name one
  * specific feed) and an `<atom:link rel="self">` URL. A template is a new feed,
- * so it must not carry the source's. Other passthrough elements are kept.
+ * so it must not carry the source's. Every passthrough `<podcast:pinned>` goes
+ * too: the parser leaves a pin there only when it names nothing the feed models
+ * (no track of an album, no catalog feed of a publisher), so in a template it
+ * can only point at the source's episodes. A pin on one of the feed's own
+ * tracks or catalog feeds is `pinned` on that track or remote item, and is
+ * kept. Other passthrough elements are kept.
  *
  * Does not mutate the input; returns undefined once nothing is left, matching
  * the parser's own passthrough maps.
@@ -16,6 +21,7 @@ export function withoutIdentityPassthrough(
   if (!elements) return elements;
   const rest = { ...elements };
   delete rest['podcast:txt'];
+  delete rest['podcast:pinned'];
   const links = rest['atom:link'];
   if (links) {
     const kept = (Array.isArray(links) ? links : [links]).filter(
@@ -50,8 +56,10 @@ function withoutOp3Prefix(enclosures: AlternateEnclosure[]): AlternateEnclosure[
  * inherits another feed's track identities. Reusing a track's `<guid>` across two
  * different feeds makes podcast apps and Podcast Index treat unrelated tracks as
  * the same episode (the bug that produced the Live at Rockpile / Amnesia collision).
- * The source's identity passthrough (verification txt tags, self link) goes too,
- * and so does an OP3 prefix left on an alternate source.
+ * The source's identity passthrough (verification txt tags, self link, pins that
+ * name none of its tracks) goes too, and so does an OP3 prefix left on an
+ * alternate source. A pinned track stays pinned, and the generator writes the
+ * pin against its new guid.
  *
  * Does not mutate the input. Publisher feeds are handled separately — their
  * `remoteItems` reference real external feeds, so only the feed GUID is renewed.

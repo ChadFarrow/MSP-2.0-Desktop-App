@@ -770,6 +770,8 @@ body {
   border-radius: 12px;
   cursor: pointer;
   transition: background var(--transition);
+  /* A long label beside it must wrap, not squeeze the switch */
+  flex-shrink: 0;
 }
 
 .toggle.active {

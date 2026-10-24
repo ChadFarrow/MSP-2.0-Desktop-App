@@ -282,6 +282,15 @@ export const parseRssFeed = (xmlString: string): Album => {
     }
   }
 
+  // Recommended tracks. Both `guid` (the proposal) and `itemGuid` (the rename
+  // discussed on it) are read.
+  const tracksByGuid = new Map(album.tracks.filter(track => track.guid).map(track => [track.guid, track]));
+  album.unknownChannelElements = consumePins(
+    channel,
+    album.unknownChannelElements,
+    pin => tracksByGuid.get(getAttr(pin, 'guid') || getAttr(pin, 'itemGuid'))
+  );
+
   return album;
 };
 
@@ -383,6 +392,28 @@ function keepPassthrough(
     delete elements[key];
   }
   return Object.keys(elements).length > 0 ? elements : undefined;
+}
+
+/**
+ * Read <podcast:pinned> (a proposed tag). A pin that `targetOf` resolves to
+ * something this feed models — a track, or a publisher's catalog feed — sets
+ * that target's `pinned`, and the generator writes it back, so it leaves the
+ * passthrough. A pin naming nothing here round-trips as is.
+ */
+function consumePins(
+  channel: Record<string, unknown>,
+  elements: Record<string, unknown> | undefined,
+  targetOf: (pin: unknown) => { pinned?: boolean } | undefined
+): Record<string, unknown> | undefined {
+  const pinTags = channel['podcast:pinned'];
+  if (!pinTags) return elements;
+  const unmatchedPins = (Array.isArray(pinTags) ? pinTags : [pinTags]).filter(pin => {
+    const target = targetOf(pin);
+    if (!target) return true;
+    target.pinned = true;
+    return false;
+  });
+  return keepPassthrough(elements, 'podcast:pinned', unmatchedPins);
 }
 
 // itunes:explicit is "true"/"false" today. Apple's older vocabulary was "yes" /
@@ -1145,6 +1176,17 @@ export const parsePublisherRssFeed = (xmlString: string): PublisherFeed => {
     const remoteArray = Array.isArray(remoteItems) ? remoteItems : [remoteItems];
     feed.remoteItems = remoteArray.map(parseRemoteItem).filter(Boolean) as RemoteItem[];
   }
+
+  // Recommended albums: MSP's <podcast:pinned feedGuid>, since a publisher feed
+  // has no episodes for the proposal's `guid` to name. A `guid` pin is left alone.
+  // A feedUrl-only item has feedGuid '', which every pin without the attribute
+  // would otherwise match.
+  const itemsByFeedGuid = new Map(feed.remoteItems.filter(item => item.feedGuid).map(item => [item.feedGuid, item]));
+  feed.unknownChannelElements = consumePins(
+    channel,
+    feed.unknownChannelElements,
+    pin => itemsByFeedGuid.get(getAttr(pin, 'feedGuid'))
+  );
 
   return feed;
 };
