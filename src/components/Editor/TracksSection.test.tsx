@@ -106,6 +106,14 @@ describe('TracksSection recommended first listen', () => {
     expect(screen.getByText(label)).toBeInTheDocument();
   });
 
+  // The highlight box and BETA tag from MSP-2.0#170 (web Editor.tsx).
+  it('highlights the toggle as a beta field', () => {
+    renderTracks(<TracksSection tracks={[createEmptyTrack(1)]} isVideo={false} dispatch={vi.fn()} />, { beta: true });
+    const field = screen.getByText(label).closest('.form-group')!;
+    expect(field).toHaveClass('beta-field');
+    expect(field.querySelector('.beta-tag')).toHaveTextContent('Beta');
+  });
+
   it('pins the track by its index', () => {
     const dispatch = vi.fn<(action: FeedAction) => void>();
     renderTracks(<TracksSection tracks={[createEmptyTrack(1)]} isVideo={false} dispatch={dispatch} />, { beta: true });

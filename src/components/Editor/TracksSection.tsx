@@ -9,6 +9,7 @@ import { detectAddressType } from '../../utils/addressUtils';
 import { getMediaDuration, secondsToHHMMSS, formatDuration } from '../../utils/audioUtils';
 import { getVideoMimeType } from '../../utils/videoUtils';
 import { isNaddrString, resolveNostrVideo } from '../../utils/nostrVideoConverter';
+import { BetaTag } from '../BetaTag';
 import { InfoIcon } from '../InfoIcon';
 import { Section } from '../Section';
 import { Toggle } from '../Toggle';
@@ -459,14 +460,14 @@ export function TracksSection({ tracks, isVideo, dispatch }: TracksSectionProps)
               {/* Shown when the feed already has a recommendation, so turning the
                   beta toggle off can never hide one that will be written. */}
               {(showBeta || track.pinned) && (
-                <div className="form-group">
+                <div className="form-group beta-field">
                   <Toggle
                     checked={!!track.pinned}
                     onChange={val => dispatch({
                       type: 'UPDATE_TRACK',
                       payload: { index, track: { pinned: val } }
                     })}
-                    label="Recommended first listen 🧪"
+                    label={<>Recommended first listen <BetaTag /></>}
                     labelSuffix={<InfoIcon text={FIELD_INFO.trackPinned} />}
                   />
                 </div>

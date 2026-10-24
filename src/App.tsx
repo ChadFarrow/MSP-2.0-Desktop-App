@@ -33,6 +33,7 @@ import {
   type NostrProfile,
 } from './utils/tauriNostr';
 import { FeedSidebar } from './components/FeedSidebar';
+import { BetaBanner } from './components/BetaBanner';
 import { hasLocalStorage } from './utils/localFeedStorage';
 // The 40px header logo. Points at the 192px file in public/ rather than importing
 // assets/msp-logo.png, which is a 1024x1024 PNG weighing ~1.8 MB — the same file
@@ -380,6 +381,7 @@ function AppContent() {
             </div>
           </div>
         </header>
+        <BetaBanner />
         <div className="app-body">
           {isDesktop && (
             <FeedSidebar
