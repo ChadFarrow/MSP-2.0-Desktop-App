@@ -15,6 +15,7 @@
 // And "Into the Valueverse 1" names Nathan Abbott's publisher feed, which MSP
 // must never overwrite on another artist's behalf.
 import { publisherParties, sameGuid } from './publisherParties';
+import { normalizeRel, roleTokens, sameRoles } from './publisherRole';
 import type { Album, RemoteItem } from '../types/feed';
 import { fetchFeedFromUrl, parseRssFeed } from './xmlParser';
 import { apiFetch } from './api';
@@ -62,8 +63,11 @@ export const extractFeedIdFromUrl = (url: string): string | null => {
 // callers that have always imported it from here.
 export { sameGuid };
 
+// `albumRel` is the role the album states on its link to this publisher, kept so
+// the link can be compared with the catalog row's role (withRoleCheck).
 export type LinkBackResult =
-  | { status: 'linked' }
+  | { status: 'linked'; albumRel?: string }
+  | { status: 'role-mismatch'; albumRel: string; catalogRel: string }
   | { status: 'other'; publisherGuid: string; publisherUrl?: string }
   | { status: 'none' }
   | { status: 'unknown' };
@@ -92,9 +96,10 @@ export function classifyLinkBack(xml: string, publisherGuid: string): LinkBackRe
 export function classifyAlbumLinkBack(
   album: Pick<Album, 'publisher' | 'additionalPublishers'>,
   publisherGuid: string
-): Exclude<LinkBackResult, { status: 'unknown' }> {
+): Exclude<LinkBackResult, { status: 'unknown' | 'role-mismatch' }> {
   const parties = publisherParties(album);
-  if (parties.some(party => sameGuid(party.feedGuid, publisherGuid))) return { status: 'linked' };
+  const mine = parties.find(party => sameGuid(party.feedGuid, publisherGuid));
+  if (mine) return roleTokens(mine.rel).length > 0 ? { status: 'linked', albumRel: mine.rel } : { status: 'linked' };
   const other = parties.find(party => party.feedGuid?.trim());
   if (!other) return { status: 'none' };
   return {
@@ -102,6 +107,19 @@ export function classifyAlbumLinkBack(
     publisherGuid: other.feedGuid.trim(),
     ...(other.feedUrl ? { publisherUrl: other.feedUrl } : {})
   };
+}
+
+/**
+ * A link back counts only when its two sides agree on the roles (podcast-namespace
+ * PR #793): if the album and the catalog row both state rel, they must name the
+ * same set of tokens, or apps discard the link. If either side states none, it
+ * is a plain publisher link. Applied when the result is shown, against the row's
+ * current rel, so a role changed in the editor after the check shows at once.
+ */
+export function withRoleCheck(result: LinkBackResult, catalogRel: string | undefined): LinkBackResult {
+  if (result.status !== 'linked' || !result.albumRel || roleTokens(catalogRel).length === 0) return result;
+  if (sameRoles(result.albumRel, catalogRel)) return result;
+  return { status: 'role-mismatch', albumRel: result.albumRel, catalogRel: catalogRel ?? '' };
 }
 
 /**
@@ -161,6 +179,12 @@ export function linkBackMessage(result: LinkBackResult, onMsp: boolean, addsPart
   switch (result.status) {
     case 'linked':
       return 'Points back to this publisher feed.';
+    case 'role-mismatch':
+      return `Points back to this publisher feed, but with other roles: the album says "${normalizeRel(result.albumRel)}", ` +
+        `this catalog says "${normalizeRel(result.catalogRel)}". Apps ignore a link whose two sides name different roles. ` +
+        (onMsp
+          ? "Publish to write this catalog's roles into the album, or change the roles here to match."
+          : "Download this album's new version in Download Catalog and upload it to your host, or change the roles here to match.");
     case 'none':
       return onMsp
         ? 'Not linked yet. MSP adds the link back when you publish.'

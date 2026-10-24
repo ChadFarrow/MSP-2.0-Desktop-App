@@ -49,7 +49,7 @@ export const FIELD_INFO = {
   // Publisher Reference
   publisherGuid: "The GUID of your publisher feed. This links your album to a parent publisher feed that aggregates multiple releases.",
   publisherUrl: "URL to your publisher feed. Links this release to the publisher's catalog.",
-  publisherRole: 'What this publisher is to this release. Several roles can be on, for example Artist and Producer. MSP writes them as rel on the publisher reference. The publisher feed should list this release with the same roles, so the two feeds agree. With none on, MSP writes nothing. rel is proposed in podcast-namespace PR #793. Beta feature.',
+  publisherRole: 'What this publisher is to this release. Several roles can be on, for example Artist and Producer. MSP writes them as rel on the publisher reference. The publisher feed should list this release with the same roles, so the two feeds agree: when both state roles and they differ, apps ignore the link. With none on, MSP writes nothing. rel is proposed in podcast-namespace PR #793. Beta feature.',
   otherPublishers: 'Other publisher feeds that also take part in this release, for example the label when the publisher above is the artist. Each one must list this release in its own feed for apps to confirm it. Several publishers are proposed in podcast-namespace PR #793; an app that reads only one publisher shows the first. Name each publisher once: one publisher with two roles keeps one entry. Beta feature.',
 
   // Publisher Feed

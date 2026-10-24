@@ -42,7 +42,7 @@ const PUBLISHER_FIELD_INFO = {
   remoteItemTitle: 'A display title for this feed (optional). If not provided, apps will fetch the title from the feed itself.',
   remoteItemPinned: 'Recommend this release as the first listen for someone new to your music. Written as <podcast:pinned feedGuid>: the proposed Podcasting 2.0 tag only pins an episode of the same feed, so naming a catalog feed is MSP\'s own extension, and no app reads it yet. The catalog order is not changed.',
   publisherRole: 'Sets one role on every catalog feed at once, for example Artist or Label. You can also set the roles of each feed below, for example Artist and Producer for one album. MSP writes them as rel on each catalog feed, and on the publisher reference of each album when you publish. "Not stated" writes nothing. rel is proposed in podcast-namespace PR #793. Beta feature.',
-  itemRole: 'What this publisher is to this feed. The feed should name this publisher with the same roles, so the two feeds agree. With none on, MSP writes nothing. Beta feature.',
+  itemRole: 'What this publisher is to this feed. The feed should name this publisher with the same roles, so the two feeds agree: when both state roles and they differ, apps ignore the link, and the check below this feed says so. With none on, MSP writes nothing. Beta feature.',
 };
 
 interface CatalogFeedsSectionProps {

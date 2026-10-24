@@ -8,7 +8,8 @@ import {
   fetchCatalogFeedXml,
   platformRefusal,
   platformWarning,
-  linkBackMessage
+  linkBackMessage,
+  withRoleCheck
 } from './publisherControl';
 import type { RemoteItem } from '../types/feed';
 
@@ -86,8 +87,9 @@ describe('classifyLinkBack', () => {
       `<podcast:remoteItem medium="publisher" rel="artist" feedGuid="${NATHAN_PUBLISHER}"/>` +
       `<podcast:remoteItem medium="publisher" rel="label" feedGuid="${LONGY_PUBLISHER}"/>` +
       '</podcast:publisher>';
-    expect(classifyLinkBack(album(two), LONGY_PUBLISHER)).toEqual({ status: 'linked' });
-    expect(classifyLinkBack(album(two), NATHAN_PUBLISHER)).toEqual({ status: 'linked' });
+    // Each publisher gets the role of its own party.
+    expect(classifyLinkBack(album(two), LONGY_PUBLISHER)).toEqual({ status: 'linked', albumRel: 'label' });
+    expect(classifyLinkBack(album(two), NATHAN_PUBLISHER)).toEqual({ status: 'linked', albumRel: 'artist' });
   });
 
   it('reports the first publisher named by GUID when none is this one', () => {
@@ -131,6 +133,65 @@ describe('classifyAlbumLinkBack', () => {
       LONGY_PUBLISHER
     )).toEqual({ status: 'linked' });
     expect(classifyAlbumLinkBack({}, LONGY_PUBLISHER)).toEqual({ status: 'none' });
+  });
+
+  it("keeps the role the album states on this publisher's link, for the role check", () => {
+    expect(classifyAlbumLinkBack(
+      { publisher: { feedGuid: NATHAN_PUBLISHER, rel: 'artist' }, additionalPublishers: [{ feedGuid: LONGY_PUBLISHER, rel: 'label' }] },
+      LONGY_PUBLISHER
+    )).toEqual({ status: 'linked', albumRel: 'label' });
+    expect(classifyAlbumLinkBack({ publisher: { feedGuid: LONGY_PUBLISHER, rel: ' ' } }, LONGY_PUBLISHER))
+      .toEqual({ status: 'linked' });
+  });
+
+  it('reads that role from the XML too', () => {
+    const withRel = `<podcast:publisher><podcast:remoteItem medium="publisher" rel="producer artist" feedGuid="${LONGY_PUBLISHER}"/></podcast:publisher>`;
+    expect(classifyLinkBack(album(withRel), LONGY_PUBLISHER)).toEqual({ status: 'linked', albumRel: 'producer artist' });
+  });
+});
+
+describe('withRoleCheck (podcast-namespace PR #793: both sides must name the same roles)', () => {
+  const linked = (albumRel?: string) => ({ status: 'linked' as const, ...(albumRel ? { albumRel } : {}) });
+
+  it('reports a link whose two sides state different roles, which apps discard', () => {
+    expect(withRoleCheck(linked('label'), 'artist')).toEqual({ status: 'role-mismatch', albumRel: 'label', catalogRel: 'artist' });
+    expect(withRoleCheck(linked('artist producer'), 'artist')).toEqual({
+      status: 'role-mismatch',
+      albumRel: 'artist producer',
+      catalogRel: 'artist'
+    });
+  });
+
+  it('keeps the link when the roles are the same set in another order', () => {
+    expect(withRoleCheck(linked('producer artist'), 'artist producer')).toEqual(linked('producer artist'));
+  });
+
+  it('keeps the link when either side states no role (the plain publisher link)', () => {
+    expect(withRoleCheck(linked(), 'artist')).toEqual(linked());
+    expect(withRoleCheck(linked('label'), undefined)).toEqual(linked('label'));
+    expect(withRoleCheck(linked('label'), '')).toEqual(linked('label'));
+  });
+
+  it('leaves every other result as it is', () => {
+    const other = { status: 'other' as const, publisherGuid: NATHAN_PUBLISHER };
+    expect(withRoleCheck(other, 'artist')).toBe(other);
+    expect(withRoleCheck({ status: 'none' }, 'artist')).toEqual({ status: 'none' });
+    expect(withRoleCheck({ status: 'unknown' }, 'artist')).toEqual({ status: 'unknown' });
+  });
+});
+
+describe('linkBackMessage for a role mismatch', () => {
+  const mismatch = { status: 'role-mismatch' as const, albumRel: 'Label', catalogRel: 'producer artist' };
+
+  it('names both roles, in the form the editor writes them', () => {
+    const text = linkBackMessage(mismatch, true);
+    expect(text).toContain('"label"');
+    expect(text).toContain('"artist producer"');
+  });
+
+  it('points an MSP album to publishing and a self-hosted album to Download Catalog', () => {
+    expect(linkBackMessage(mismatch, true)).toContain('Publish');
+    expect(linkBackMessage(mismatch, false)).toContain('Download Catalog');
   });
 });
 

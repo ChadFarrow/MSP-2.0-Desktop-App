@@ -64,6 +64,16 @@ export function normalizeRel(rel: string | undefined): string {
 }
 
 /**
+ * Whether two rel values name the same set of tokens. PR #793 requires that of
+ * the two sides of a publisher link, in any order. Letter case is ignored, as
+ * roleTokens ignores it; the PR doesn't say.
+ */
+export function sameRoles(a: string | undefined, b: string | undefined): boolean {
+  const tokenSet = (rel: string | undefined) => roleTokens(rel).map(token => token.toLowerCase()).sort().join(' ');
+  return tokenSet(a) === tokenSet(b);
+}
+
+/**
  * The rel value with `token` turned on or off, in the canonical form. Gives ''
  * when no token is left, which means "not stated".
  */
