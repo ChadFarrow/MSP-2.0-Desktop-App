@@ -1,0 +1,16 @@
+/* A catalog feed row puts the artwork beside the fields. Form inputs have no
+   set width, so each keeps its default width (about 15rem at the 16px phone
+   font), and on a narrow phone the fields ran past the card instead of fitting
+   next to the artwork. The row now wraps: when the fields can't have that much
+   room beside the artwork, they move below it and take the full width.
+
+   Kept out of App.css because the Desktop App forks App.css; a new file syncs
+   as it is. */
+.catalog-feed-list .repeatable-item-content {
+  flex-wrap: wrap;
+}
+
+.catalog-feed-fields {
+  flex: 1 1 15rem;
+  min-width: 0;
+}
