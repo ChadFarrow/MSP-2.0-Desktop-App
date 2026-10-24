@@ -1,0 +1,53 @@
+/* Beta fields — the "🧪 BETA" tag on the label and the box around the field.
+ *
+ * Kept out of App.css on purpose: the Desktop App forks App.css, so styles added
+ * there never reach it, while a new file syncs as-is. Imported by BetaTag.tsx,
+ * and every beta field carries a tag, so this loads wherever .beta-field is used.
+ * The variables come from App.css, which both copies define. */
+.beta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  /* Darker than --accent-primary (#8b5cf6): white text on that is ~4.2:1, under
+     WCAG AA for text this small; on #7c3aed it is 5.7:1. */
+  background: #7c3aed;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* The negative margin cancels the padding, so the field's own content stays
+   aligned with its neighbours; the 16px grid gap and track card padding take
+   the overhang. */
+.beta-field {
+  padding: 8px 10px;
+  margin: -8px -10px;
+  background: var(--accent-bg-subtle);
+  box-shadow: inset 3px 0 0 var(--accent-primary);
+  border-radius: var(--radius-sm);
+}
+
+/* The tag doesn't break, so on one unbreakable row with the label text it made
+   the toggle label ~270px wide at minimum, wider than a track card on a 320px
+   phone — and the grid widened every field in the track to match. Wrapping
+   drops the tag under the text when there is no room beside it. */
+.beta-field .form-label {
+  flex-wrap: wrap;
+}
+
+/* On phones the box keeps to the field's own width and indents the content
+   instead. A track's Pub Date input is ~257px at minimum, which at 320px is
+   wider than the card's content box, so every field already ends inside the
+   card padding and any overhang crossed the card border. */
+@media (max-width: 480px) {
+  .beta-field {
+    padding: 8px 8px 8px 10px;
+    margin: -8px 0;
+  }
+}

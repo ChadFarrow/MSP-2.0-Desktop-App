@@ -5,6 +5,7 @@ import { AUDIO_EXTENSION_LIST, AUDIO_FILE_TYPES, detectMediaSize, isKnownAudioFo
 import { createMeasurer, isVideoType, typeChange, urlChange, type MeasuredField } from '../utils/alternateEnclosure';
 import { detectVideoHeight, matchVideoExtension, VIDEO_EXTENSION_LIST, VIDEO_FILE_TYPES } from '../utils/videoUtils';
 import { FIELD_INFO } from '../data/fieldInfo';
+import { BetaTag } from './BetaTag';
 import { InfoIcon } from './InfoIcon';
 
 interface AlternateEnclosuresListProps {
@@ -60,8 +61,8 @@ export function AlternateEnclosuresList({ enclosures, onChange, onMeasured, canA
   const remove = (id: string) => onChange(enclosures.filter(enc => enc.id !== id));
 
   return (
-    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-      <label className="form-label">Alternate Versions 🧪<InfoIcon text={FIELD_INFO.alternateEnclosures} /></label>
+    <div className="form-group beta-field" style={{ gridColumn: '1 / -1' }}>
+      <label className="form-label">Alternate Versions <BetaTag /><InfoIcon text={FIELD_INFO.alternateEnclosures} /></label>
       <div className="repeatable-list">
         {enclosures.map((enc, index) => {
           const url = enc.sources[0]?.uri || '';

@@ -1,0 +1,52 @@
+/* Beta banner — under the header while "Show Beta Features" is on.
+ *
+ * Kept out of App.css on purpose: the Desktop App forks App.css, so styles added
+ * there never reach it, while a new file syncs as-is. The variables come from
+ * App.css, which both copies define. */
+.beta-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 24px;
+  background: var(--accent-bg-subtle);
+  border-bottom: 1px solid var(--accent-primary);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.beta-banner-title strong,
+.beta-banner-list strong {
+  color: var(--text-primary);
+}
+
+.beta-banner-list {
+  list-style: none;
+  margin-top: 2px;
+}
+
+.beta-banner-where {
+  color: var(--text-muted);
+}
+
+.beta-banner-off {
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .beta-banner {
+    padding: 8px 16px;
+    align-items: flex-start;
+  }
+
+  .beta-banner-detail {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .beta-banner {
+    padding: 8px 12px;
+  }
+}

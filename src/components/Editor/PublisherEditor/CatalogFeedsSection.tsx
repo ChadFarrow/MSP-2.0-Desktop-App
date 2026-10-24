@@ -12,6 +12,7 @@ import { PUBLISHER_ROLES, catalogRole } from '../../../utils/publisherRole';
 import { getPlatformHost, isMspHosted, linkBackMessage, platformRefusal, platformWarning } from '../../../utils/publisherControl';
 import { buildHostedUrl } from '../../../utils/hostedFeed';
 import type { LinkBackState } from './useLinkBackStatus';
+import { BetaTag } from '../../BetaTag';
 import { InfoIcon } from '../../InfoIcon';
 import { Toggle } from '../../Toggle';
 import { Section } from '../../Section';
@@ -714,14 +715,14 @@ export function CatalogFeedsSection({ publisherFeed, dispatch, linkBack }: Catal
                   {/* Shown when the catalog already has a recommendation, so turning the
                       beta toggle off can never hide one that will be written. */}
                   {(showBeta || item.pinned) && (
-                    <div className="form-group">
+                    <div className="form-group beta-field">
                       <Toggle
                         checked={!!item.pinned}
                         onChange={val => dispatch({
                           type: 'UPDATE_REMOTE_ITEM',
                           payload: { index, item: { ...item, pinned: val } }
                         })}
-                        label="Recommended first listen 🧪"
+                        label={<>Recommended first listen <BetaTag /></>}
                         labelSuffix={<InfoIcon text={PUBLISHER_FIELD_INFO.remoteItemPinned} />}
                       />
                     </div>
