@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PublisherFeed, RemoteItem } from '../../../types/feed';
-import { checkAlbumLinkBack, getPlatformHost, isMspHosted, type LinkBackResult } from '../../../utils/publisherControl';
+import { checkAlbumLinkBack, getPlatformHost, isMspHosted, withRoleCheck, type LinkBackResult } from '../../../utils/publisherControl';
+import { roleTokens } from '../../../utils/publisherRole';
 
 export type LinkBackEntry = LinkBackResult | 'checking';
 
@@ -39,6 +40,25 @@ export function selectItemsToCheck(
     const known = results[key];
     return !(skipLinked && known && known !== 'checking' && known.status === 'linked');
   });
+}
+
+/**
+ * A row's status as shown. The stored result keeps the role the album states,
+ * and the role check runs here against the row's current role: the artist can
+ * change that role after the check, and the album needn't be read again for it.
+ */
+export function entryFor(
+  results: Record<string, LinkBackEntry>,
+  guid: string,
+  item: RemoteItem
+): LinkBackEntry | undefined {
+  const entry = results[keyFor(guid, item)];
+  return entry && entry !== 'checking' ? withRoleCheck(entry, item.rel) : entry;
+}
+
+/** What a publish leaves in the album: this link, with the row's role (processCatalogFeed writes it). */
+export function linkedByPublish(item: RemoteItem): LinkBackResult {
+  return roleTokens(item.rel).length > 0 ? { status: 'linked', albumRel: item.rel } : { status: 'linked' };
 }
 
 /**
@@ -90,7 +110,7 @@ export function useLinkBackStatus(publisherFeed: PublisherFeed | null, feedInsta
 
   const markLinked = useCallback((items: RemoteItem[]) => {
     const guid = feedRef.current?.podcastGuid ?? '';
-    setResults(prev => ({ ...prev, ...Object.fromEntries(items.map(item => [keyFor(guid, item), { status: 'linked' as const }])) }));
+    setResults(prev => ({ ...prev, ...Object.fromEntries(items.map(item => [keyFor(guid, item), linkedByPublish(item)])) }));
   }, [setResults]);
 
   const checkAll = useCallback(async () => {
@@ -106,7 +126,7 @@ export function useLinkBackStatus(publisherFeed: PublisherFeed | null, feedInsta
     void runChecks((feedRef.current?.remoteItems ?? []).filter(item => isMspHosted(item.feedUrl ?? '')), true);
   }, [feedInstance, runChecks]);
 
-  const statusFor = (item: RemoteItem) => results[keyFor(publisherFeed?.podcastGuid ?? '', item)];
+  const statusFor = (item: RemoteItem) => entryFor(results, publisherFeed?.podcastGuid ?? '', item);
 
   return { statusFor, checkItems, checkAll, markLinked, checkingAll };
 }

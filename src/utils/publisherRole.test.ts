@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { catalogRole, normalizeRel, roleTokens, withRole, withRoleToken } from './publisherRole';
+import { catalogRole, normalizeRel, roleTokens, sameRoles, withRole, withRoleToken } from './publisherRole';
 import { generateRssFeed, generatePublisherRssFeed } from './xmlGenerator';
 import { parseRssFeed, parsePublisherRssFeed } from './xmlParser';
 import { createEmptyAlbum, createEmptyPublisherFeed, createEmptyRemoteItem } from '../types/feed';
@@ -58,6 +58,24 @@ describe('roleTokens', () => {
     expect(roleTokens(undefined)).toEqual([]);
     expect(roleTokens('  ')).toEqual([]);
     expect(normalizeRel(undefined)).toBe('');
+  });
+});
+
+describe('sameRoles (podcast-namespace PR #793)', () => {
+  it('agrees when both sides name the same set of tokens, in any order', () => {
+    expect(sameRoles('artist producer', 'producer artist')).toBe(true);
+    expect(sameRoles('artist, producer', 'producer artist')).toBe(true);
+  });
+
+  it('agrees on a token in another letter case, as MSP reads tokens everywhere else', () => {
+    expect(sameRoles('Artist', 'artist')).toBe(true);
+    expect(sameRoles('remixer artist', 'artist Remixer')).toBe(true);
+  });
+
+  it('disagrees when a token is missing or different', () => {
+    expect(sameRoles('artist producer', 'artist')).toBe(false);
+    expect(sameRoles('label', 'artist')).toBe(false);
+    expect(sameRoles('remixer', 'mixer')).toBe(false);
   });
 });
 
