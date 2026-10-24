@@ -14,7 +14,8 @@
 // of Longy's Wavlake artist page; the URL in those tags still names Wavlake.
 // And "Into the Valueverse 1" names Nathan Abbott's publisher feed, which MSP
 // must never overwrite on another artist's behalf.
-import type { RemoteItem } from '../types/feed';
+import { publisherParties, sameGuid } from './publisherParties';
+import type { Album, RemoteItem } from '../types/feed';
 import { fetchFeedFromUrl, parseRssFeed } from './xmlParser';
 import { apiFetch } from './api';
 
@@ -57,12 +58,9 @@ export const extractFeedIdFromUrl = (url: string): string | null => {
   return match ? match[1] : null;
 };
 
-/** GUIDs compare trimmed and case-insensitively; two empty GUIDs are not the same feed. */
-export function sameGuid(a: string | undefined, b: string | undefined): boolean {
-  const x = (a ?? '').trim().toLowerCase();
-  const y = (b ?? '').trim().toLowerCase();
-  return x !== '' && x === y;
-}
+// sameGuid lives with the other publisher-identity rules; re-exported for the
+// callers that have always imported it from here.
+export { sameGuid };
 
 export type LinkBackResult =
   | { status: 'linked' }
@@ -74,20 +72,35 @@ export type LinkBackResult =
  * Does this album feed point back to the publisher? Only the GUID is compared:
  * the URL in the tag may be an older address of the same publisher feed, and the
  * one case where the URL is plainly wrong (Wavlake) is refused by host anyway.
+ * Every party counts (utils/publisherParties.ts): an album that names its artist
+ * first and this label second points back to the label too.
  */
 export function classifyLinkBack(xml: string, publisherGuid: string): LinkBackResult {
-  let reference;
+  let album;
   try {
-    reference = parseRssFeed(xml).publisher;
+    album = parseRssFeed(xml);
   } catch {
     return { status: 'unknown' };
   }
-  if (!reference || !reference.feedGuid?.trim()) return { status: 'none' };
-  if (sameGuid(reference.feedGuid, publisherGuid)) return { status: 'linked' };
+  return classifyAlbumLinkBack(album, publisherGuid);
+}
+
+/**
+ * classifyLinkBack for an album already parsed. 'other' is an album that is
+ * another publisher's claim, which the catalog flows leave unchanged.
+ */
+export function classifyAlbumLinkBack(
+  album: Pick<Album, 'publisher' | 'additionalPublishers'>,
+  publisherGuid: string
+): Exclude<LinkBackResult, { status: 'unknown' }> {
+  const parties = publisherParties(album);
+  if (parties.some(party => sameGuid(party.feedGuid, publisherGuid))) return { status: 'linked' };
+  const other = parties.find(party => party.feedGuid?.trim());
+  if (!other) return { status: 'none' };
   return {
     status: 'other',
-    publisherGuid: reference.feedGuid.trim(),
-    ...(reference.feedUrl ? { publisherUrl: reference.feedUrl } : {})
+    publisherGuid: other.feedGuid.trim(),
+    ...(other.feedUrl ? { publisherUrl: other.feedUrl } : {})
   };
 }
 
@@ -139,7 +152,12 @@ export function platformWarning({ name }: PlatformHost): string {
     `remove the ${name} copy, or ask ${name} to remove it, then delete this row and add the new copy from Search Directory.`;
 }
 
-export function linkBackMessage(result: LinkBackResult, onMsp: boolean): string {
+/**
+ * `addsParty`: the beta multi-publisher feature is on, so publish and Download
+ * Catalog add this publisher to an album that names another one instead of
+ * leaving it alone (utils/publisherParties.ts, linkPublisher).
+ */
+export function linkBackMessage(result: LinkBackResult, onMsp: boolean, addsParty = false): string {
   switch (result.status) {
     case 'linked':
       return 'Points back to this publisher feed.';
@@ -148,6 +166,11 @@ export function linkBackMessage(result: LinkBackResult, onMsp: boolean): string 
         ? 'Not linked yet. MSP adds the link back when you publish.'
         : "Not linked yet. Download this album's new version in Download Catalog and upload it to your host.";
     case 'other':
+      if (addsParty) {
+        return `This album names a different publisher feed (${result.publisherGuid}). With Beta Features on, ` + (onMsp
+          ? 'MSP adds this publisher as another publisher of the album when you publish, and keeps that one.'
+          : "the album's new version in Download Catalog names both publishers. Upload it only if you control this album.");
+      }
       return `This album names a different publisher feed (${result.publisherGuid}). An album can name only one publisher, ` +
         'so MSP leaves it alone. Ask the owner of that publisher feed if it should move.';
     case 'unknown':

@@ -299,6 +299,12 @@ export interface Album {
   // Publisher reference (optional - links this feed to a parent publisher feed)
   publisher?: PublisherReference;
 
+  // Further parties inside the same <podcast:publisher>, in feed order, after
+  // `publisher` (the primary party). An album released by a label and credited
+  // to its artist names both. Proposed in podcast-namespace PR #793; see
+  // utils/publisherParties.ts.
+  additionalPublishers?: PublisherReference[];
+
   // Unknown/unsupported XML elements (preserved for round-trip)
   unknownChannelElements?: Record<string, unknown>;
 

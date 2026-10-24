@@ -3,6 +3,7 @@ import {
   PLATFORM_HOSTS,
   getPlatformHost,
   classifyLinkBack,
+  classifyAlbumLinkBack,
   checkAlbumLinkBack,
   fetchCatalogFeedXml,
   platformRefusal,
@@ -80,6 +81,24 @@ describe('classifyLinkBack', () => {
       .toEqual({ status: 'other', publisherGuid: NATHAN_PUBLISHER, publisherUrl: url });
   });
 
+  it('is linked when this publisher is a later party (podcast-namespace PR #793)', () => {
+    const two = '<podcast:publisher>' +
+      `<podcast:remoteItem medium="publisher" rel="artist" feedGuid="${NATHAN_PUBLISHER}"/>` +
+      `<podcast:remoteItem medium="publisher" rel="label" feedGuid="${LONGY_PUBLISHER}"/>` +
+      '</podcast:publisher>';
+    expect(classifyLinkBack(album(two), LONGY_PUBLISHER)).toEqual({ status: 'linked' });
+    expect(classifyLinkBack(album(two), NATHAN_PUBLISHER)).toEqual({ status: 'linked' });
+  });
+
+  it('reports the first publisher named by GUID when none is this one', () => {
+    const urlOnly = 'https://example.com/old-address.xml';
+    const two = '<podcast:publisher>' +
+      `<podcast:remoteItem medium="publisher" feedUrl="${urlOnly}"/>` +
+      `<podcast:remoteItem medium="publisher" feedGuid="${NATHAN_PUBLISHER}"/>` +
+      '</podcast:publisher>';
+    expect(classifyLinkBack(album(two), LONGY_PUBLISHER)).toEqual({ status: 'other', publisherGuid: NATHAN_PUBLISHER });
+  });
+
   it('reports no publisher tag', () => {
     expect(classifyLinkBack(album(''), LONGY_PUBLISHER)).toEqual({ status: 'none' });
   });
@@ -95,6 +114,36 @@ describe('classifyLinkBack', () => {
 
   it('reports unreadable XML as unknown', () => {
     expect(classifyLinkBack('<html><body>Not found</body></html>', LONGY_PUBLISHER)).toEqual({ status: 'unknown' });
+  });
+});
+
+describe('classifyAlbumLinkBack', () => {
+  // What Download Catalog checks on the album it has already parsed.
+  it('is other for an album that names only another publisher, and linked when this one is a later party', () => {
+    const nathan = { feedGuid: NATHAN_PUBLISHER, feedUrl: 'https://example.com/nathan.xml' };
+    expect(classifyAlbumLinkBack({ publisher: nathan }, LONGY_PUBLISHER)).toEqual({
+      status: 'other',
+      publisherGuid: NATHAN_PUBLISHER,
+      publisherUrl: 'https://example.com/nathan.xml'
+    });
+    expect(classifyAlbumLinkBack(
+      { publisher: nathan, additionalPublishers: [{ feedGuid: LONGY_PUBLISHER }] },
+      LONGY_PUBLISHER
+    )).toEqual({ status: 'linked' });
+    expect(classifyAlbumLinkBack({}, LONGY_PUBLISHER)).toEqual({ status: 'none' });
+  });
+});
+
+describe('linkBackMessage with the beta multi-publisher feature', () => {
+  const other = { status: 'other' as const, publisherGuid: NATHAN_PUBLISHER };
+
+  it('says MSP leaves the album alone without it', () => {
+    expect(linkBackMessage(other, true)).toContain('MSP leaves it alone');
+  });
+
+  it('says publish adds this publisher, or that the new version names both', () => {
+    expect(linkBackMessage(other, true, true)).toContain('adds this publisher as another publisher');
+    expect(linkBackMessage(other, false, true)).toContain('names both publishers');
   });
 });
 

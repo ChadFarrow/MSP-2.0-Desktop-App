@@ -115,6 +115,34 @@ describe('processCatalogFeed', () => {
     expect(updateHostedFeedWithNostr).not.toHaveBeenCalled();
   });
 
+  it('updates its own entry in an album that names two publishers, and keeps the other', async () => {
+    const ARTIST = 'c0d95236-3400-43e6-9721-d3904f182767';
+    const two = '<podcast:publisher>' +
+      `<podcast:remoteItem medium="publisher" rel="artist" feedGuid="${ARTIST}"/>` +
+      `<podcast:remoteItem medium="publisher" feedGuid="${PUBLISHER.toUpperCase()}"/>` +
+      '</podcast:publisher>';
+    vi.mocked(fetchCatalogFeedXml).mockResolvedValue(albumXml(two));
+    vi.mocked(getHostedFeedInfo).mockReturnValue({ feedId: ALBUM, editToken: 't', createdAt: 0, lastUpdated: 0 });
+    const result = await processCatalogFeed({ ...item(MSP_URL), rel: 'label' }, PUBLISHER, PUBLISHER_URL);
+    expect(result.status).toBe('updated');
+    const xml = vi.mocked(updateHostedFeed).mock.calls[0][2];
+    expect(xml.match(/<podcast:remoteItem medium="publisher"/g)).toHaveLength(2);
+    expect(xml.indexOf(`feedGuid="${ARTIST}" rel="artist"`))
+      .toBeLessThan(xml.indexOf(`feedGuid="${PUBLISHER}" feedUrl="${PUBLISHER_URL}" rel="label"`));
+  });
+
+  it('adds itself after the publisher an album names, with addParty (beta)', async () => {
+    const ARTIST = 'c0d95236-3400-43e6-9721-d3904f182767';
+    const other = `<podcast:publisher><podcast:remoteItem medium="publisher" rel="artist" feedGuid="${ARTIST}"/></podcast:publisher>`;
+    vi.mocked(fetchCatalogFeedXml).mockResolvedValue(albumXml(other));
+    vi.mocked(getHostedFeedInfo).mockReturnValue({ feedId: ALBUM, editToken: 't', createdAt: 0, lastUpdated: 0 });
+    const result = await processCatalogFeed({ ...item(MSP_URL), rel: 'label' }, PUBLISHER, PUBLISHER_URL, { addParty: true });
+    expect(result.status).toBe('updated');
+    const xml = vi.mocked(updateHostedFeed).mock.calls[0][2];
+    expect(xml.indexOf(`feedGuid="${ARTIST}" rel="artist"`))
+      .toBeLessThan(xml.indexOf(`feedGuid="${PUBLISHER}" feedUrl="${PUBLISHER_URL}" rel="label"`));
+  });
+
   it('still updates an MSP album it has a record for', async () => {
     vi.mocked(fetchCatalogFeedXml).mockResolvedValue(albumXml());
     vi.mocked(getHostedFeedInfo).mockReturnValue({ feedId: ALBUM, editToken: 't', createdAt: 0, lastUpdated: 0 });

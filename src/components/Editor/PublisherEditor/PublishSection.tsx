@@ -4,6 +4,7 @@ import { Section } from '../../Section';
 import { InfoIcon } from '../../InfoIcon';
 import { useNostr } from '../../../store/nostrStore';
 import { useFeed } from '../../../store/feedStore';
+import { useExperimental } from '../../../store/experimentalStore';
 import {
   publishPublisherFeed,
   getPublishStatus,
@@ -34,6 +35,7 @@ interface StepState {
 export function PublishSection({ publisherFeed, linkBack }: PublishSectionProps) {
   const { state: nostrState } = useNostr();
   const { dispatch } = useFeed();
+  const { showBeta } = useExperimental();
   const isLoggedIn = nostrState.isLoggedIn;
 
   // Publish state
@@ -130,6 +132,7 @@ export function PublishSection({ publisherFeed, linkBack }: PublishSectionProps)
       updateCatalogFeeds: updateCatalogFeeds && publisherFeed.remoteItems.length > 0,
       linkNostr: isLoggedIn,
       nostrPubkey: nostrState.user?.pubkey,
+      addParty: showBeta,
       onProgress: setProgress
     });
 

@@ -878,3 +878,39 @@ describe('feedReducer SET_ALTERNATE_ENCLOSURE_MEASURED', () => {
     expect(height(typed)).toBe(typed);
   });
 });
+
+describe('feedReducer SET_PUBLISHER_GUID', () => {
+  // A Podcast Index lookup lands after a network round trip. It names the
+  // publisher by URL, so it can't write over an edit made meanwhile.
+  const URL_A = 'https://example.com/artist.xml';
+  // Built inline, not with makeState: the Desktop App's copy of this file has
+  // its own makeState, and this block reaches it through the sync.
+  const withPublisher = (fields: Partial<Album>): FeedState => ({
+    feedType: 'album',
+    album: { ...createEmptyAlbum(), ...fields },
+    videoFeed: null,
+    publisherFeed: null,
+    isDirty: false,
+    publisherFeedInstance: 0,
+    feedCheck: emptyFeedCheck()
+  });
+  const found = (state: FeedState, feedUrl = URL_A) =>
+    feedReducer(state, { type: 'SET_PUBLISHER_GUID', payload: { feedUrl, feedGuid: 'artist-guid' } });
+
+  it('sets the GUID and keeps the rel an imported feed states', () => {
+    const state = found(withPublisher({ publisher: { feedGuid: '', feedUrl: URL_A, rel: 'artist' } }));
+    expect(state.album.publisher).toEqual({ feedGuid: 'artist-guid', feedUrl: URL_A, rel: 'artist' });
+    expect(state.isDirty).toBe(true);
+  });
+
+  it('keeps the other publishers', () => {
+    const label = { feedGuid: 'label-guid', feedUrl: 'https://example.com/label.xml', rel: 'label' };
+    const state = found(withPublisher({ publisher: { feedGuid: '', feedUrl: URL_A }, additionalPublishers: [label] }));
+    expect(state.album.additionalPublishers).toEqual([label]);
+  });
+
+  it('changes nothing when the URL was edited meanwhile', () => {
+    const state = withPublisher({ publisher: { feedGuid: '', feedUrl: 'https://example.com/artist.xm' } });
+    expect(found(state)).toBe(state);
+  });
+});

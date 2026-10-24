@@ -23,6 +23,7 @@ import { XMLValidator } from 'fast-xml-parser';
 import { createFeedXmlParser } from './xmlParser';
 import { detectAddressType } from './addressUtils';
 import { MIN_PLAUSIBLE_MEDIA_BYTES } from './audioUtils';
+import { samePublisher } from './publisherParties';
 import { LEGACY_MSP_NODE_PUBKEY } from '../types/feed';
 import type { FeedIssue, IssueArea, IssueCode, IssueLevel } from './feedChecks';
 
@@ -138,12 +139,17 @@ function inspectAlbum(channel: XmlNode, medium: string, add: Add) {
   }
 
   // <podcast:publisher> wrapping exactly one remoteItem is the spec form; the
-  // parser also reads attributes on the wrapper, repeated remoteItems and a bare
-  // channel-level remoteItem medium="publisher", and the generator rewrites them.
+  // parser also reads attributes on the wrapper, the same publisher named twice
+  // and a bare channel-level remoteItem medium="publisher", and the generator
+  // rewrites them. Several remoteItems naming different publishers are one party
+  // each (podcast-namespace PR #793, utils/publisherParties.ts) and are kept as
+  // they are, so they are not reported.
   const publisher = channel['podcast:publisher'];
   const bareRef = asArray(channel['podcast:remoteItem']).some(item => attr(item, 'medium') === 'publisher');
   const wrapperAttrs = publisher && (attr(publisher, 'feedGuid') || attr(publisher, 'feedUrl'));
-  const repeated = publisher && typeof publisher === 'object' && Array.isArray((publisher as XmlNode)['podcast:remoteItem']);
+  const refs = (publisher && typeof publisher === 'object' ? asArray((publisher as XmlNode)['podcast:remoteItem']) : [])
+    .map(item => ({ feedGuid: attr(item, 'feedGuid'), feedUrl: attr(item, 'feedUrl') }));
+  const repeated = refs.some((ref, i) => refs.slice(0, i).some(earlier => samePublisher(earlier, ref)));
   if (bareRef || wrapperAttrs || repeated) {
     add('outdated', 'publisher-ref-shape', 'feed', 'The link to your publisher feed uses a non-standard form. MSP writes the standard <podcast:publisher> block when you save.');
   }

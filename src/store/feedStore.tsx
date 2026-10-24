@@ -14,6 +14,7 @@ import { probeLink } from '../utils/mediaProbe';
 import { nextTrackPubDate, resequenceTrackDates, trackOrderIssue } from '../utils/trackOrder';
 import { catalogRole, withRole } from '../utils/publisherRole';
 import { withMeasured, type MeasuredField } from '../utils/alternateEnclosure';
+import { withPartyGuid } from '../utils/publisherParties';
 
 export type { FeedType };
 
@@ -35,6 +36,8 @@ export type FeedAction =
   | { type: 'REMOVE_FUNDING'; payload: number }
   | { type: 'ADD_TRACK'; payload?: Track }
   | { type: 'UPDATE_TRACK'; payload: { index: number; track: Partial<Track> } }
+  // A Podcast Index lookup that lands late: by URL, never by position (see withPartyGuid).
+  | { type: 'SET_PUBLISHER_GUID'; payload: { feedUrl: string; feedGuid: string } }
   // A size or height lookup that lands late: by id, never by index (see withMeasured).
   | { type: 'SET_ALTERNATE_ENCLOSURE_MEASURED'; payload: { trackId: string; versionId: string; url: string; field: MeasuredField; value: string } }
   | { type: 'REMOVE_TRACK'; payload: number }
@@ -357,6 +360,16 @@ export function feedReducer(state: FeedState, action: FeedAction): FeedState {
           i === action.payload.index ? { ...t, ...action.payload.track } : t
         )
       });
+
+    case 'SET_PUBLISHER_GUID': {
+      // The lookup started when the URL was typed or the feed opened; the user may
+      // have edited, moved or removed that publisher since. Unchanged state when
+      // no publisher is at that URL any more, and every other field (rel, the
+      // other parties) is kept.
+      const fields = withPartyGuid(activeAlbum, action.payload.feedUrl, action.payload.feedGuid);
+      if (!fields) return state;
+      return updateActiveFeed(state, { ...activeAlbum, ...fields });
+    }
 
     case 'SET_ALTERNATE_ENCLOSURE_MEASURED': {
       // The lookup started up to ~10 s ago; the track may have moved, been

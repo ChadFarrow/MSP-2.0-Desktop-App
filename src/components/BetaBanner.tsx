@@ -6,6 +6,16 @@ import './BetaBanner.css';
 // The names match the field labels, which carry a <BetaTag /> in the editor.
 const BETA_FEATURES = [
   {
+    name: 'This publisher is',
+    where: 'album publishers and publisher catalog feeds',
+    what: 'states what a publisher is to the album, such as its artist or label',
+  },
+  {
+    name: 'Other publishers',
+    where: 'album Publisher Feed section',
+    what: 'names more than one publisher for an album, such as the artist and the label',
+  },
+  {
     name: 'Alternate Versions',
     where: 'album tracks',
     what: 'extra files for a track, such as a lossless copy or its music video',
