@@ -49,6 +49,12 @@
     },
     "api/boosts/rebuild.ts": {
       "maxDuration": 60
+    },
+    "api/hosted/*.ts": {
+      "maxDuration": 130
+    },
+    "api/pubnotify.ts": {
+      "maxDuration": 130
     }
   }
 }
