@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -208,6 +208,123 @@ describe('notifyPodcastIndex', () => {
     expect(result.addResult?.description).toMatch(/credentials/i);
     // Only the pubnotify ping went out — no add attempt.
     expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('schedulePodping', () => {
+  const HOSTED_URL = 'https://musicsideproject.com/api/hosted/abc.xml';
+  const REQUEST_CONTEXT = Symbol.for('@vercel/request-context');
+  const globals = globalThis as Record<symbol, unknown>;
+  const urlsFetched = () => mockFetch.mock.calls.map(([url]) => String(url));
+
+  function onVercel() {
+    const waitUntil = vi.fn();
+    globals[REQUEST_CONTEXT] = { get: () => ({ waitUntil }) };
+    return waitUntil;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    vi.useFakeTimers();
+    process.env.PODPING_ENDPOINT_URL = 'https://hive.example.com/';
+    process.env.PODPING_BEARER_TOKEN = 'secret';
+    mockFetch.mockResolvedValue({ ok: true, status: 200, text: async () => '' });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    delete process.env.PODPING_ENDPOINT_URL;
+    delete process.env.PODPING_BEARER_TOKEN;
+    delete globals[REQUEST_CONTEXT];
+    mockFetch.mockReset();
+  });
+
+  it('holds a hosted feed until the caches have caught up, then notifies PI and Hive', async () => {
+    const waitUntil = onVercel();
+    const { schedulePodping, HOSTED_FEED_SETTLE_MS } = await import('./feedUtils');
+
+    schedulePodping(HOSTED_URL, { medium: 'music' });
+
+    expect(waitUntil).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(HOSTED_FEED_SETTLE_MS - 1);
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    await waitUntil.mock.calls[0][0];
+
+    expect(urlsFetched()).toHaveLength(2);
+    expect(urlsFetched()[0]).toContain('hub/pubnotify');
+    expect(urlsFetched()[1]).toContain('https://hive.example.com/');
+    expect(urlsFetched()[1]).toContain('medium=music');
+  });
+
+  it('waits longer than the 60 s blob CDN floor plus the edge TTL', async () => {
+    const { HOSTED_FEED_SETTLE_MS, HOSTED_FEED_EDGE_TTL_S } = await import('./feedUtils');
+
+    expect(HOSTED_FEED_SETTLE_MS).toBeGreaterThan((60 + HOSTED_FEED_EDGE_TTL_S) * 1000);
+  });
+
+  it('still sends the podping when the delayed pubnotify fails', async () => {
+    const waitUntil = onVercel();
+    mockFetch.mockRejectedValueOnce(new Error('PI down'));
+    const { schedulePodping, HOSTED_FEED_SETTLE_MS } = await import('./feedUtils');
+
+    schedulePodping(HOSTED_URL);
+    await vi.advanceTimersByTimeAsync(HOSTED_FEED_SETTLE_MS);
+    await waitUntil.mock.calls[0][0];
+
+    expect(urlsFetched()[1]).toContain('https://hive.example.com/');
+  });
+
+  it('sends a self-hosted feed at once, since MSP wrote nothing for it to wait on', async () => {
+    const waitUntil = onVercel();
+    const { schedulePodping } = await import('./feedUtils');
+
+    schedulePodping('https://example.com/feed.xml', { medium: 'music' });
+
+    expect(waitUntil).not.toHaveBeenCalled();
+    expect(urlsFetched()).toHaveLength(1);
+    expect(urlsFetched()[0]).toContain('https://hive.example.com/');
+  });
+
+  it('sends a hosted feed at once when nothing can keep the function alive for the wait', async () => {
+    const { schedulePodping } = await import('./feedUtils');
+
+    schedulePodping(HOSTED_URL);
+
+    expect(urlsFetched()).toHaveLength(1);
+    expect(urlsFetched()[0]).toContain('https://hive.example.com/');
+  });
+
+  it('holds nothing when podping is not configured', async () => {
+    delete process.env.PODPING_ENDPOINT_URL;
+    const waitUntil = onVercel();
+    const { schedulePodping, HOSTED_FEED_SETTLE_MS } = await import('./feedUtils');
+
+    schedulePodping(HOSTED_URL);
+    await vi.advanceTimersByTimeAsync(HOSTED_FEED_SETTLE_MS);
+
+    expect(waitUntil).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps a hosted save out of the podping wait: the response path only reaches PI', async () => {
+    const waitUntil = onVercel();
+    process.env.PODCASTINDEX_API_KEY = 'test-key';
+    process.env.PODCASTINDEX_API_SECRET = 'test-secret';
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => '' })
+      .mockResolvedValueOnce({ status: 200, text: async () => JSON.stringify({ status: true, feed: { id: 7 } }) });
+    const { notifyPodcastIndex } = await import('./feedUtils');
+
+    const result = await notifyPodcastIndex(HOSTED_URL, { medium: 'music' });
+
+    expect(result).toEqual({ podcastIndexId: 7 });
+    expect(waitUntil).toHaveBeenCalledTimes(1);
+    expect(urlsFetched()).toHaveLength(2);
+    expect(urlsFetched()[0]).toContain('hub/pubnotify');
+    expect(urlsFetched()[1]).toContain('add/byfeedurl');
   });
 });
 

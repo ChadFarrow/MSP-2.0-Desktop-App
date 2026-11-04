@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Mock } from 'vitest';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
@@ -12,7 +12,8 @@ vi.stubGlobal('fetch', mockFetch);
 const { mockGuard } = vi.hoisted(() => ({ mockGuard: vi.fn() }));
 vi.mock('./_utils/feedReachability.js', () => ({
   guardFeedSubmission: mockGuard,
-  wantsForce: (v: unknown) => v === true || v === '1' || v === 'true'
+  wantsForce: (v: unknown) => v === true || v === '1' || v === 'true',
+  isMspHostedUrl: (url: string) => url.includes('/api/hosted/')
 }));
 
 // Mock crypto for auth header generation
@@ -399,6 +400,50 @@ describe('pubnotify API', () => {
         expect.objectContaining({ force: true })
       );
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+  });
+
+  describe('podping timing', () => {
+    const REQUEST_CONTEXT = Symbol.for('@vercel/request-context');
+    const globals = globalThis as Record<symbol, unknown>;
+    const podpingCalls = () => mockFetch.mock.calls.filter(([url]) => String(url).startsWith('https://hive.example.com'));
+
+    beforeEach(() => {
+      process.env.PODPING_ENDPOINT_URL = 'https://hive.example.com/';
+      process.env.PODPING_BEARER_TOKEN = 'secret';
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({}),
+        text: vi.fn().mockResolvedValue('{}')
+      });
+      globals[REQUEST_CONTEXT] = { get: () => ({ waitUntil: vi.fn() }) };
+    });
+
+    afterEach(() => {
+      delete process.env.PODPING_ENDPOINT_URL;
+      delete process.env.PODPING_BEARER_TOKEN;
+      delete globals[REQUEST_CONTEXT];
+      mockFetch.mockReset();
+    });
+
+    it('holds the podping for a hosted URL, which may have just been written', async () => {
+      const { default: handler } = await import('./pubnotify');
+      const { req, res } = createMockReqRes({ url: 'https://musicsideproject.com/api/hosted/abc.xml', medium: 'music' });
+      await handler(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(podpingCalls()).toHaveLength(0);
+    });
+
+    it('sends the podping at once for a self-hosted feed', async () => {
+      const { default: handler } = await import('./pubnotify');
+      const { req, res } = createMockReqRes({ url: 'https://example.com/feed.xml', medium: 'music' });
+      await handler(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(podpingCalls()).toHaveLength(1);
+      expect(podpingCalls()[0][0]).toContain('medium=music');
     });
   });
 });

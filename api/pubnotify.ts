@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuthHeaders } from './_utils/podcastIndex.js';
-import { notifyPodping, isPodpingConfigured } from './_utils/feedUtils.js';
+import { schedulePodping } from './_utils/feedUtils.js';
 import { getFeedUrlError, normalizeFeedUrl } from './_utils/urlValidation.js';
 import { guardFeedSubmission, wantsForce } from './_utils/feedReachability.js';
 import { getClientIp } from './_utils/urlSafety.js';
@@ -80,15 +80,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Broadcast a podping in parallel so indexers that watch Hive re-crawl too.
-    // Fire-and-forget; Railway/hivepinger handles its own retries.
-    if (isPodpingConfigured()) {
-      notifyPodping(url, { reason: 'update', medium: podpingMedium }).then((result) => {
-        if (!result.ok) {
-          console.warn(`Podping broadcast failed for ${url}: ${result.error ?? 'unknown'}`);
-        }
-      });
-    }
+    // Broadcast a podping so indexers that watch Hive re-crawl too. Fire-and-forget;
+    // Railway/hivepinger handles its own retries. publisherPublish.ts calls this right
+    // after writing an MSP-hosted album, so a hosted URL waits for the caches to catch up.
+    schedulePodping(url, { medium: podpingMedium });
 
     // Then, look up the feed to get its Podcast Index ID (requires auth)
     // Try GUID lookup first (more reliable), fall back to URL lookup

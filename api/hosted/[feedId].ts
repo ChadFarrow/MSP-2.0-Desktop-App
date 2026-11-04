@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { put, del, list } from '@vercel/blob';
 import { parseAuthHeader, parseFeedAuthHeader } from '../_utils/adminAuth.js';
 import {
+  HOSTED_FEED_EDGE_TTL_S,
   notifyPodcastIndex,
   getBaseUrl,
   hashToken,
@@ -191,7 +192,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Set cache and CORS headers. application/xml (not application/rss+xml)
         // so browsers render the feed inline in a tab instead of downloading it;
         // podcast apps / Podcast Index parse either content-type the same.
-        res.setHeader('Cache-Control', 'public, max-age=300');
+        // The edge TTL decides how long a save stays invisible, and so how long a
+        // podping has to wait: see HOSTED_FEED_SETTLE_MS before raising it.
+        res.setHeader('Cache-Control', `public, max-age=0, s-maxage=${HOSTED_FEED_EDGE_TTL_S}`);
         res.setHeader('Content-Type', 'application/xml; charset=utf-8');
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
