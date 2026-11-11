@@ -1,0 +1,103 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="xslsheet"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <atom:link rel="self" type="application/atom+xml" href="https://serve.podhome.fm/rss/b39fc3b2-2742-5944-a800-e87c42a093a3" title="MP3 Audio" />
+    <atom:link rel="hub" href="https://pubsubhubbub.appspot.com/" />
+    <podcast:podping usesPodping="true" />
+    <podcast:value type="lightning" method="keysend" suggested="5000.00000000000">
+      <podcast:valueRecipient name="frankiepaint@fountain.fm" type="node" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" split="7" fee="false" customKey="906608" customValue="01VTbdZbLdAWvw11TU7UTR" />
+      <podcast:valueRecipient name="ThunderRoad" type="node" address="03589f3ddb81f3802f3fc9aaa359b684ed19840b55db88f7c9c2cc671e74ac93e2" split="4" fee="false" />
+      <podcast:valueRecipient name="BoostBot" type="node" address="03d55f4d4c870577e98ac56605a54c5ed20c8897e41197a068fd61bdb580efaa67" split="1" fee="false" />
+      <podcast:valueRecipient name="ericpp" type="node" address="02c7bb6f29f09d92d40d62d64443b688891259dea324406b4678df6235794f24bf" split="6" fee="false" />
+      <podcast:valueRecipient name="NickTheRat@getalby.com" type="node" address="030a58b8653d32b99200a2334cfe913e51dc7d155aa0116c176657a4f1722677a3" split="6" fee="false" customKey="696969" customValue="5YIgYogNriaUfehBCvES" />
+      <podcast:valueRecipient name="isobot@getalby.com" type="node" address="030a58b8653d32b99200a2334cfe913e51dc7d155aa0116c176657a4f1722677a3" split="6" fee="false" customKey="696969" customValue="ep8O788eWPLvZEvPCdhl" />
+      <podcast:valueRecipient name="Hot Liv Tyler" type="node" address="030a58b8653d32b99200a2334cfe913e51dc7d155aa0116c176657a4f1722677a3" split="7" fee="false" customKey="696969" customValue="NnZfac239TZsKyNAQEIO" />
+      <podcast:valueRecipient name="herbivore@getalby.com" type="node" address="030a58b8653d32b99200a2334cfe913e51dc7d155aa0116c176657a4f1722677a3" split="5" fee="false" customKey="696969" customValue="Rg1q1IBNumM9qgmBm0s5" />
+      <podcast:valueRecipient name="heycitizen" type="node" address="03a524eb4f2e9f07b4cbb904f265ed21af7e46cebd8dc92eb9682dfd0d54f6349f" split="5" fee="false" />
+      <podcast:valueRecipient name="StevenB" type="node" address="035ad2c954e264004986da2d9499e1732e5175e1dcef2453c921c6cdcc3536e9d8" split="6" fee="false" />
+      <podcast:valueRecipient name="boostbot@fountain.fm" type="node" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" split="1" fee="false" customKey="906608" customValue="01IMQkt4BFzAiSynxcQQqd" />
+      <podcast:valueRecipient name="marykateultra@fountain.fm" type="node" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" split="7" fee="false" customKey="906608" customValue="01vI2zSit4cEphEcc8ciDS" />
+      <podcast:valueRecipient name="DuhLaurien" type="node" address="0368fed1c2fc35393228091c3ed1558090bfefc2ba5f57d8e025784f7fbc705dd5" split="7" fee="false" />
+      <podcast:valueRecipient name="makeheroism@fountain.fm" type="node" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" split="6" fee="false" customKey="906608" customValue="01Ek7o8H3hZJor1uWXd3hb" />
+      <podcast:valueRecipient name="Spencer" type="node" address="03ecb3ee55ba6324d40bea174de096dc9134cb35d990235723b37ae9b5c49f4f53" split="6" fee="false" />
+      <podcast:valueRecipient name="deltaog@getalby.com" type="node" address="030a58b8653d32b99200a2334cfe913e51dc7d155aa0116c176657a4f1722677a3" split="5" fee="false" customKey="696969" customValue="16qtdH4XsWV4lii5rDHo" />
+      <podcast:valueRecipient name="empatheyes@fountain.fm" type="node" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" split="5" fee="false" customKey="906608" customValue="01zBEoIV6zBgaRkqknPWKL" />
+      <podcast:valueRecipient name="Malachi@fountain.fm" type="node" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" split="5" fee="false" customKey="906608" customValue="01Uw8fhg1QgaumZoQfept0" />
+      <podcast:valueRecipient name="lavish@fountain.fm" type="node" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" split="5" fee="false" customKey="906608" customValue="01o8Zpqqre1SWyIYPOCCPb" />
+    </podcast:value>
+    <image>
+      <url>https://assets.podhome.fm/677e5bd6-598f-4522-1134-08dbdac63cde/639059720448810009the%20satellite%20skirmish%20mku.gif</url>
+      <title>The Satellite Skirmish</title>
+      <link>http://satskirmish.com/</link>
+    </image>
+    <podcast:images srcset="https://assets.podhome.fm/677e5bd6-598f-4522-1134-08dbdac63cde/639059720448810009the%20satellite%20skirmish%20mku.gif 1500w" />
+    <podcast:medium>music</podcast:medium>
+    <title>The Satellite Skirmish</title>
+    <description><![CDATA[A v4v Remote Royale. Newly Minted Feed Featuring The Recap, Full Video, and Individual Tracks!]]></description>
+    <link>http://satskirmish.com/</link>
+    <language />
+    <podcast:locked owner="">no</podcast:locked>
+    <podcast:guid>b39fc3b2-2742-5944-a800-e87c42a093a3</podcast:guid>
+    <generator>Podhome (https://www.podhome.fm)</generator>
+    <managingEditor />
+    <lastBuildDate>Fri, 6 Feb 2026 09:54:10 +0000</lastBuildDate>
+    <pubDate>Fri, 6 Feb 2026 09:54:10 +0000</pubDate>
+    <itunes:title>The Satellite Skirmish</itunes:title>
+    <itunes:image href="https://assets.podhome.fm/677e5bd6-598f-4522-1134-08dbdac63cde/639059720448810009the%20satellite%20skirmish%20mku.gif" />
+    <itunes:new-feed-url>https://serve.podhome.fm/rss/b39fc3b2-2742-5944-a800-e87c42a093a3</itunes:new-feed-url>
+    <itunes:author>The Satellite Skirmish</itunes:author>
+    <itunes:owner>
+      <itunes:name />
+      <itunes:email />
+    </itunes:owner>
+    <itunes:explicit>false</itunes:explicit>
+    <itunes:category text="Music" />
+    <itunes:type>episodic</itunes:type>
+    <item>
+      <title>The Satellite Skirmish: Boost Recap</title>
+      <description><![CDATA[<p>Frankiepaint, Hot Liv Tyler, Marykate Ultra, DuhLaurien, EricPP, and boo-bury take the evening to thank everyone who sent value to this v4v remote royale!</p>
+<p>Check out the announcement of the winner on <a href="https://podverse.fm/episode/FoZ-aikn2">Homegrown Hits - Episode 43</a>!</p>
+<p>Stay tooned!</p>]]></description>
+      <guid isPermaLink="false">f475f98b-8ed4-4b06-8038-53727b9100d6</guid>
+      <link>http://satskirmish.com/</link>
+      <pubDate>Thu, 18 Jul 2024 07:17:02 +0000</pubDate>
+      <podcast:value type="lightning" method="keysend" suggested="5000.00000000000">
+        <podcast:valueRecipient name="frankiepaint@fountain.fm" type="node" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" split="15" fee="false" customKey="906608" customValue="01VTbdZbLdAWvw11TU7UTR" />
+        <podcast:valueRecipient name="ThunderRoad" type="node" address="03589f3ddb81f3802f3fc9aaa359b684ed19840b55db88f7c9c2cc671e74ac93e2" split="15" fee="false" />
+        <podcast:valueRecipient name="BoostBot" type="node" address="03d55f4d4c870577e98ac56605a54c5ed20c8897e41197a068fd61bdb580efaa67" split="1" fee="false" />
+        <podcast:valueRecipient name="ericpp" type="node" address="02c7bb6f29f09d92d40d62d64443b688891259dea324406b4678df6235794f24bf" split="15" fee="false" />
+        <podcast:valueRecipient name="isobot@getalby.com" type="node" address="030a58b8653d32b99200a2334cfe913e51dc7d155aa0116c176657a4f1722677a3" split="1" fee="false" customKey="696969" customValue="ep8O788eWPLvZEvPCdhl" />
+        <podcast:valueRecipient name="Hot Liv Tyler" type="node" address="030a58b8653d32b99200a2334cfe913e51dc7d155aa0116c176657a4f1722677a3" split="15" fee="false" customKey="696969" customValue="NnZfac239TZsKyNAQEIO" />
+        <podcast:valueRecipient name="StevenB" type="node" address="035ad2c954e264004986da2d9499e1732e5175e1dcef2453c921c6cdcc3536e9d8" split="7" fee="false" />
+        <podcast:valueRecipient name="boostbot@fountain.fm" type="node" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" split="1" fee="false" customKey="906608" customValue="01IMQkt4BFzAiSynxcQQqd" />
+        <podcast:valueRecipient name="marykateultra@fountain.fm" type="node" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" split="15" fee="false" customKey="906608" customValue="01vI2zSit4cEphEcc8ciDS" />
+        <podcast:valueRecipient name="DuhLaurien" type="node" address="0368fed1c2fc35393228091c3ed1558090bfefc2ba5f57d8e025784f7fbc705dd5" split="15" fee="false" />
+        <podcast:valueTimeSplit startTime="1" duration="265" remotePercentage="95">
+          <podcast:remoteItem feedGuid="b39fc3b2-2742-5944-a800-e87c42a093a3" itemGuid="1a4bc4fb-0b37-4b06-9de5-24fb500f93a1" />
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="3392" duration="86399" remotePercentage="95">
+          <podcast:remoteItem feedGuid="b39fc3b2-2742-5944-a800-e87c42a093a3" itemGuid="f68613cf-9435-4843-933d-724c0e9e8806" />
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="5224" duration="86399" remotePercentage="95">
+          <podcast:remoteItem feedGuid="b39fc3b2-2742-5944-a800-e87c42a093a3" itemGuid="9db6d76b-fe9e-4914-bcc4-c429e0d75d6b" />
+        </podcast:valueTimeSplit>
+      </podcast:value>
+      <itunes:image href="https://assets.podhome.fm/677e5bd6-598f-4522-1134-08dbdac63cde/639059676274727371ecap-2.gif" />
+      <podcast:images srcset="https://assets.podhome.fm/677e5bd6-598f-4522-1134-08dbdac63cde/639059676274727371ecap-2.gif 1500w" />
+      <itunes:duration>01:30:52</itunes:duration>
+      <itunes:explicit>true</itunes:explicit>
+      <itunes:title>The Satellite Skirmish: Boost Recap</itunes:title>
+      <itunes:author>The Satellite Skirmish</itunes:author>
+      <itunes:episodeType>Full</itunes:episodeType>
+      <enclosure url="https://serve.podhome.fm/episode/677e5bd6-598f-4522-1134-08dbdac63cde/6390596763613549592781723a-c37d-4589-8ec0-62953f1bbfca.mp3" length="131245689" type="audio/mpeg" />
+      <podcast:chapters url="https://assets.podhome.fm/677e5bd6-598f-4522-1134-08dbdac63cde/6390596763613549592781723a-c37d-4589-8ec0-62953f1bbfcav1.chapters.json" type="application/json" />
+      <podcast:person role="Guest" group="Cast" href="https://podcastindex.social/@boobury" img="https://assets.podhome.fm/677e5bd6-598f-4522-1134-08dbdac63cde/639059683947066333c3cf54.jpg">Boo-Bury</podcast:person>
+      <podcast:person role="Guest" group="Cast" img="https://assets.podhome.fm/677e5bd6-598f-4522-1134-08dbdac63cde/639059712408215751epaint.jpg">Frankiepaint</podcast:person>
+      <podcast:person role="Host" group="Cast" href="https://homegrownhits.substack.com/" img="https://assets.podhome.fm/677e5bd6-598f-4522-1134-08dbdac63cde/639059676155370953rofile.png">MaryKateUltra</podcast:person>
+      <podcast:person role="Host" group="Cast" href="https://dangeranddance.com/" img="https://assets.podhome.fm/61a244b1-9045-42df-6712-08de5cab0166/639057483720998467hot%2520liv%25201.jpg">Hot Liv Tyler</podcast:person>
+      <podcast:person role="Host" group="Cast" href="https://bowlafterbowl.com/" img="https://assets.podhome.fm/677e5bd6-598f-4522-1134-08dbdac63cde/63905967617088660520open.jpg">DuhLaurien</podcast:person>
+      <podcast:person role="scoreboard author" href="https://boostboard.vercel.app/terminal" img="https://assets.podhome.fm/677e5bd6-598f-4522-1134-08dbdac63cde/639059676183102224UYzqjH.jpg">ericpp</podcast:person>
+    </item>
+  </channel>
+</rss>

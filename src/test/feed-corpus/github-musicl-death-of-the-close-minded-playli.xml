@@ -1,0 +1,36 @@
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:podcast="https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/1.0.md" version="2.0">
+  <channel>
+    <title>Death of the Close Minded Playlist</title>
+    <description>Songs from the album Death of the Close Minded</description>
+    <itunes:image href="https://media.rssblue.com/podcasts/limited/cover-art.death-of-the-closed-minded.jpg"/>
+    <link>https://jackphemister.com/</link>
+    <generator>Sovereign Feeds</generator>
+    <podcast:medium>musicL</podcast:medium>
+    <image>
+      <url>https://media.rssblue.com/podcasts/limited/cover-art.death-of-the-closed-minded.jpg</url>
+      <link>https://jackphemister.com/</link>
+      <title>Death of the Close Minded Playlist</title>
+      <description>Songs from the album Death of the Close Minded</description>
+      <width>144</width>
+      <height>144</height>
+    </image>
+    <podcast:block>no</podcast:block>
+    <itunes:owner>
+      <itunes:email/>
+      <itunes:name/>
+    </itunes:owner>
+    <itunes:author>Jack Phemister Fan</itunes:author>
+    <pubDate>Sat, 12 Jul 2025 23:09:15 +0000</pubDate>
+    <lastBuildDate>Sat, 12 Jul 2025 23:09:15 +0000</lastBuildDate>
+    <podcast:guid>fd40b8a9-c7b7-5121-a1e3-e6d1186dc0bf</podcast:guid>
+    <podcast:complete>no</podcast:complete>
+    <podcast:remoteItem feedGuid="68678a97-855a-5968-8920-f4df641eac49" feedUrl="https://feeds.rssblue.com/backwards-sideways" itemGuid="65e440ec-f285-5cd9-8c42-1249ca9fd1c8" medium="music"/>
+    <podcast:remoteItem feedGuid="d62482fa-a0b9-590d-8102-9a286bac3b7b" feedUrl="https://feeds.rssblue.com/ice-statues" itemGuid="38c3cb3d-abbd-54f8-b347-2af7a60cd680" medium="music"/>
+    <podcast:remoteItem feedGuid="1aac3da3-601a-5ecf-8941-84ec985f1f2d" feedUrl="https://feeds.rssblue.com/infiltrated" feedImg="https://media.rssblue.com/podcasts/infiltrated/cover-art.death-of-the-closed-minded.jpg" itemGuid="203b1eb3-c8aa-5fe1-b2c4-ec8f04b47c3a"/>
+    <podcast:remoteItem feedGuid="b4ad477a-1145-5692-b405-507debe430bf" feedUrl="https://feeds.rssblue.com/wild-out-there" feedImg="https://media.rssblue.com/podcasts/wild-out-there/cover-art.death-of-the-closed-minded.jpg" itemGuid="6b3ec5f2-bd11-5447-9c1b-9a61aa14900b"/>
+    <podcast:remoteItem feedGuid="4c2331e6-ffd6-5a68-98f2-683cdbadd2d6" feedUrl="https://feeds.rssblue.com/i-know-you-know-i-know" feedImg="https://media.rssblue.com/podcasts/i-know-you-know-i-know/cover-art.iknowyouknowiknow.jpg" itemGuid="db27ba85-0b28-56a2-8057-513dca8c9b31"/>
+    <podcast:remoteItem feedGuid="25f12bca-f310-50a4-ad58-aebedc4f52f2" feedUrl="https://feeds.rssblue.com/adelaide" feedImg="https://media.rssblue.com/podcasts/adelaide/cover-art.death-of-the-closed-minded.jpg" itemGuid="b752e657-4ea9-5eb4-939e-bde4524d60ee"/>
+    <podcast:remoteItem feedGuid="8221b047-1dee-5226-9c4b-44235e9828ee" feedUrl="https://feeds.rssblue.com/matchstick-tail" feedImg="https://media.rssblue.com/podcasts/matchstick-tail/cover-art.death-of-the-closed-minded.jpg" itemGuid="35c6af60-f0de-5983-a1ce-608d2640e57e"/>
+    <podcast:remoteItem feedGuid="531c87af-11e7-5eed-9108-fde91ce8c9c4" feedUrl="https://feeds.rssblue.com/limited" feedImg="https://media.rssblue.com/podcasts/limited/cover-art.death-of-the-closed-minded.jpg" itemGuid="81aeb4ec-c191-59f0-a3af-453a476c9f2c"/>
+  </channel>
+</rss>

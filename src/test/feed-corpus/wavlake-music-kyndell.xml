@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:psc="http://podlove.org/simple-chapters" xmlns:podcast="https://podcastindex.org/namespace/1.0">
+	<channel>
+		<title><![CDATA[Kyndell]]></title>
+		<description><![CDATA[jSmovie — Smovieverse.]]></description>
+		<link>https://wavlake.com/jsmovie</link>
+		<generator>Wavlake</generator>
+		<lastBuildDate>Wed, 11 Nov 2026 01:06:19 GMT</lastBuildDate>
+		<atom:link href="https://wavlake.com/feed/music/495c42a0-388c-4d9a-a5eb-3616b222bbaf" rel="self" type="application/rss+xml"/>
+		<author><![CDATA[jSmovie]]></author>
+		<podcast:medium>music</podcast:medium>
+		<podcast:remoteItem medium="publisher" feedGuid="44f2785c-6a55-4f59-b47f-4a7fcedc7d01" feedUrl="https://wavlake.com/feed/artist/44f2785c-6a55-4f59-b47f-4a7fcedc7d01">
+		</podcast:remoteItem>
+		<podcast:category text="Hip-Hop/Rap">
+			<podcast:category text="null"/>
+		</podcast:category>
+		<podcast:guid>7d6c3a22-27de-5502-b51c-387bf3a2591d</podcast:guid>
+		<podcast:value type="lightning" method="keysend">
+			<podcast:valueRecipient name="Kyndell via Wavlake" type="node" address="02682b7c86f474d082fa9d274c3751291225448468691784c6f112187de975a8c2" customKey="16180339" customValue="495c42a0-388c-4d9a-a5eb-3616b222bbaf" split="100"/>
+		</podcast:value>
+		<itunes:author>jSmovie</itunes:author>
+		<itunes:summary>jSmovie — Smovieverse.</itunes:summary>
+		<itunes:owner>
+			<itunes:name>Wavlake</itunes:name>
+			<itunes:email>contact@wavlake.com</itunes:email>
+		</itunes:owner>
+		<itunes:explicit>false</itunes:explicit>
+		<itunes:image href="https://d12wklypp119aj.cloudfront.net/image/495c42a0-388c-4d9a-a5eb-3616b222bbaf.jpg"/>
+		<item>
+			<title><![CDATA[Kyndell]]></title>
+			<link>https://www.wavlake.com/album/495c42a0-388c-4d9a-a5eb-3616b222bbaf</link>
+			<guid isPermaLink="false">099e6ba9-d9f9-414a-9305-7cc6f466adff</guid>
+			<dc:creator><![CDATA[jSmovie]]></dc:creator>
+			<pubDate>Sat, 17 Oct 2026 08:32:14 GMT</pubDate>
+			<enclosure url="https://op3.dev/e,pg=7d6c3a22-27de-5502-b51c-387bf3a2591d/https://d12wklypp119aj.cloudfront.net/track/099e6ba9-d9f9-414a-9305-7cc6f466adff.mp3" length="2398555" type="audio/mpeg"/>
+			<podcast:episode>1</podcast:episode>
+			<podcast:season>1</podcast:season>
+			<podcast:value type="lightning" method="keysend">
+				<podcast:valueRecipient name="jSmovie via Wavlake" type="node" address="02682b7c86f474d082fa9d274c3751291225448468691784c6f112187de975a8c2" customKey="16180339" customValue="099e6ba9-d9f9-414a-9305-7cc6f466adff" split="100"/>
+			</podcast:value>
+			<itunes:explicit>false</itunes:explicit>
+			<itunes:duration>00:04:54</itunes:duration>
+		</item>
+	</channel>
+</rss>

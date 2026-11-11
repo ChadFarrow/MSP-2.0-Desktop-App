@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+    <channel>
+        <title>B-Sides The Sch3m3s</title>
+        <itunes:author>Behind The Sch3m3s</itunes:author>
+        <description>
+            Cuts From The LIT
+        </description>
+        <link>https://behindthesch3m3s.com/</link>
+        <language>en</language>
+        <generator>MSP 2.0 - Music Side Project Studio</generator>
+        <pubDate>Thu, 17 Sep 2026 21:34:32 GMT</pubDate>
+        <lastBuildDate>Thu, 17 Sep 2026 22:13:18 GMT</lastBuildDate>
+        <podcast:guid>23c2d5df-52e2-4e9a-b562-54e0e0123511</podcast:guid>
+        <itunes:category text="Music" />
+        <image>
+            <url>https://behindthesch3m3s.com/wp-content/uploads/2026/09/bsides-the-sch3m3s.gif</url>
+            <title>B-Sides The Sch3m3s</title>
+            <link>https://behindthesch3m3s.com/</link>
+        </image>
+        <itunes:image href="https://behindthesch3m3s.com/wp-content/uploads/2026/09/bsides-the-sch3m3s.gif" />
+        <podcast:medium>music</podcast:medium>
+        <itunes:explicit>true</itunes:explicit>
+        <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+            <podcast:valueRecipient name="malachi@fountain.fm" address="malachi@fountain.fm" split="50" type="lnaddress" />
+            <podcast:valueRecipient name="MSP 2.0" address="chadf@getalby.com" split="1" type="lnaddress" />
+            <podcast:valueRecipient name="Podcastindex.org" address="podcastindex@getalby.com" split="1" type="lnaddress" />
+            <podcast:valueRecipient name="lavish@fountain.fm" address="lavish@fountain.fm" split="25" type="lnaddress" />
+            <podcast:valueRecipient name="boobury@fountain.fm" address="boobury@fountain.fm" split="25" type="lnaddress" />
+        </podcast:value>
+        <item>
+            <title>Malachi - Carlik</title>
+            <description>Based on a true story.</description>
+            <pubDate>Thu, 17 Sep 2026 21:34:32 GMT</pubDate>
+            <guid isPermaLink="false">809810df-2bae-4bbd-8a4f-d220597565b3</guid>
+            <itunes:image href="https://behindthesch3m3s.com/wp-content/uploads/2026/09/bsides-the-sch3m3s.gif" />
+            <enclosure url="https://op3.dev/e,pg=23c2d5df-52e2-4e9a-b562-54e0e0123511/music.behindthesch3m3s.com/wp-content/uploads/bsides/250/01_Carlik.mp3" length="4180632" type="audio/mpeg"/>
+            <itunes:duration>00:04:21</itunes:duration>
+            <podcast:season>1</podcast:season>
+            <podcast:episode>1</podcast:episode>
+            <itunes:explicit>false</itunes:explicit>
+            <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+                <podcast:valueRecipient name="malachi@fountain.fm" address="malachi@fountain.fm" split="50" type="lnaddress" />
+                <podcast:valueRecipient name="MSP 2.0" address="chadf@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="Podcastindex.org" address="podcastindex@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="lavish@fountain.fm" address="lavish@fountain.fm" split="25" type="lnaddress" />
+                <podcast:valueRecipient name="boobury@fountain.fm" address="boobury@fountain.fm" split="25" type="lnaddress" />
+            </podcast:value>
+        </item>
+        <item>
+            <title>Malachi - Satan Gave Me A Taco</title>
+            <description>Cover of a Beck B-Side</description>
+            <pubDate>Thu, 17 Sep 2026 21:33:32 GMT</pubDate>
+            <guid isPermaLink="false">8d5d862c-a27a-4bcc-92eb-d5e6226ed464</guid>
+            <itunes:image href="https://behindthesch3m3s.com/wp-content/uploads/2026/09/bsides-the-sch3m3s.gif" />
+            <enclosure url="https://op3.dev/e,pg=23c2d5df-52e2-4e9a-b562-54e0e0123511/music.behindthesch3m3s.com/wp-content/uploads/bsides/250/02_Satan%20Gave%20Me%20A%20Taco.mp3" length="3831322" type="audio/mpeg"/>
+            <itunes:duration>00:03:59</itunes:duration>
+            <podcast:season>1</podcast:season>
+            <podcast:episode>2</podcast:episode>
+            <itunes:explicit>false</itunes:explicit>
+            <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+                <podcast:valueRecipient name="malachi@fountain.fm" address="malachi@fountain.fm" split="50" type="lnaddress" />
+                <podcast:valueRecipient name="MSP 2.0" address="chadf@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="Podcastindex.org" address="podcastindex@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="lavish@fountain.fm" address="lavish@fountain.fm" split="25" type="lnaddress" />
+                <podcast:valueRecipient name="boobury@fountain.fm" address="boobury@fountain.fm" split="25" type="lnaddress" />
+            </podcast:value>
+        </item>
+        <item>
+            <title>Malachi - Seven Days To God</title>
+            <pubDate>Thu, 17 Sep 2026 21:32:32 GMT</pubDate>
+            <guid isPermaLink="false">1be098e6-1d7d-4e5f-976a-8986b124a519</guid>
+            <itunes:image href="https://behindthesch3m3s.com/wp-content/uploads/2026/09/bsides-the-sch3m3s.gif" />
+            <enclosure url="https://op3.dev/e,pg=23c2d5df-52e2-4e9a-b562-54e0e0123511/music.behindthesch3m3s.com/wp-content/uploads/bsides/250/03_Seven%20Days%20To%20God.mp3" length="5478077" type="audio/mpeg"/>
+            <itunes:duration>00:05:42</itunes:duration>
+            <podcast:season>1</podcast:season>
+            <podcast:episode>3</podcast:episode>
+            <itunes:explicit>false</itunes:explicit>
+            <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+                <podcast:valueRecipient name="malachi@fountain.fm" address="malachi@fountain.fm" split="50" type="lnaddress" />
+                <podcast:valueRecipient name="MSP 2.0" address="chadf@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="Podcastindex.org" address="podcastindex@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="lavish@fountain.fm" address="lavish@fountain.fm" split="25" type="lnaddress" />
+                <podcast:valueRecipient name="boobury@fountain.fm" address="boobury@fountain.fm" split="25" type="lnaddress" />
+            </podcast:value>
+        </item>
+        <item>
+            <title>Malachi - Mary Jo</title>
+            <pubDate>Thu, 17 Sep 2026 21:31:32 GMT</pubDate>
+            <guid isPermaLink="false">f948bc8d-44cb-4ff7-9961-946fae0712e6</guid>
+            <itunes:image href="https://behindthesch3m3s.com/wp-content/uploads/2026/09/bsides-the-sch3m3s.gif" />
+            <enclosure url="https://op3.dev/e,pg=23c2d5df-52e2-4e9a-b562-54e0e0123511/music.behindthesch3m3s.com/wp-content/uploads/bsides/250/04_Mary%20Jo.mp3" length="4228749" type="audio/mpeg"/>
+            <itunes:duration>00:04:24</itunes:duration>
+            <podcast:season>1</podcast:season>
+            <podcast:episode>4</podcast:episode>
+            <itunes:explicit>false</itunes:explicit>
+            <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+                <podcast:valueRecipient name="malachi@fountain.fm" address="malachi@fountain.fm" split="50" type="lnaddress" />
+                <podcast:valueRecipient name="MSP 2.0" address="chadf@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="Podcastindex.org" address="podcastindex@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="lavish@fountain.fm" address="lavish@fountain.fm" split="25" type="lnaddress" />
+                <podcast:valueRecipient name="boobury@fountain.fm" address="boobury@fountain.fm" split="25" type="lnaddress" />
+            </podcast:value>
+        </item>
+        <item>
+            <title>Malachi - Thanks For The Pussy Last Night</title>
+            <description>Special request of Lavish</description>
+            <pubDate>Thu, 17 Sep 2026 21:30:32 GMT</pubDate>
+            <guid isPermaLink="false">5908943c-489e-4b4a-b435-01c7fb67a288</guid>
+            <itunes:image href="https://behindthesch3m3s.com/wp-content/uploads/2026/09/bsides-the-sch3m3s.gif" />
+            <enclosure url="https://op3.dev/e,pg=23c2d5df-52e2-4e9a-b562-54e0e0123511/music.behindthesch3m3s.com/wp-content/uploads/bsides/250/05_Thanks%20For%20The%20Pussy%20Last%20Night.mp3" length="2657183" type="audio/mpeg"/>
+            <itunes:duration>00:02:46</itunes:duration>
+            <podcast:season>1</podcast:season>
+            <podcast:episode>5</podcast:episode>
+            <itunes:explicit>false</itunes:explicit>
+            <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+                <podcast:valueRecipient name="malachi@fountain.fm" address="malachi@fountain.fm" split="50" type="lnaddress" />
+                <podcast:valueRecipient name="MSP 2.0" address="chadf@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="Podcastindex.org" address="podcastindex@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="lavish@fountain.fm" address="lavish@fountain.fm" split="25" type="lnaddress" />
+                <podcast:valueRecipient name="boobury@fountain.fm" address="boobury@fountain.fm" split="25" type="lnaddress" />
+            </podcast:value>
+        </item>
+        <item>
+            <title>Malachi - Eat My Shit</title>
+            <description>A song sang to in-laws once.</description>
+            <pubDate>Thu, 17 Sep 2026 21:29:32 GMT</pubDate>
+            <guid isPermaLink="false">56d7ea90-5467-4fd4-823d-f283264345c7</guid>
+            <itunes:image href="https://behindthesch3m3s.com/wp-content/uploads/2026/09/bsides-the-sch3m3s.gif" />
+            <enclosure url="https://op3.dev/e,pg=23c2d5df-52e2-4e9a-b562-54e0e0123511/music.behindthesch3m3s.com/wp-content/uploads/bsides/250/06_Eat%20My%20Shit.mp3" length="2555756" type="audio/mpeg"/>
+            <itunes:duration>00:02:40</itunes:duration>
+            <podcast:season>1</podcast:season>
+            <podcast:episode>6</podcast:episode>
+            <itunes:explicit>false</itunes:explicit>
+            <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+                <podcast:valueRecipient name="malachi@fountain.fm" address="malachi@fountain.fm" split="50" type="lnaddress" />
+                <podcast:valueRecipient name="MSP 2.0" address="chadf@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="Podcastindex.org" address="podcastindex@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="lavish@fountain.fm" address="lavish@fountain.fm" split="25" type="lnaddress" />
+                <podcast:valueRecipient name="boobury@fountain.fm" address="boobury@fountain.fm" split="25" type="lnaddress" />
+            </podcast:value>
+        </item>
+        <item>
+            <title>Malachi - Working Man</title>
+            <description>Never gonna keep a working man down, one of the elusive missing tracks from the Polar Embrace.</description>
+            <pubDate>Thu, 17 Sep 2026 21:28:32 GMT</pubDate>
+            <guid isPermaLink="false">64c9182c-8a5e-4688-bd9b-500e853272e4</guid>
+            <itunes:image href="https://behindthesch3m3s.com/wp-content/uploads/2026/09/bsides-the-sch3m3s.gif" />
+            <enclosure url="https://op3.dev/e,pg=23c2d5df-52e2-4e9a-b562-54e0e0123511/music.behindthesch3m3s.com/wp-content/uploads/bsides/250/07_Working%20Man.mp3" length="3681512" type="audio/mpeg"/>
+            <itunes:duration>00:03:50</itunes:duration>
+            <podcast:season>1</podcast:season>
+            <podcast:episode>7</podcast:episode>
+            <itunes:explicit>false</itunes:explicit>
+            <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+                <podcast:valueRecipient name="malachi@fountain.fm" address="malachi@fountain.fm" split="50" type="lnaddress" />
+                <podcast:valueRecipient name="MSP 2.0" address="chadf@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="Podcastindex.org" address="podcastindex@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="lavish@fountain.fm" address="lavish@fountain.fm" split="25" type="lnaddress" />
+                <podcast:valueRecipient name="boobury@fountain.fm" address="boobury@fountain.fm" split="25" type="lnaddress" />
+            </podcast:value>
+        </item>
+    </channel>
+</rss>

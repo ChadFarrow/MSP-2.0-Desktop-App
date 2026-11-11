@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+    <channel>
+        <title>The Singles</title>
+        <itunes:author>Fentlay</itunes:author>
+        <description>
+            The Singles by Fentlay
+        </description>
+        <link>https://phafe.com/fentlay</link>
+        <language>en</language>
+        <generator>MSP 2.0 - Music Side Project Studio</generator>
+        <pubDate>Mon, 02 Feb 2026 11:18:05 GMT</pubDate>
+        <lastBuildDate>Sat, 19 Sep 2026 06:26:26 GMT</lastBuildDate>
+        <podcast:guid>d5c805fb-6016-4038-9cda-2e68d2b8dcc4</podcast:guid>
+        <podcast:txt purpose="npub">npub19573mxeqcq5k6xt7hcp2e4wgd9wakh7mvz7l5zq7l3f3t4glnz6su85g79</podcast:txt>
+        <itunes:category text="Music" />
+        <itunes:keywords>rap, hip hop, hip-hop, hiphop</itunes:keywords>
+        <image>
+            <url>https://phafe.com/wp-content/uploads/rssfeed/artist_images/fenlay/fentlay(profile).jpg</url>
+            <title>Fentlay - Take A Break</title>
+            <link>https://phafe.com/fentlay</link>
+        </image>
+        <itunes:image href="https://phafe.com/wp-content/uploads/rssfeed/artist_images/fenlay/fentlay(profile).jpg" />
+        <podcast:medium>music</podcast:medium>
+        <itunes:explicit>true</itunes:explicit>
+        <itunes:owner>
+            <itunes:name>Fentlay</itunes:name>
+        </itunes:owner>
+        <podcast:person npub="npub19573mxeqcq5k6xt7hcp2e4wgd9wakh7mvz7l5zq7l3f3t4glnz6su85g79" group="music" role="band">Fentlay</podcast:person>
+        <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+            <podcast:valueRecipient name="Fentlay" address="fentlay@fountain.fm" split="90" type="lnaddress" />
+            <podcast:valueRecipient name="MSP 2.0" address="chadf@getalby.com" split="1" type="lnaddress" />
+            <podcast:valueRecipient name="Podcastindex.org" address="podcastindex@getalby.com" split="1" type="lnaddress" />
+            <podcast:valueRecipient name="Ph@fe" address="phafe@phafe.com" split="8" type="lnaddress" />
+        </podcast:value>
+        <podcast:funding url="https://phafe.com/fentlay">Links</podcast:funding>
+        <podcast:publisher>
+            <podcast:remoteItem medium="publisher" feedGuid="46bd92a3-f960-4417-b46a-611a472f9bd5" feedUrl="https://phafe.com/wp-content/uploads/rssfeed/music/fentlay/fentlay.xml" />
+        </podcast:publisher>
+        <item>
+            <title>See Through</title>
+            <pubDate>Sat, 19 Sep 2026 11:18:05 GMT</pubDate>
+            <guid isPermaLink="false">cbdaeaa0-3c58-41ce-92d1-c718710ade54</guid>
+            <itunes:image href="https://phafe.com/wp-content/uploads/rssfeed/music/fentlay/take-a-break/see-through.jpeg" />
+            <enclosure url="https://op3.dev/e,pg=d5c805fb-6016-4038-9cda-2e68d2b8dcc4/phafe.com/wp-content/uploads/rssfeed/music/fentlay/take-a-break/seethrough.mp3" length="4258270" type="audio/mpeg"/>
+            <itunes:duration>00:02:36</itunes:duration>
+            <podcast:season>1</podcast:season>
+            <podcast:episode>1</podcast:episode>
+            <itunes:explicit>false</itunes:explicit>
+            <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+                <podcast:valueRecipient name="Fentlay" address="fentlay@fountain.fm" split="90" type="lnaddress" />
+                <podcast:valueRecipient name="MSP 2.0" address="chadf@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="Podcastindex.org" address="podcastindex@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="Ph@fe" address="phafe@phafe.com" split="8" type="lnaddress" />
+            </podcast:value>
+        </item>
+        <item>
+            <title>Take A Break</title>
+            <pubDate>Mon, 02 Feb 2026 11:17:05 GMT</pubDate>
+            <guid isPermaLink="false">f778d23e-0c88-4ecc-8c1f-0f2a4df789c4</guid>
+            <itunes:image href="https://phafe.com/wp-content/uploads/rssfeed/music/fentlay/take-a-break/takeabreak.jpeg" />
+            <enclosure url="https://op3.dev/e,pg=d5c805fb-6016-4038-9cda-2e68d2b8dcc4/phafe.com/wp-content/uploads/rssfeed/music/fentlay/take-a-break/take-a-break.mp3" length="6751462" type="audio/mpeg"/>
+            <itunes:duration>00:02:46</itunes:duration>
+            <podcast:season>1</podcast:season>
+            <podcast:episode>2</podcast:episode>
+            <itunes:explicit>true</itunes:explicit>
+            <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+                <podcast:valueRecipient name="Fentlay" address="fentlay@fountain.fm" split="90" type="lnaddress" />
+                <podcast:valueRecipient name="MSP 2.0" address="chadf@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="Podcastindex.org" address="podcastindex@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="Ph@fe" address="phafe@phafe.com" split="8" type="lnaddress" />
+            </podcast:value>
+        </item>
+    </channel>
+</rss>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>Strange Love</title>
+        <itunes:author>Strange Love</itunes:author>
+        <description>
+            This is the self-hosted publisher feed for the band Strange Love.
+        </description>
+        <link>strangeloveofmusic.wixsite.com/strangelove</link>
+        <language>en</language>
+        <generator>MSP 2.0 - Music Side Project Studio</generator>
+        <pubDate>Mon, 19 Jan 2026 00:14:03 GMT</pubDate>
+        <lastBuildDate>Mon, 26 Oct 2026 15:33:41 GMT</lastBuildDate>
+        <podcast:guid>e3e2e758-6c83-41e3-87f2-d3c64d3011f8</podcast:guid>
+        <itunes:category text="Music" />
+        <image>
+            <url>http://phafe.com/wp-content/uploads/strangelove/Album/strangelovepp.png</url>
+            <title>Strange Love</title>
+            <link>strangeloveofmusic.wixsite.com/strangelove</link>
+        </image>
+        <itunes:image href="http://phafe.com/wp-content/uploads/strangelove/Album/strangelovepp.png" />
+        <podcast:medium>publisher</podcast:medium>
+        <itunes:explicit>false</itunes:explicit>
+        <itunes:owner>
+            <itunes:name>Strange Love</itunes:name>
+            <itunes:email>strangeloveofmusic@gmail.com</itunes:email>
+        </itunes:owner>
+        <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+            <podcast:valueRecipient name="Strange Love" address="strangeloveofmusic@fountain.fm" split="100" type="lnaddress" />
+        </podcast:value>
+        <podcast:remoteItem feedGuid="dfc51831-1d1b-4f06-80e3-2f7051dc4052" feedUrl="https://msp.podtards.com/api/hosted/dfc51831-1d1b-4f06-80e3-2f7051dc4052.xml" medium="music" title="Strange Love" feedImg="https://cdn.satellite.earth/ebf1663fe8a5593add3b464914ba5502b8bf062def6830fe0dfba5831159b968.jpg" />
+        <podcast:remoteItem feedGuid="27735a10-3775-503d-b038-70b4b7d536ab" feedUrl="https://new.musicsideproject.com/api/hosted/27735a10-3775-503d-b038-70b4b7d536ab.xml" medium="music" title="The EP (Amnesia)" feedImg="https://cdn.satellite.earth/16439f488cfccd6b5024572f31ca85e9262e9abf711528551178db4b175e4478.png" />
+        <podcast:remoteItem feedGuid="7192ec54-3aa2-5c61-987b-51bf75f68568" feedUrl="https://new.musicsideproject.com/api/hosted/7192ec54-3aa2-5c61-987b-51bf75f68568.xml" medium="music" title="Live at Rockpile" feedImg="https://cdn.satellite.earth/af43fd71bd72ca7b1f3a7f2238627043283b8abd24496e27694010e13ce1fdfd.png" />
+        <atom:link href="https://msp.podtards.com/api/hosted/e3e2e758-6c83-41e3-87f2-d3c64d3011f8.xml" rel="self" type="application/rss+xml" />
+    </channel>
+</rss>
