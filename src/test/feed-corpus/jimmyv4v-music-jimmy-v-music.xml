@@ -1,0 +1,372 @@
+<rss version="2.0" endcoding="UTF-8" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:podcast="https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/1.0.md">
+  <channel>
+    <generator>Sovereign Feeds</generator>
+    <itunes:category text="Music"/>
+    <itunes:keywords>music</itunes:keywords>
+    <podcast:medium>music</podcast:medium>
+    <itunes:author>Jimmy V</itunes:author>
+    <itunes:owner itunes:name="Jimmy V" itunes:email="">
+      <itunes:name>Jimmy V</itunes:name>
+      <itunes:email>kolomona@kolomona.com</itunes:email>
+    </itunes:owner>
+    <title>Jimmy V - Music</title>
+    <description>A collection of Jimmy V songs</description>
+    <itunes:image href="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-1000.jpg"/>
+    <itunes:explicit>no</itunes:explicit>
+    <link>https://jimmyv4v.com</link>
+    <podcast:value type="lightning" method="keysend">
+      <podcast:valueRecipient type="lnaddress" name="Steven Bell for musicsideproject.com and much much more" address="steven@getalby.com" split="4"/>
+      <podcast:valueRecipient type="node" name="Podcasting 2.0 Dave Jones &amp; Adam Curry for making all this possible" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="2"/>
+      <podcast:valueRecipient type="node" name="op3.dev for amazing free stats" address="03a2cb3058309f7a0355b9583fc4347d82b251ee94997aec4d4e5573b181a49657" split="1"/>
+      <podcast:valueRecipient type="node" name="IPFSPodcasting.net for Cameron and all the IPFS nodes&#39; bandwidth" address="028eb5be336f7fdf2a4e40c57ff55d3d5d71277bb4197ea14957f756bff249e623" split="3"/>
+      <podcast:valueRecipient type="node" name="Jimmy V - Musicianship &amp; Hosting" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" customKey="906608" customValue="01dIRsYB86CoEkZ4yUubfh" split="85"/>
+      <podcast:valueRecipient name="SirLibre Node" type="node" address="03460a453d13c98ff06b36b3b6a8c06a7b48328ad5f983dacc3a7b0991b841bc57" split="5"/>
+    </podcast:value>
+    <podcast:guid>dbad52b9-6253-4a9b-bfab-246b9e839815</podcast:guid>
+    <podcast:publisher>
+      <podcast:remoteItem medium="publisher" feedGuid="efa7f6e4-9410-5b49-a3e6-0ef0d405a88d" feedUrl="https://music.jimmyv4v.com/publisher/jimmy-v-publisher-rss.xml"/>
+    </podcast:publisher>
+    <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="band" role="vocals">Jimmy V</podcast:person>
+    <podcast:complete>no</podcast:complete>
+    <podcast:block>no</podcast:block>
+    <managingEditor>Kolomona - Sir Libre - LightningThrashes.com</managingEditor>
+    <podcast:funding url="https://jimmyv4v.com/donate">Send us some Fiat Fun Coupons!</podcast:funding>
+    <pubDate>Fri, 16 Oct 2026 14:59:19 +0000</pubDate>
+    <lastBuildDate>Fri, 16 Oct 2026 14:59:19 +0000</lastBuildDate>
+    <category>Music</category>
+    <image>
+      <url>https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-1000.jpg</url>
+      <link>https://jimmyv4v.com</link>
+      <title>Jimmy V - Music</title>
+      <description>A collection of Jimmy V songs</description>
+      <width>144</width>
+      <height>144</height>
+    </image>
+    <language/>
+    <item>
+      <pubDate>Thu, 28 Dec 2023 20:42:37 +0000</pubDate>
+      <guid isPermaLink="false">7cf60bc3-6618-45cd-a85f-670e30ea9368</guid>
+      <title>Sweet time</title>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Sweet_Time-Jimmy_V.mp3" type="audio/mpeg" length="3067840"/>
+      <itunes:duration>190</itunes:duration>
+      <description>Sweet time
+
+        Written, recorded and produced by Jimmy V
+
+        Jimmyv4v.com</description>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:image href="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Sweet_Time-Jimmy_V-500.jpg"/>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="writing" role="author">Jimmy V</podcast:person>
+      <author>Jimmy V</author>
+      <itunes:author>Jimmy V</itunes:author>
+      <itunes:keywords>Blues, rock</itunes:keywords>
+      <podcast:value type="lightning" method="keysend" suggested="0.00000005000">
+        <podcast:valueRecipient type="lnaddress" name="Steven Bell for musicsideproject.com and much much more" address="steven@getalby.com" split="4"/>
+        <podcast:valueRecipient type="node" name="Podcasting 2.0 Dave Jones &amp; Adam Curry for making all this possible" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="2"/>
+        <podcast:valueRecipient type="node" name="op3.dev for amazing free stats" address="03a2cb3058309f7a0355b9583fc4347d82b251ee94997aec4d4e5573b181a49657" split="1"/>
+        <podcast:valueRecipient type="node" name="IPFSPodcasting.net for Cameron and all the IPFS nodes&#39; bandwidth" address="028eb5be336f7fdf2a4e40c57ff55d3d5d71277bb4197ea14957f756bff249e623" split="3"/>
+        <podcast:valueRecipient type="node" name="Jimmy V - Musicianship &amp; Hosting" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" customKey="906608" customValue="01dIRsYB86CoEkZ4yUubfh" split="85"/>
+        <podcast:valueRecipient name="SirLibre Node" type="node" address="03460a453d13c98ff06b36b3b6a8c06a7b48328ad5f983dacc3a7b0991b841bc57" split="5"/>
+      </podcast:value>
+    </item>
+    <item>
+      <title>Pour Me Some Water</title>
+      <author>Jimmy V</author>
+      <description><![CDATA[<p>Pour Me Some Water Written, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></description>
+      <duration/>
+      <enclosure length="0" type="audio/mpeg" url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Pour_Me_Some_Water.mp3"/>
+      <guid isPermaLink="false">fabc3e64-e470-4f97-bf4a-3957e481e23b</guid>
+      <itunes:image href="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Pour_Me_Some_Water-500.jpg"/>
+      <itunes:keywords>Rock</itunes:keywords>
+      <itunes:subtitle>Pour Me Some Water</itunes:subtitle>
+      <itunes:summary><![CDATA[<p>Pour Me Some Water Written, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></itunes:summary>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="writing" role="author">Jimmy V</podcast:person>
+      <itunes:duration>190</itunes:duration>
+      <pubDate>Wed, 03 Jan 2024 22:13:23 +0000</pubDate>
+      <itunes:explicit>No</itunes:explicit>
+      <itunes:author>Jimmy V</itunes:author>
+      <podcast:images srcset="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Pour_Me_Some_Water-500.jpg 500w"/>
+    </item>
+    <item>
+      <pubDate>Wed, 03 Jan 2024 22:34:28 +0000</pubDate>
+      <guid isPermaLink="false">0b6a3889-87ee-432b-a7ee-f6bef65ca3c4</guid>
+      <title>Real World</title>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Real_World-Jimmy_V.mp3" type="audio/mpeg" length="0"/>
+      <itunes:duration>285</itunes:duration>
+      <description><![CDATA[<p>Real World Written, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></description>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:image href="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Real_World-Jimmy_V-500.jpg"/>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="writing" role="author">Jimmy V</podcast:person>
+      <author>Jimmy V</author>
+      <itunes:author>Jimmy V</itunes:author>
+      <itunes:keywords>Blues, rock</itunes:keywords>
+      <itunes:subtitle>Real World</itunes:subtitle>
+      <itunes:summary><![CDATA[<p>Real World Written, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></itunes:summary>
+      <podcast:images srcset="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Real_World-Jimmy_V-500.jpg 500w"/>
+    </item>
+    <item>
+      <pubDate>Wed, 10 Jan 2024 05:20:30 +0000</pubDate>
+      <guid isPermaLink="false">c971583d-0164-42d1-ba23-69c16ad997ab</guid>
+      <title><![CDATA[Wonderin']]></title>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Wonderin-Jimmy_V.mp3" type="audio/mpeg" length="0"/>
+      <itunes:duration>190</itunes:duration>
+      <description><![CDATA[<p>Wonderin' Written, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></description>
+      <itunes:explicit>no</itunes:explicit>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="writing" role="author">Jimmy V</podcast:person>
+      <author>Jimmy V</author>
+      <itunes:author>Jimmy V</itunes:author>
+      <itunes:keywords>Blues, rock</itunes:keywords>
+      <itunes:subtitle><![CDATA[Wonderin']]></itunes:subtitle>
+      <itunes:summary><![CDATA[<p>Wonderin' Written, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></itunes:summary>
+      <itunes:image href="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Wanderin-Jimmy_V-500.jpg"/>
+      <podcast:images srcset="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Wanderin-Jimmy_V-1000.jpg 1000w, https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Wanderin-Jimmy_V-500.jpg 500w, https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Wanderin-Jimmy_V-100.jpg 100w"/>
+    </item>
+    <item>
+      <pubDate>Thu, 18 Jan 2024 06:02:20 +0000</pubDate>
+      <guid isPermaLink="false">65f1a2f5-ac0b-483c-98b4-58b19afb3cd9</guid>
+      <title>So Pretty</title>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/so_pretty/so_pretty-jimmy_v.mp3" type="audio/mpeg" length="0"/>
+      <itunes:duration>287</itunes:duration>
+      <description><![CDATA[<p>So Pretty Written, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></description>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:image href="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Wanderin-Jimmy_V-500.jpg"/>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="writing" role="author">Jimmy V</podcast:person>
+      <podcast:images srcset="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/Wanderin-Jimmy_V-500.jpg 500w"/>
+      <author>Jimmy V</author>
+      <itunes:author>Jimmy V</itunes:author>
+      <itunes:keywords>Blues, rock</itunes:keywords>
+      <itunes:subtitle>So Pretty</itunes:subtitle>
+      <itunes:summary><![CDATA[<p>So Pretty Written, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></itunes:summary>
+    </item>
+    <item>
+      <pubDate>Wed, 31 Jan 2024 17:44:04 +0000</pubDate>
+      <guid isPermaLink="false">0d8507ec-78d4-4294-bbc8-1548dde98cba</guid>
+      <title>For Those Without a Prayer</title>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/for_those_without_a_prayer/for_those_without_a_prayer-jimmy_v.mp3" type="audio/mpeg" length="0"/>
+      <itunes:duration>190</itunes:duration>
+      <description><![CDATA[<p>For Those Without a Prayer</p>
+<p>Produced by Jimmy V</p>
+<p>Matthew 6:10-13</p>]]></description>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:image href="https://music.jimmyv4v.com/podcasts/outside-in/common/Stone-V-2.jpg"/>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="writing" role="author">Jimmy V</podcast:person>
+      <podcast:person href="https://www.facebook.com/tysonfroesemusic" img="https://music.jimmyv4v.com/podcasts/outside-in/common/tyson_froese-headshot.jpg" group="band" role="guitar">Tyson Froese</podcast:person>
+      <podcast:images srcset="https://music.jimmyv4v.com/podcasts/outside-in/common/Stone-V-2.jpg 500w"/>
+      <author>Jimmy V</author>
+      <itunes:author>Jimmy V</itunes:author>
+      <itunes:keywords>blues, rock, gospel</itunes:keywords>
+      <itunes:subtitle>For Those Without a Prayer</itunes:subtitle>
+      <link>https://jimmyv4v.com</link>
+      <itunes:summary><![CDATA[<p>For Those Without a Prayer</p>
+<p>Produced by Jimmy V</p>
+<p>Matthew 6:10-13</p>]]></itunes:summary>
+    </item>
+    <item>
+      <pubDate>Tue, 13 Feb 2024 20:31:16 +0000</pubDate>
+      <guid isPermaLink="false">13b9faaa-357e-4626-9e83-820bcef1cd8e</guid>
+      <title>Day in the Sun</title>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/day_in_the_sun/day_in_the_sun-jimmy_v.mp3" type="audio/mpeg" length="3204710"/>
+      <itunes:duration>186</itunes:duration>
+      <description><![CDATA[<p>Day in the Sun, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></description>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:image href="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/day_in_the_sun/day_in_the_sun-jimmy_v.jpg"/>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="writing" role="author">Jimmy V</podcast:person>
+      <podcast:images srcset="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/day_in_the_sun/day_in_the_sun-jimmy_v.jpg 1080w"/>
+      <author>Jimmy V</author>
+      <itunes:author>Jimmy V</itunes:author>
+      <itunes:keywords>Blues, rock, funk</itunes:keywords>
+      <itunes:subtitle>Day in the Sun</itunes:subtitle>
+      <itunes:summary><![CDATA[<p>Day in the Sun, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></itunes:summary>
+    </item>
+    <item>
+      <pubDate>Fri, 23 Feb 2024 01:20:37 +0000</pubDate>
+      <guid isPermaLink="false">1085e34a-f1b8-4923-8523-285a64dc568b</guid>
+      <title><![CDATA[I'll Find Love]]></title>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/ill_find_love/ill_find_love-jimmy_v.mp3" type="audio/mpeg" length="3530958"/>
+      <itunes:duration>158</itunes:duration>
+      <description><![CDATA[<p>I'll find Love</p>
+<p>Written By James C. Roycraft and Ron Neilson Jr.</p>
+<p>Produced and Mixed by Jimmy V</p>]]></description>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:image href="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/ill_find_love/ill_find_love-jimmy_v.jpg"/>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="writing" role="author">Jimmy V</podcast:person>
+      <podcast:images srcset="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/ill_find_love/ill_find_love-jimmy_v.jpg 1080w"/>
+      <author>Jimmy V</author>
+      <itunes:author>Jimmy V</itunes:author>
+      <itunes:keywords>rock</itunes:keywords>
+      <itunes:subtitle><![CDATA[I'll Find Love]]></itunes:subtitle>
+      <itunes:summary><![CDATA[<p>I'll find Love</p>
+<p>Written By James C. Roycraft and Ron Neilson Jr.</p>
+<p>Produced and Mixed by Jimmy V</p>]]></itunes:summary>
+    </item>
+    <item>
+      <pubDate>Thu, 07 Mar 2024 15:51:29 +0000</pubDate>
+      <guid isPermaLink="false">5394bd93-7135-45f5-be8a-99f1be8c6915</guid>
+      <title>So Do I</title>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/so_do_i/so_do_i-jimmy_v.mp3" type="audio/mpeg" length="3514368"/>
+      <itunes:duration>220</itunes:duration>
+      <description><![CDATA[<p>So Do I</p>
+<p>Written By Tyson Froese and James C Roycraft.<br />Produced by Jimmy V</p>]]></description>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:image href="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/so_do_i/so_do_i-jimmy_v.jpg"/>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="wri﻿ting" role="author">Jimmy V</podcast:person>
+      <podcast:images srcset="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/so_do_i/so_do_i-jimmy_v.jpg 1191w"/>
+      <author>Jimmy V</author>
+      <itunes:author>Jimmy V</itunes:author>
+      <itunes:keywords>Blues, rock</itunes:keywords>
+      <itunes:subtitle>So Do I</itunes:subtitle>
+      <link>https://jimmyv4v.com</link>
+      <itunes:summary><![CDATA[<p>So Do I</p>
+<p>Written By Tyson Froese and James C Roycraft.<br />Produced by Jimmy V</p>]]></itunes:summary>
+    </item>
+    <item>
+      <pubDate>Tue, 17 Sep 2024 19:47:15 +0000</pubDate>
+      <guid isPermaLink="false">339085cc-c70c-4a5f-ae9f-ecc745ac8a45</guid>
+      <title>I Believe</title>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/i_believe/i_believe-jimmy_v.mp3" type="audio/mpeg" length="3250781"/>
+      <itunes:duration>188</itunes:duration>
+      <description><![CDATA[<p>I Believe Written, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></description>
+      <itunes:explicit>no</itunes:explicit>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="writing" role="author">Jimmy V</podcast:person>
+      <author>Jimmy V</author>
+      <itunes:author>Jimmy V</itunes:author>
+      <itunes:keywords>Blues, rock</itunes:keywords>
+      <itunes:subtitle>I Believe</itunes:subtitle>
+      <itunes:summary><![CDATA[<p>I Believe Written, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></itunes:summary>
+    </item>
+    <item>
+      <pubDate>Mon, 04 Nov 2024 03:29:51 +0000</pubDate>
+      <guid isPermaLink="false">9c017289-79a4-40c2-a4fa-451041335db2</guid>
+      <title>Give it Up</title>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/give_it_up/give_it_up-jimmy_v.mp3" type="audio/mpeg" length="3261198"/>
+      <itunes:duration>204</itunes:duration>
+      <description><![CDATA[<p>Written by Tyson Froese and James C Roycraft.</p>
+<ul>
+<li>Jimmy V - Vocals, Keyboards</li>
+<li>Brian Doerner - Drums</li>
+<li>Atilla Toth - Bass</li>
+<li>Tyson Froese - Guitar, Vocals</li>
+</ul>]]></description>
+      <itunes:explicit>no</itunes:explicit>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="writing" role="author">Jimmy V</podcast:person>
+      <author>Jimmy V</author>
+      <itunes:author>Jimmy V</itunes:author>
+      <itunes:keywords>Blues, rock</itunes:keywords>
+      <itunes:subtitle>Give it Up</itunes:subtitle>
+      <itunes:summary><![CDATA[<p>Written by Tyson Froese and James C Roycraft.</p>
+<ul>
+<li>Jimmy V - Vocals, Keyboards</li>
+<li>Brian Doerner - Drums</li>
+<li>Atilla Toth - Bass</li>
+<li>Tyson Froese - Guitar, Vocals</li>
+</ul>]]></itunes:summary>
+      <itunes:image href="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/give_it_up/give_it_up-jimmy_v.jpg"/>
+    </item>
+    <item>
+      <pubDate>Wed, 08 Oct 2025 14:41:55 +0000</pubDate>
+      <guid isPermaLink="false">c265358b-28d1-4879-a050-8b51e1e48c7e</guid>
+      <title>Water is Sound</title>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/water_is_sound/Water_is_Sound-Jimmy_V.mp3" type="audio/mpeg" length="3840621"/>
+      <podcast:alternateEnclosure type="video/mp4" length="48611412" bitrate="1561599" height="720" timeOffset="10.74">
+        <podcast:source uri="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/water_is_sound/Water_is_Sound-Jimmy_V.mp4"/>
+      </podcast:alternateEnclosure>
+      <itunes:duration>240</itunes:duration>
+      <description><![CDATA[<p>The Water is Sound Written, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></description>
+      <itunes:explicit>no</itunes:explicit>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="writing" role="author">Jimmy V</podcast:person>
+      <author>Jimmy V</author>
+      <itunes:author>Jimmy V</itunes:author>
+      <itunes:keywords>Blues, rock</itunes:keywords>
+      <podcast:transcript url="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/water_is_sound/Water_is_Sound-Jimmy_V.srt" type="application/srt"/>
+      <podcast:chapters url="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/water_is_sound/Water_is_Sound-Jimmy_V.json" type="application/json"/>
+      <itunes:subtitle>Water is Sound</itunes:subtitle>
+      <itunes:summary><![CDATA[<p>The Water is Sound Written, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></itunes:summary>
+      <podcast:value type="lightning" method="keysend" suggested="0.00000005000">
+        <podcast:valueRecipient type="lnaddress" name="Steven Bell for musicsideproject.com and much much more" address="steven@getalby.com" split="4"/>
+        <podcast:valueRecipient type="node" name="Podcasting 2.0 Dave Jones &amp; Adam Curry for making all this possible" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="2"/>
+        <podcast:valueRecipient type="node" name="op3.dev for amazing free stats" address="03a2cb3058309f7a0355b9583fc4347d82b251ee94997aec4d4e5573b181a49657" split="1"/>
+        <podcast:valueRecipient type="node" name="IPFSPodcasting.net for Cameron and all the IPFS nodes&#39; bandwidth" address="028eb5be336f7fdf2a4e40c57ff55d3d5d71277bb4197ea14957f756bff249e623" split="3"/>
+        <podcast:valueRecipient type="node" name="Jimmy V - Musicianship &amp; Hosting" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" customKey="906608" customValue="01dIRsYB86CoEkZ4yUubfh" split="85"/>
+        <podcast:valueRecipient name="SirLibre Node" type="node" address="03460a453d13c98ff06b36b3b6a8c06a7b48328ad5f983dacc3a7b0991b841bc57" split="5"/>
+      </podcast:value>
+    </item>
+    <item>
+      <pubDate>Thu, 28 Dec 2023 20:42:37 +0000</pubDate>
+      <guid isPermaLink="false">0faf03d9-d443-40e4-b3bf-2284f539cc6a</guid>
+      <title>Big Shot</title>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/big_shot/Big_Shot-Jimmy_V.mp3" type="audio/mpeg" length="3067840"/>
+      <itunes:duration>190</itunes:duration>
+      <description>Big Shot
+        Written, recorded and produced by Jimmy V
+        Jimmyv4v.com</description>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:image href="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/big_shot/Big_Shot-Jimmy_V-1000.jpg"/>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-1000.jpg" group="writing" role="author">Jimmy V</podcast:person>
+      <author>Jimmy V</author>
+      <itunes:author>Jimmy V</itunes:author>
+      <itunes:keywords>Blues, rock</itunes:keywords>
+      <podcast:value method="keysend" type="lightning">
+        <podcast:valueRecipient type="lnaddress" name="Steven Bell for musicsideproject.com and much much more" address="steven@getalby.com" split="4"/>
+        <podcast:valueRecipient type="node" name="Podcasting 2.0 Dave Jones &amp; Adam Curry for making all this possible" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="2"/>
+        <podcast:valueRecipient type="node" name="op3.dev for amazing free stats" address="03a2cb3058309f7a0355b9583fc4347d82b251ee94997aec4d4e5573b181a49657" split="1"/>
+        <podcast:valueRecipient type="node" name="IPFSPodcasting.net for Cameron and all the IPFS nodes&#39; bandwidth" address="028eb5be336f7fdf2a4e40c57ff55d3d5d71277bb4197ea14957f756bff249e623" split="3"/>
+        <podcast:valueRecipient type="node" name="Jimmy V - Musicianship &amp; Hosting" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" customKey="906608" customValue="01dIRsYB86CoEkZ4yUubfh" split="85"/>
+        <podcast:valueRecipient name="SirLibre Node" type="node" address="03460a453d13c98ff06b36b3b6a8c06a7b48328ad5f983dacc3a7b0991b841bc57" split="5"/>
+      </podcast:value>
+    </item>
+    <item>
+      <pubDate>Sat, 26 Sep 2026 23:21:44 +0000</pubDate>
+      <guid isPermaLink="false">bc80fa46-9563-48f0-b6df-5f9c847c7642</guid>
+      <title>Woman of the Year</title>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/woman-of-the-year/jimmy-v-woman-of-the-year.mp3" type="audio/mpeg" length="3002316"/>
+      <itunes:duration>179</itunes:duration>
+      <description><![CDATA[<p>Woman of the Year, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></description>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:image href="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/woman-of-the-year/jimmy-v-woman-of-the-year-1000.jpg"/>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="writing" role="author">Jimmy V</podcast:person>
+      <author>Jimmy V</author>
+      <itunes:author>Jimmy V</itunes:author>
+      <itunes:keywords>Blues, rock</itunes:keywords>
+      <itunes:subtitle>Woman of the Year</itunes:subtitle>
+      <itunes:summary><![CDATA[<p>Woman of the Year, recorded and produced by Jimmy V Jimmyv4v.com</p>]]></itunes:summary>
+      <podcast:value method="keysend" type="lightning">
+        <podcast:valueRecipient type="lnaddress" name="Steven Bell for musicsideproject.com and much much more" address="steven@getalby.com" split="4"/>
+        <podcast:valueRecipient type="node" name="Podcasting 2.0 Dave Jones &amp; Adam Curry for making all this possible" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="2"/>
+        <podcast:valueRecipient type="node" name="op3.dev for amazing free stats" address="03a2cb3058309f7a0355b9583fc4347d82b251ee94997aec4d4e5573b181a49657" split="1"/>
+        <podcast:valueRecipient type="node" name="IPFSPodcasting.net for Cameron and all the IPFS nodes&#39; bandwidth" address="028eb5be336f7fdf2a4e40c57ff55d3d5d71277bb4197ea14957f756bff249e623" split="3"/>
+        <podcast:valueRecipient type="node" name="Jimmy V - Musicianship &amp; Hosting" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" customKey="906608" customValue="01dIRsYB86CoEkZ4yUubfh" split="85"/>
+        <podcast:valueRecipient name="SirLibre Node" type="node" address="03460a453d13c98ff06b36b3b6a8c06a7b48328ad5f983dacc3a7b0991b841bc57" split="5"/>
+      </podcast:value>
+      <podcast:alternateEnclosure type="video/mp4" length="75591122" bitrate="3304174" height="1080">
+        <podcast:source uri="https://op3.dev/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/woman-of-the-year/jimmy-v-woman-of-the-year.mp4"/>
+      </podcast:alternateEnclosure>
+    </item>
+    <item>
+      <pubDate>Fri, 16 Oct 2026 14:45:19 +0000</pubDate>
+      <guid isPermaLink="false">13ca4e6c-74b3-456f-bdac-b9e2ab053842</guid>
+      <title>Catch Me if You Can</title>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/catch_me_if_you_can/jimmy_v-catch_me_if_you_can.mp3" type="audio/mpeg" length="3786858"/>
+      <itunes:duration>237</itunes:duration>
+      <description><![CDATA[<p>Catch Me if You Can, Written and recorded by Jimmy V</p>]]></description>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:image href="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/catch_me_if_you_can/jimmy_v-catch_me_if_you_can-1000.jpg"/>
+      <podcast:person href="https://jimmyv4v.com" img="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/album-500.jpg" group="writing" role="author">Jimmy V</podcast:person>
+      <author>Jimmy V</author>
+      <itunes:author>Jimmy V</itunes:author>
+      <itunes:keywords>Blues, rock</itunes:keywords>
+      <itunes:subtitle>Catch Me if You Can</itunes:subtitle>
+      <itunes:summary><![CDATA[<p>Catch Me if You Can, Written and recorded by Jimmy V</p>]]></itunes:summary>
+      <podcast:value method="keysend" type="lightning">
+        <podcast:valueRecipient type="lnaddress" name="Steven Bell for musicsideproject.com and much much more" address="steven@getalby.com" split="4"/>
+        <podcast:valueRecipient type="node" name="Podcasting 2.0 Dave Jones &amp; Adam Curry for making all this possible" address="03ae9f91a0cb8ff43840e3c322c4c61f019d8c1c3cea15a25cfc425ac605e61a4a" split="2"/>
+        <podcast:valueRecipient type="node" name="op3.dev for amazing free stats" address="03a2cb3058309f7a0355b9583fc4347d82b251ee94997aec4d4e5573b181a49657" split="1"/>
+        <podcast:valueRecipient type="node" name="IPFSPodcasting.net for Cameron and all the IPFS nodes&#39; bandwidth" address="028eb5be336f7fdf2a4e40c57ff55d3d5d71277bb4197ea14957f756bff249e623" split="3"/>
+        <podcast:valueRecipient type="node" name="Jimmy V - Musicianship &amp; Hosting" address="03b6f613e88bd874177c28c6ad83b3baba43c4c656f56be1f8df84669556054b79" customKey="906608" customValue="01dIRsYB86CoEkZ4yUubfh" split="85"/>
+        <podcast:valueRecipient name="SirLibre Node" type="node" address="03460a453d13c98ff06b36b3b6a8c06a7b48328ad5f983dacc3a7b0991b841bc57" split="5"/>
+      </podcast:value>
+      <podcast:alternateEnclosure type="video/mp4" length="65920255" bitrate="2229248" height="720">
+        <podcast:source uri="https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/catch_me_if_you_can/jimmy_v-catch_me_if_you_can.mp4"/>
+      </podcast:alternateEnclosure>
+    </item>
+  </channel>
+</rss>

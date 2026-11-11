@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:podcast="https://podcastindex.org/namespace/1.0">
+  <channel>
+    <description>&lt;p&gt;New artists on &lt;a href="http://Soundcloud.com"&gt;Soundcloud.com&lt;/a&gt; have a lot of Hip Hop and R&amp;B tracks&lt;/p&gt;</description>
+    <generator>Fountain</generator>
+    <lastBuildDate>Mon, 13 Jul 2026 09:54:39 GMT</lastBuildDate>
+    <language>en</language>
+    <link>https://on.soundcloud.com/qvPVYdcsOkYVC6owiC</link>
+    <title>darrar211</title>
+    <itunes:explicit>false</itunes:explicit>
+    <itunes:image href="https://feeds.fountain.fm/fQkiKpFLnEBpcENT4GUG/files/COVER_ART---DEFAULT---0b1d47a6-e806-4396-b4fc-8100bf3b49eb.jpg"/>
+    <podcast:guid>faa86f29-f4bd-5523-b4ad-7e593f945e38</podcast:guid>
+    <podcast:medium>publisher</podcast:medium>
+    <podcast:value type="lightning" method="lnaddress">
+      <podcast:valueRecipient split="90" type="lnaddress" address="user23169118@fountain.fm"/>
+      <podcast:valueRecipient name="Fountain" split="10" type="lnaddress" address="boostbot@fountain.fm"/>
+    </podcast:value>
+    <podcast:remoteItem feedGuid="c73f281a-6f21-5721-ae4a-e8136860d5cf" feedUrl="https://feeds.fountain.fm/TS36KDtqYLCMlV79X4b8" medium="music" title="DubzDubzSheSexy"/>
+    <podcast:remoteItem feedGuid="2abf57b0-b7ef-5a7c-93bd-9c6099c91b82" feedUrl="https://feeds.fountain.fm/lJK2pCk2JPlxTBuLspQw" medium="music" title="360Degrees"/>
+    <podcast:remoteItem feedGuid="94bddbbe-4c33-5888-afb8-d876c1f8aba9" feedUrl="https://feeds.fountain.fm/HE4KeMjztAlciP2grS2V" medium="music" title="AboutDcream"/>
+    <podcast:remoteItem feedGuid="fc13a692-d7e2-5532-9f8d-c10d975ed155" feedUrl="https://feeds.fountain.fm/cFKXOYwOgXlAGUYqdlS1" medium="music" title="BoutLiife Ah ya"/>
+    <podcast:remoteItem feedGuid="2a423219-9292-5f04-9dc5-04d941e21912" feedUrl="https://feeds.fountain.fm/h9hnM7Dwdr68aUYCzuQh" medium="music" title="MikeCheck1000"/>
+    <podcast:remoteItem feedGuid="d9f5f0d5-7fa6-5c5e-ba8c-eed3d1e459ee" feedUrl="https://feeds.fountain.fm/9r4sAfMLIMsaxzRHALae" medium="music" title="_DubzSex21x3)"/>
+    <podcast:remoteItem feedGuid="e09eb64d-bb5a-5e71-a84b-41304726ab56" feedUrl="https://feeds.fountain.fm/llxhf7BAHG9vLi44DCHp" medium="music" title="BreakitDown2"/>
+  </channel>
+</rss>

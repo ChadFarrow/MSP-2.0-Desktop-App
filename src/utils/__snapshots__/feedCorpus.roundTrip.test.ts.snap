@@ -1,0 +1,593 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`round trip: behindthesch3m3s-music-pixel-palace.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/item/podcast:episode: 0 → 2",
+    "rss/channel/item/podcast:season: 0 → 2",
+    "rss/channel/itunes:explicit: 0 → 1",
+  ],
+  "changed": [
+    "rss/channel/item/podcast:value@method (2 of 2): "keysend" → "lnaddress"",
+    "rss/channel/item/pubDate (2 of 2): "Sun, 18 Oct 2026 00:00:00 +0000" → "Sun, 18 Oct 2026 00:00:00 GMT"",
+    "rss/channel/podcast:value@method (1 of 1): "keysend" → "lnaddress"",
+    "rss/channel/pubDate (1 of 1): "Sat, 24 Oct 2026 22:47:45 +0000" → "Sat, 24 Oct 2026 22:47:45 GMT"",
+    "rss@xmlns:podcast (1 of 1): "https://github.com/Podcastindex-org/podcast-namespace/blob/m…" → "https://podcastindex.org/namespace/1.0"",
+  ],
+  "importedAs": "album",
+  "lost": [
+    "rss/channel/image/height: 1 → 0",
+    "rss/channel/image/width: 1 → 0",
+    "rss@xmlns:content: 1 → 0",
+  ],
+  "sourceMedium": "music",
+}
+`;
+
+exports[`round trip: doerfelverse-music-no-longer-afraid-single.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [],
+  "changed": [],
+  "importedAs": "album",
+  "lost": [],
+  "sourceMedium": "music",
+}
+`;
+
+exports[`round trip: example-feed.xml (repo root) > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [],
+  "changed": [],
+  "importedAs": "album",
+  "lost": [
+    "rss/channel/item/podcast:images: 3 → 0",
+    "rss/channel/item/podcast:images@srcset: 3 → 0",
+    "rss/channel/item/podcast:person: 10 → 2",
+    "rss/channel/item/podcast:person@group: 10 → 2",
+    "rss/channel/item/podcast:person@href: 2 → 0",
+    "rss/channel/item/podcast:person@img: 2 → 0",
+    "rss/channel/item/podcast:person@role: 10 → 2",
+  ],
+  "sourceMedium": "music",
+}
+`;
+
+exports[`round trip: fountain-music-feast-of-hammers.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/image: 0 → 1",
+    "rss/channel/image/link: 0 → 1",
+    "rss/channel/image/title: 0 → 1",
+    "rss/channel/image/url: 0 → 1",
+    "rss/channel/item/itunes:image: 0 → 13",
+    "rss/channel/item/itunes:image@href: 0 → 13",
+    "rss/channel/item/podcast:season: 0 → 13",
+    "rss/channel/item/podcast:value: 0 → 13",
+    "rss/channel/item/podcast:value/podcast:valueRecipient: 0 → 39",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@address: 0 → 39",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@name: 0 → 39",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@split: 0 → 39",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@type: 0 → 39",
+    "rss/channel/item/podcast:value@method: 0 → 13",
+    "rss/channel/item/podcast:value@type: 0 → 13",
+    "rss/channel/itunes:category: 0 → 1",
+    "rss/channel/itunes:category@text: 0 → 1",
+    "rss/channel/pubDate: 0 → 1",
+  ],
+  "changed": [],
+  "importedAs": "album",
+  "lost": [
+    "rss/channel/podcast:publisher/podcast:remoteItem@title: 1 → 0",
+  ],
+  "sourceMedium": "music",
+}
+`;
+
+exports[`round trip: fountain-music-the-bullet-within.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/image: 0 → 1",
+    "rss/channel/image/link: 0 → 1",
+    "rss/channel/image/title: 0 → 1",
+    "rss/channel/image/url: 0 → 1",
+    "rss/channel/item/itunes:image: 0 → 11",
+    "rss/channel/item/itunes:image@href: 0 → 11",
+    "rss/channel/item/podcast:season: 0 → 11",
+    "rss/channel/item/podcast:value: 0 → 11",
+    "rss/channel/item/podcast:value/podcast:valueRecipient: 0 → 33",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@address: 0 → 33",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@name: 0 → 33",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@split: 0 → 33",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@type: 0 → 33",
+    "rss/channel/item/podcast:value@method: 0 → 11",
+    "rss/channel/item/podcast:value@type: 0 → 11",
+    "rss/channel/itunes:category: 0 → 1",
+    "rss/channel/itunes:category@text: 0 → 1",
+    "rss/channel/pubDate: 0 → 1",
+  ],
+  "changed": [],
+  "importedAs": "album",
+  "lost": [
+    "rss/channel/podcast:publisher/podcast:remoteItem@title: 1 → 0",
+  ],
+  "sourceMedium": "music",
+}
+`;
+
+exports[`round trip: fountain-publisher-darrar211.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/image: 0 → 1",
+    "rss/channel/image/link: 0 → 1",
+    "rss/channel/image/title: 0 → 1",
+    "rss/channel/image/url: 0 → 1",
+    "rss/channel/itunes:author: 0 → 1",
+    "rss/channel/itunes:category: 0 → 1",
+    "rss/channel/itunes:category@text: 0 → 1",
+    "rss/channel/podcast:value/podcast:valueRecipient@name: 1 → 2",
+    "rss/channel/pubDate: 0 → 1",
+  ],
+  "changed": [],
+  "importedAs": "publisher",
+  "lost": [],
+  "sourceMedium": "publisher",
+}
+`;
+
+exports[`round trip: github-musicl-death-of-the-close-minded-playli.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/itunes:category: 0 → 1",
+    "rss/channel/itunes:category@text: 0 → 1",
+    "rss/channel/itunes:explicit: 0 → 1",
+    "rss/channel/language: 0 → 1",
+  ],
+  "changed": [
+    "rss/channel/podcast:medium (1 of 1): "musicL" → "music"",
+    "rss/channel/pubDate (1 of 1): "Sat, 12 Jul 2025 23:09:15 +0000" → "Sat, 12 Jul 2025 23:09:15 GMT"",
+    "rss@xmlns:podcast (1 of 1): "https://github.com/Podcastindex-org/podcast-namespace/blob/m…" → "https://podcastindex.org/namespace/1.0"",
+  ],
+  "importedAs": "album",
+  "lost": [
+    "rss/channel/image/height: 1 → 0",
+    "rss/channel/image/width: 1 → 0",
+    "rss/channel/itunes:owner: 1 → 0",
+    "rss/channel/itunes:owner/itunes:email: 1 → 0",
+    "rss/channel/itunes:owner/itunes:name: 1 → 0",
+    "rss@xmlns:content: 1 → 0",
+  ],
+  "sourceMedium": "musicL",
+}
+`;
+
+exports[`round trip: headstarts-publisher-james-goulding.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [],
+  "changed": [],
+  "importedAs": "publisher",
+  "lost": [],
+  "sourceMedium": "publisher",
+}
+`;
+
+exports[`round trip: jimmyv4v-music-jimmy-v-music.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/item/itunes:image: 13 → 15",
+    "rss/channel/item/itunes:image@href: 13 → 15",
+    "rss/channel/item/podcast:episode: 0 → 15",
+    "rss/channel/item/podcast:season: 0 → 15",
+    "rss/channel/item/podcast:value: 5 → 15",
+    "rss/channel/item/podcast:value/podcast:valueRecipient: 30 → 90",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@address: 30 → 90",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@customKey: 5 → 15",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@customValue: 5 → 15",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@name: 30 → 90",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@split: 30 → 90",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@type: 30 → 90",
+    "rss/channel/item/podcast:value@method: 5 → 15",
+    "rss/channel/item/podcast:value@type: 5 → 15",
+  ],
+  "changed": [
+    "rss/channel/item/enclosure@url (15 of 15): "https://op3.dev/e/ipfspodcasting.net/e/music.jimmyv4v.com/ba…" → "https://op3.dev/e,pg=dbad52b9-6253-4a9b-bfab-246b9e839815/ip…"",
+    "rss/channel/item/itunes:explicit (15 of 15): "no" → "false"",
+    "rss/channel/item/podcast:alternateEnclosure/podcast:source@uri (3 of 3): "https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/…" → "https://op3.dev/e,pg=dbad52b9-6253-4a9b-bfab-246b9e839815/mu…"",
+    "rss/channel/item/pubDate (15 of 15): "Thu, 28 Dec 2023 20:42:37 +0000" → "Thu, 28 Dec 2023 20:42:37 GMT"",
+    "rss/channel/itunes:explicit (1 of 1): "no" → "false"",
+    "rss/channel/podcast:value@method (1 of 1): "keysend" → "lnaddress"",
+    "rss/channel/pubDate (1 of 1): "Fri, 16 Oct 2026 14:59:19 +0000" → "Fri, 16 Oct 2026 14:59:19 GMT"",
+    "rss@xmlns:podcast (1 of 1): "https://github.com/Podcastindex-org/podcast-namespace/blob/m…" → "https://podcastindex.org/namespace/1.0"",
+  ],
+  "importedAs": "album",
+  "lost": [
+    "rss/channel/image/height: 1 → 0",
+    "rss/channel/image/width: 1 → 0",
+    "rss/channel/item/podcast:images: 8 → 0",
+    "rss/channel/item/podcast:images@srcset: 8 → 0",
+    "rss/channel/item/podcast:value@suggested: 2 → 0",
+    "rss/channel/itunes:owner@itunes:email: 1 → 0",
+    "rss/channel/itunes:owner@itunes:name: 1 → 0",
+    "rss@endcoding: 1 → 0",
+  ],
+  "sourceMedium": "music",
+}
+`;
+
+exports[`round trip: kolomona-podcast-v4vmusic-live.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/item/itunes:explicit: 0 → 3",
+    "rss/channel/item/itunes:image: 0 → 3",
+    "rss/channel/item/itunes:image@href: 0 → 3",
+    "rss/channel/item/podcast:episode: 0 → 3",
+    "rss/channel/item/podcast:season: 0 → 3",
+    "rss/channel/itunes:explicit: 0 → 1",
+  ],
+  "changed": [
+    "rss/channel/item/enclosure@url (3 of 3): "https://op3.dev/e/ipfspodcasting.net/e/cdn.kolomona.com/podc…" → "https://op3.dev/e,pg=c1959795-28f1-502d-ad3e-70abf5a034a9/ip…"",
+    "rss/channel/item/podcast:value@method (3 of 3): "keysend" → "lnaddress"",
+    "rss/channel/item/pubDate (3 of 3): "Mon, 19 Oct 2026 19:34:56 +0000" → "Mon, 19 Oct 2026 19:34:56 GMT"",
+    "rss/channel/podcast:medium (1 of 1): "podcast" → "music"",
+    "rss/channel/podcast:value@method (1 of 1): "keysend" → "lnaddress"",
+    "rss/channel/pubDate (1 of 1): "Thu, 05 Nov 2026 03:07:38 +0000" → "Thu, 05 Nov 2026 03:07:38 GMT"",
+    "rss@xmlns:podcast (1 of 1): "https://github.com/Podcastindex-org/podcast-namespace/blob/m…" → "https://podcastindex.org/namespace/1.0"",
+  ],
+  "importedAs": "album",
+  "lost": [
+    "rss/channel/image/height: 1 → 0",
+    "rss/channel/image/width: 1 → 0",
+    "rss/channel/itunes:category: 2 → 1",
+    "rss/channel/itunes:category@text: 2 → 1",
+    "rss/channel/itunes:owner/itunes:email: 1 → 0",
+    "rss@xmlns:content: 1 → 0",
+  ],
+  "sourceMedium": "podcast",
+}
+`;
+
+exports[`round trip: musicsideproject-music-b-sides-the-sch3m3s.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [],
+  "changed": [],
+  "importedAs": "album",
+  "lost": [],
+  "sourceMedium": "music",
+}
+`;
+
+exports[`round trip: musicsideproject-publisher-strange-love.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [],
+  "changed": [],
+  "importedAs": "publisher",
+  "lost": [],
+  "sourceMedium": "publisher",
+}
+`;
+
+exports[`round trip: namespace-fixture-example.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/item/itunes:duration: 0 → 3",
+    "rss/channel/item/podcast:person@group: 3 → 9",
+    "rss/channel/item/podcast:person@role: 6 → 9",
+    "rss/channel/item/podcast:value: 2 → 3",
+    "rss/channel/item/podcast:value/podcast:valueRecipient: 6 → 8",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@address: 6 → 8",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@name: 6 → 8",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@split: 6 → 8",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@type: 6 → 8",
+    "rss/channel/item/podcast:value@method: 2 → 3",
+    "rss/channel/item/podcast:value@suggested: 2 → 3",
+    "rss/channel/item/podcast:value@type: 2 → 3",
+  ],
+  "changed": [
+    "rss/channel/item/guid@isPermaLink (3 of 3): "true" → "false"",
+    "rss/channel/podcast:medium (1 of 1): "podcast" → "music"",
+  ],
+  "importedAs": "album",
+  "lost": [
+    "rss/channel/item/podcast:season@name: 3 → 0",
+    "rss/channel/item/podcast:transcript: 4 → 2",
+    "rss/channel/item/podcast:transcript@language: 1 → 0",
+    "rss/channel/item/podcast:transcript@rel: 1 → 0",
+    "rss/channel/item/podcast:transcript@type: 4 → 2",
+    "rss/channel/item/podcast:transcript@url: 4 → 2",
+  ],
+  "sourceMedium": "podcast",
+}
+`;
+
+exports[`round trip: phafe-music-the-singles.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [],
+  "changed": [],
+  "importedAs": "album",
+  "lost": [],
+  "sourceMedium": "music",
+}
+`;
+
+exports[`round trip: podhome-podcast-satellite-skirmish.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/item/podcast:episode: 0 → 1",
+    "rss/channel/item/podcast:person@group: 5 → 6",
+    "rss/channel/item/podcast:season: 0 → 1",
+  ],
+  "changed": [
+    "rss/channel/item/podcast:value/podcast:valueRecipient@address (1 of 10): "035ad2c954e264004986da2d9499e1732e5175e1dcef2453c921c6cdcc35…" → "musicsideproject@getalby.com"",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@name (1 of 10): "StevenB" → "MSP 2.0"",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@type (1 of 10): "node" → "lnaddress"",
+    "rss/channel/item/podcast:value@method (1 of 1): "keysend" → "lnaddress"",
+    "rss/channel/item/pubDate (1 of 1): "Thu, 18 Jul 2024 07:17:02 +0000" → "Thu, 18 Jul 2024 07:17:02 GMT"",
+    "rss/channel/podcast:value/podcast:valueRecipient@address (1 of 19): "035ad2c954e264004986da2d9499e1732e5175e1dcef2453c921c6cdcc35…" → "musicsideproject@getalby.com"",
+    "rss/channel/podcast:value/podcast:valueRecipient@name (1 of 19): "StevenB" → "MSP 2.0"",
+    "rss/channel/podcast:value/podcast:valueRecipient@type (1 of 19): "node" → "lnaddress"",
+    "rss/channel/podcast:value@method (1 of 1): "keysend" → "lnaddress"",
+    "rss/channel/pubDate (1 of 1): "Fri, 6 Feb 2026 09:54:10 +0000" → "Fri, 06 Feb 2026 09:54:10 GMT"",
+  ],
+  "importedAs": "album",
+  "lost": [
+    "?xml-stylesheet: 1 → 0",
+    "?xml-stylesheet@href: 1 → 0",
+    "?xml-stylesheet@type: 1 → 0",
+    "rss/channel/item/podcast:images: 1 → 0",
+    "rss/channel/item/podcast:images@srcset: 1 → 0",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@fee: 10 → 0",
+    "rss/channel/itunes:owner: 1 → 0",
+    "rss/channel/itunes:owner/itunes:email: 1 → 0",
+    "rss/channel/itunes:owner/itunes:name: 1 → 0",
+    "rss/channel/managingEditor: 1 → 0",
+    "rss/channel/podcast:locked: 1 → 0",
+    "rss/channel/podcast:locked@owner: 1 → 0",
+    "rss/channel/podcast:value/podcast:valueRecipient@fee: 19 → 0",
+    "rss@xmlns:content: 1 → 0",
+  ],
+  "sourceMedium": "music",
+}
+`;
+
+exports[`round trip: thinkandactlocally-musicl-local-theory-full-catalog.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [],
+  "changed": [
+    "rss/channel/podcast:medium (1 of 1): "musicL" → "music"",
+    "rss/channel/pubDate (1 of 1): "Sun, 21 Jun 2026 12:00:00 +0000" → "Sun, 21 Jun 2026 12:00:00 GMT"",
+  ],
+  "importedAs": "album",
+  "lost": [],
+  "sourceMedium": "musicL",
+}
+`;
+
+exports[`round trip: thunderroad-publisher-master-s-scroll.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/image/link: 0 → 1",
+    "rss/channel/image/title: 0 → 1",
+    "rss/channel/itunes:category: 0 → 1",
+    "rss/channel/itunes:category@text: 0 → 1",
+    "rss/channel/itunes:image: 0 → 1",
+    "rss/channel/itunes:image@href: 0 → 1",
+    "rss/channel/language: 0 → 1",
+    "rss/channel/lastBuildDate: 0 → 1",
+    "rss/channel/pubDate: 0 → 1",
+  ],
+  "changed": [
+    "rss/channel/itunes:explicit (1 of 1): "yes" → "true"",
+    "rss@xmlns:podcast (1 of 1): "https://github.com/Podcastindex-org/podcast-namespace/blob/m…" → "https://podcastindex.org/namespace/1.0"",
+  ],
+  "importedAs": "publisher",
+  "lost": [
+    "rss/channel/item: 1 → 0",
+    "rss/channel/item/description: 1 → 0",
+    "rss/channel/item/enclosure: 1 → 0",
+    "rss/channel/item/enclosure@length: 1 → 0",
+    "rss/channel/item/enclosure@type: 1 → 0",
+    "rss/channel/item/enclosure@url: 1 → 0",
+    "rss/channel/item/guid: 1 → 0",
+    "rss/channel/item/guid@isPermaLink: 1 → 0",
+    "rss/channel/item/itunes:duration: 1 → 0",
+    "rss/channel/item/itunes:image: 1 → 0",
+    "rss/channel/item/itunes:image@href: 1 → 0",
+    "rss/channel/item/itunes:subtitle: 1 → 0",
+    "rss/channel/item/itunes:summary: 1 → 0",
+    "rss/channel/item/podcast:aspectImages: 1 → 0",
+    "rss/channel/item/podcast:aspectImages@aspect-ratio: 1 → 0",
+    "rss/channel/item/podcast:aspectImages@src: 1 → 0",
+    "rss/channel/item/pubDate: 1 → 0",
+    "rss/channel/item/title: 1 → 0",
+    "rss/channel/itunes:keywords: 1 → 0",
+    "rss/channel/podcast:value/podcast:valueRecipient@customKey: 1 → 0",
+    "rss/channel/podcast:value/podcast:valueRecipient@customValue: 1 → 0",
+    "rss@endcoding: 1 → 0",
+  ],
+  "sourceMedium": "publisher",
+}
+`;
+
+exports[`round trip: wavlake-music-cream.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/image: 0 → 1",
+    "rss/channel/image/link: 0 → 1",
+    "rss/channel/image/title: 0 → 1",
+    "rss/channel/image/url: 0 → 1",
+    "rss/channel/item/itunes:image: 0 → 1",
+    "rss/channel/item/itunes:image@href: 0 → 1",
+    "rss/channel/itunes:category: 0 → 1",
+    "rss/channel/itunes:category@text: 0 → 1",
+    "rss/channel/language: 0 → 1",
+    "rss/channel/podcast:publisher: 0 → 1",
+    "rss/channel/podcast:publisher/podcast:remoteItem: 0 → 1",
+    "rss/channel/podcast:publisher/podcast:remoteItem@feedGuid: 0 → 1",
+    "rss/channel/podcast:publisher/podcast:remoteItem@feedUrl: 0 → 1",
+    "rss/channel/podcast:publisher/podcast:remoteItem@medium: 0 → 1",
+    "rss/channel/pubDate: 0 → 1",
+  ],
+  "changed": [
+    "rss/channel/item/enclosure@url (1 of 1): "https://op3.dev/e,pg=d1c05b58-16bd-5f8a-9d79-2a5bc9d5e3f9/ht…" → "https://op3.dev/e,pg=d1c05b58-16bd-5f8a-9d79-2a5bc9d5e3f9/d1…"",
+  ],
+  "importedAs": "album",
+  "lost": [
+    "rss/channel/podcast:remoteItem: 1 → 0",
+    "rss/channel/podcast:remoteItem@feedGuid: 1 → 0",
+    "rss/channel/podcast:remoteItem@feedUrl: 1 → 0",
+    "rss/channel/podcast:remoteItem@medium: 1 → 0",
+    "rss@xmlns:content: 1 → 0",
+    "rss@xmlns:psc: 1 → 0",
+  ],
+  "sourceMedium": "music",
+}
+`;
+
+exports[`round trip: wavlake-music-kyndell.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/image: 0 → 1",
+    "rss/channel/image/link: 0 → 1",
+    "rss/channel/image/title: 0 → 1",
+    "rss/channel/image/url: 0 → 1",
+    "rss/channel/item/itunes:image: 0 → 1",
+    "rss/channel/item/itunes:image@href: 0 → 1",
+    "rss/channel/itunes:category: 0 → 1",
+    "rss/channel/itunes:category@text: 0 → 1",
+    "rss/channel/language: 0 → 1",
+    "rss/channel/podcast:publisher: 0 → 1",
+    "rss/channel/podcast:publisher/podcast:remoteItem: 0 → 1",
+    "rss/channel/podcast:publisher/podcast:remoteItem@feedGuid: 0 → 1",
+    "rss/channel/podcast:publisher/podcast:remoteItem@feedUrl: 0 → 1",
+    "rss/channel/podcast:publisher/podcast:remoteItem@medium: 0 → 1",
+    "rss/channel/pubDate: 0 → 1",
+  ],
+  "changed": [
+    "rss/channel/item/enclosure@url (1 of 1): "https://op3.dev/e,pg=7d6c3a22-27de-5502-b51c-387bf3a2591d/ht…" → "https://op3.dev/e,pg=7d6c3a22-27de-5502-b51c-387bf3a2591d/d1…"",
+  ],
+  "importedAs": "album",
+  "lost": [
+    "rss/channel/podcast:remoteItem: 1 → 0",
+    "rss/channel/podcast:remoteItem@feedGuid: 1 → 0",
+    "rss/channel/podcast:remoteItem@feedUrl: 1 → 0",
+    "rss/channel/podcast:remoteItem@medium: 1 → 0",
+    "rss@xmlns:content: 1 → 0",
+    "rss@xmlns:psc: 1 → 0",
+  ],
+  "sourceMedium": "music",
+}
+`;
+
+exports[`round trip: wavlake-music-okok.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/image: 0 → 1",
+    "rss/channel/image/link: 0 → 1",
+    "rss/channel/image/title: 0 → 1",
+    "rss/channel/image/url: 0 → 1",
+    "rss/channel/item/itunes:image: 0 → 1",
+    "rss/channel/item/itunes:image@href: 0 → 1",
+    "rss/channel/itunes:category: 0 → 1",
+    "rss/channel/itunes:category@text: 0 → 1",
+    "rss/channel/language: 0 → 1",
+    "rss/channel/podcast:publisher: 0 → 1",
+    "rss/channel/podcast:publisher/podcast:remoteItem: 0 → 1",
+    "rss/channel/podcast:publisher/podcast:remoteItem@feedGuid: 0 → 1",
+    "rss/channel/podcast:publisher/podcast:remoteItem@feedUrl: 0 → 1",
+    "rss/channel/podcast:publisher/podcast:remoteItem@medium: 0 → 1",
+    "rss/channel/pubDate: 0 → 1",
+  ],
+  "changed": [
+    "rss/channel/item/enclosure@url (1 of 1): "https://op3.dev/e,pg=da1e6b2d-709d-5eb9-bb0f-79f54ad71abe/ht…" → "https://op3.dev/e,pg=da1e6b2d-709d-5eb9-bb0f-79f54ad71abe/d1…"",
+  ],
+  "importedAs": "album",
+  "lost": [
+    "rss/channel/podcast:remoteItem: 1 → 0",
+    "rss/channel/podcast:remoteItem@feedGuid: 1 → 0",
+    "rss/channel/podcast:remoteItem@feedUrl: 1 → 0",
+    "rss/channel/podcast:remoteItem@medium: 1 → 0",
+    "rss@xmlns:content: 1 → 0",
+    "rss@xmlns:psc: 1 → 0",
+  ],
+  "sourceMedium": "music",
+}
+`;
+
+exports[`round trip: wavlake-publisher-nancy-loeffler-caro.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/image: 0 → 1",
+    "rss/channel/image/link: 0 → 1",
+    "rss/channel/image/title: 0 → 1",
+    "rss/channel/image/url: 0 → 1",
+    "rss/channel/itunes:author: 0 → 1",
+    "rss/channel/itunes:category: 0 → 1",
+    "rss/channel/itunes:category@text: 0 → 1",
+    "rss/channel/language: 0 → 1",
+    "rss/channel/pubDate: 0 → 1",
+  ],
+  "changed": [],
+  "importedAs": "publisher",
+  "lost": [
+    "rss/channel/itunes:owner: 1 → 0",
+    "rss/channel/itunes:owner/itunes:email: 1 → 0",
+    "rss/channel/itunes:owner/itunes:name: 1 → 0",
+    "rss@xmlns:atom: 1 → 0",
+    "rss@xmlns:content: 1 → 0",
+    "rss@xmlns:dc: 1 → 0",
+    "rss@xmlns:psc: 1 → 0",
+  ],
+  "sourceMedium": "publisher",
+}
+`;
+
+exports[`round trip: wavlake-publisher-olamide.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/image: 0 → 1",
+    "rss/channel/image/link: 0 → 1",
+    "rss/channel/image/title: 0 → 1",
+    "rss/channel/image/url: 0 → 1",
+    "rss/channel/itunes:author: 0 → 1",
+    "rss/channel/itunes:category: 0 → 1",
+    "rss/channel/itunes:category@text: 0 → 1",
+    "rss/channel/language: 0 → 1",
+    "rss/channel/pubDate: 0 → 1",
+  ],
+  "changed": [],
+  "importedAs": "publisher",
+  "lost": [
+    "rss/channel/itunes:owner: 1 → 0",
+    "rss/channel/itunes:owner/itunes:email: 1 → 0",
+    "rss/channel/itunes:owner/itunes:name: 1 → 0",
+    "rss@xmlns:atom: 1 → 0",
+    "rss@xmlns:content: 1 → 0",
+    "rss@xmlns:dc: 1 → 0",
+    "rss@xmlns:psc: 1 → 0",
+  ],
+  "sourceMedium": "publisher",
+}
+`;
+
+exports[`round trip: wiirdo-music-global-fedpilled-industrial-comp.xml > keeps, changes and drops what the snapshot records 1`] = `
+{
+  "added": [
+    "rss/channel/item/podcast:episode: 0 → 501",
+    "rss/channel/item/podcast:season: 0 → 501",
+    "rss/channel/item/podcast:value: 0 → 501",
+    "rss/channel/item/podcast:value/podcast:valueRecipient: 0 → 501",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@address: 0 → 501",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@name: 0 → 501",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@split: 0 → 501",
+    "rss/channel/item/podcast:value/podcast:valueRecipient@type: 0 → 501",
+    "rss/channel/item/podcast:value@method: 0 → 501",
+    "rss/channel/item/podcast:value@type: 0 → 501",
+    "rss/channel/pubDate: 0 → 1",
+  ],
+  "changed": [],
+  "importedAs": "album",
+  "lost": [
+    "rss/channel/podcast:locked: 1 → 0",
+  ],
+  "sourceMedium": "music",
+}
+`;

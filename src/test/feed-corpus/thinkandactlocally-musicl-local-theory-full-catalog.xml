@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Local Theory — Full Catalog</title>
+    <link>https://music.thinkandactlocally.com/local-theory</link>
+    <description>The complete Local Theory catalog — a sovereign value-for-value music list, hosted on our own infrastructure. Each album is referenced by its own feed; boost the catalog and it routes to Think and Act Locally.</description>
+    <language>en</language>
+    <lastBuildDate>Sun, 21 Jun 2026 12:00:00 +0000</lastBuildDate>
+    <pubDate>Sun, 21 Jun 2026 12:00:00 +0000</pubDate>
+    <generator>sovereign-music-feed-generator</generator>
+    <atom:link href="https://music.thinkandactlocally.com/local-theory/feed.xml" rel="self" type="application/rss+xml"/>
+    <podcast:medium>musicL</podcast:medium>
+    <podcast:guid>d64356aa-ce73-5a22-8595-9a3af3a8d92c</podcast:guid>
+    <podcast:license>All rights reserved</podcast:license>
+    <copyright>© Local Theory. All rights reserved.</copyright>
+    <podcast:locked owner="david@thinkandactlocally.com">yes</podcast:locked>
+    <podcast:person role="music contributor" group="audio production">Mason Creek</podcast:person>
+    <itunes:author>Local Theory</itunes:author>
+    <itunes:summary>The complete Local Theory catalog — a sovereign value-for-value music list, hosted on our own infrastructure. Each album is referenced by its own feed; boost the catalog and it routes to Think and Act Locally.</itunes:summary>
+    <itunes:explicit>false</itunes:explicit>
+    <itunes:image href="https://music.thinkandactlocally.com/local-theory/cover.jpg"/>
+    <itunes:category text="Music"/>
+    <image><url>https://music.thinkandactlocally.com/local-theory/cover.jpg</url><title>Local Theory — Full Catalog</title><link>https://music.thinkandactlocally.com/local-theory</link></image>
+    <podcast:value type="lightning" method="lnaddress">
+      <podcast:valueRecipient name="Think and Act Locally" type="lnaddress" address="thinkandactlocally@fountain.fm" split="100"/>
+    </podcast:value>
+    <podcast:remoteItem medium="music" feedGuid="666f1f72-d051-56a4-a7e5-68c15f39d6c0" feedUrl="https://music.thinkandactlocally.com/mountain-christmas/feed.xml"/>
+    <podcast:remoteItem medium="music" feedGuid="dec49138-e35d-59d5-b47c-13f932e5f735" feedUrl="https://music.thinkandactlocally.com/the-squeeze/feed.xml"/>
+    <podcast:remoteItem medium="music" feedGuid="9fc551f9-4a9a-5d3e-abfd-77beddf910ce" feedUrl="https://music.thinkandactlocally.com/your-own-bank/feed.xml"/>
+    <podcast:remoteItem medium="music" feedGuid="1168800a-51fb-5110-8dc9-db422ce045aa" feedUrl="https://music.thinkandactlocally.com/built-different/feed.xml"/>
+    <podcast:remoteItem medium="music" feedGuid="75e5cb21-f39a-5fee-aa67-b02142e553de" feedUrl="https://music.thinkandactlocally.com/flesh-and-blood/feed.xml"/>
+    <podcast:remoteItem medium="music" feedGuid="8918cf33-ee51-52d8-a489-0cb2bea67084" feedUrl="https://music.thinkandactlocally.com/come-home/feed.xml"/>
+    <podcast:remoteItem medium="music" feedGuid="4dc94354-be9a-570c-a77a-14920da7d9fe" feedUrl="https://music.thinkandactlocally.com/love-and-fear/feed.xml"/>
+    <podcast:remoteItem medium="music" feedGuid="99e0103e-92c4-5184-b2ee-f66d0ef6e091" feedUrl="https://music.thinkandactlocally.com/rehearsal/feed.xml"/>
+    <podcast:remoteItem medium="music" feedGuid="e80db454-44e3-5088-9894-5b44c73266f1" feedUrl="https://music.thinkandactlocally.com/enough-already/feed.xml"/>
+    <podcast:remoteItem medium="music" feedGuid="af6a909a-48a4-5c7c-b48e-7b887f774de3" feedUrl="https://music.thinkandactlocally.com/the-operator-standard/feed.xml"/>
+    <podcast:remoteItem medium="music" feedGuid="b8859c64-bed7-50b9-ad6a-77f57cb168e5" feedUrl="https://music.thinkandactlocally.com/beef/feed.xml"/>
+    <podcast:remoteItem medium="music" feedGuid="60508ea5-566a-5fe2-9f05-c50285c2b51d" feedUrl="https://music.thinkandactlocally.com/sovereign-ground/feed.xml"/>
+    <podcast:remoteItem medium="music" feedGuid="359c313c-4e0c-562c-9cd6-d23b61c1cef6" feedUrl="https://music.thinkandactlocally.com/low-stress-living/feed.xml"/>
+  </channel>
+</rss>

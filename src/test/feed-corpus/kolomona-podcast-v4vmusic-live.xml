@@ -1,0 +1,296 @@
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:podcast="https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/1.0.md" version="2.0">
+  <channel>
+    <title>v4vmusic Show</title>
+    <description><![CDATA[This show is a show all about the world's first music app solely dedicated to ALL the bitcoin lightning enabled music RSS feeds.
+
+https://v4vmusic.com
+
+This show also happens to be a music show 🙂
+
+Brought to you by Sir Libre and Sir TJ the Wrathful
+
+Mission of the show: To feature, support, promote, v4vmusic songs and educate, artists and listeners about the ecosystem and it's underlying open protocols.
+
+This show genre hops so if there's something you hate, skip it, and if there's something you freaking love, boost it!]]></description>
+    <language>en</language>
+    <itunes:image href="https://cdn.kolomona.com/podcasts/v4vmusic/v4vmusic-logo-1000.jpg"/>
+    <link>https://v4vmusic.com/s/206</link>
+    <generator>Sovereign Feeds</generator>
+    <image>
+      <url>https://cdn.kolomona.com/podcasts/v4vmusic/v4vmusic-logo-1000.jpg</url>
+      <link>https://v4vmusic.com/s/206</link>
+      <title>v4vmusic Show</title>
+      <description><![CDATA[This show is a show all about the world's first music app solely dedicated to ALL the bitcoin lightning enabled music RSS feeds.
+
+https://v4vmusic.com
+
+This show also happens to be a music show 🙂
+
+Brought to you by Sir Libre and Sir TJ the Wrathful
+
+Mission of the show: To feature, support, promote, v4vmusic songs and educate, artists and listeners about the ecosystem and it's underlying open protocols.
+
+This show genre hops so if there's something you hate, skip it, and if there's something you freaking love, boost it!]]></description>
+      <width>144</width>
+      <height>144</height>
+    </image>
+    <itunes:category text="Music"/>
+    <itunes:category text=""/>
+    <podcast:medium>podcast</podcast:medium>
+    <podcast:complete>no</podcast:complete>
+    <podcast:block>no</podcast:block>
+    <itunes:owner>
+      <itunes:email/>
+      <itunes:name>Sir TJ and Sir Libre</itunes:name>
+    </itunes:owner>
+    <pubDate>Thu, 05 Nov 2026 03:07:38 +0000</pubDate>
+    <lastBuildDate>Thu, 05 Nov 2026 03:07:38 +0000</lastBuildDate>
+    <category>Music</category>
+    <category/>
+    <podcast:guid>c1959795-28f1-502d-ad3e-70abf5a034a9</podcast:guid>
+    <podcast:person href="https://sirlibre.com" img="https://cdn.kolomona.com/media/images/profiles/sunflower01.jpg" group="cast" role="co-host">Sir Libre</podcast:person>
+    <podcast:person href="https://www.doerfelverse.com" img="https://www.doerfelverse.com/art/tj-socials.png" group="cast" role="co-host">Sir TJ The Wrathful</podcast:person>
+    <podcast:podroll>
+      <podcast:remoteItem feedGuid="d5e73072-64a2-56a3-9dcd-4a00bfe561d5" feedUrl="https://sirlibre.com/lightning-thrashes-rss.xml"/>
+      <podcast:remoteItem feedGuid="3aebb7a8-5942-5ee7-a148-8bdc14f1f3d4" feedUrl="https://serve.podhome.fm/rss/3aebb7a8-5942-5ee7-a148-8bdc14f1f3d4"/>
+      <podcast:remoteItem feedGuid="ac746d09-7c3b-5bcd-b28a-f12d6456ca8f" feedUrl="https://feed.homegrownhits.xyz/feed.xml"/>
+      <podcast:remoteItem feedGuid="9e3cea98-d04d-5190-88b3-46ee6030d4ea" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Sat_Skirmish/sproutingsymphonies/rss/satspotlightsymphony.xml"/>
+      <podcast:remoteItem feedGuid="2973941f-0d0e-5b33-8cee-a56647fb878d" feedUrl="https://feeds.oncetold.net/80000060"/>
+      <podcast:remoteItem feedGuid="8d3aa9e5-1e42-5108-a7e0-463883d35e14" feedUrl="https://mmmusic.show/podcast/feed.xml"/>
+      <podcast:remoteItem feedGuid="469b403f-db2d-574c-9db9-96dbb3f6561c" feedUrl="https://itsamood.org/itsamoodrss.xml"/>
+      <podcast:remoteItem feedGuid="41aace28-8679-5ef1-9958-75cf76c2b5f0" feedUrl="https://www.doerfelverse.com/feeds/intothedoerfelverse.xml"/>
+      <podcast:remoteItem feedGuid="6dfbd8e4-f9f3-5ea1-98a1-574134999b3b" feedUrl="https://mp3s.nashownotes.com/bballrss.xml"/>
+      <podcast:remoteItem feedGuid="31e6e997-df26-59d5-9301-1f5928809566" feedUrl="https://phafe.com/wp-content/uploads/rssfeed/v4v_music_spotlight/V4V_Music_Spotlight.xml"/>
+      <podcast:remoteItem feedGuid="fafd2bfc-98ac-5010-9fcb-7403abfd420a" feedUrl="https://serve.podhome.fm/rss/fafd2bfc-98ac-5010-9fcb-7403abfd420a"/>
+      <podcast:remoteItem feedGuid="8f2eb0c0-3627-59cf-85fc-4e252ddb6954" feedUrl="https://serve.podhome.fm/rss/8f2eb0c0-3627-59cf-85fc-4e252ddb6954"/>
+      <podcast:remoteItem feedGuid="a3296e55-637a-539d-91dd-183d5033f065" feedUrl="https://music.jimmyv4v.com/podcasts/v4v-roundtable/v4vroundtable-rss.xml"/>
+      <podcast:remoteItem feedGuid="7c6f7875-2b73-491e-b32c-e2c8d6e91d53" feedUrl="https://serve.podhome.fm/rss/7c6f7875-2b73-491e-b32c-e2c8d6e91d53"/>
+      <podcast:remoteItem feedGuid="f38e27af-fb9e-46ef-9ed9-5d8046d094a9" feedUrl="https://music.behindthesch3m3s.com/b4ts feed/feed.xml"/>
+    </podcast:podroll>
+    <itunes:author>Sir TJ and Sir Libre</itunes:author>
+    <managingEditor>Kolomona Myer</managingEditor>
+    <podcast:funding url="https://www.paypal.com/donate/?hosted_button_id=W6CTLWQDQ4D9C">Support Sir Libre and Kanaka</podcast:funding>
+    <podcast:funding url="https://www.paypal.com/donate/?hosted_button_id=ATL9BD9EQRSNN">Support Sir TJ</podcast:funding>
+    <podcast:value type="lightning" method="keysend" suggested="0.00000005000">
+      <podcast:valueRecipient name="SirLibre Node" type="node" address="03460a453d13c98ff06b36b3b6a8c06a7b48328ad5f983dacc3a7b0991b841bc57" split="40"/>
+      <podcast:valueRecipient type="lnaddress" name="StevenB++" address="steven@getalby.com" split="4"/>
+      <podcast:valueRecipient name="IPFS Podcasting - Cameron++" type="node" address="028eb5be336f7fdf2a4e40c57ff55d3d5d71277bb4197ea14957f756bff249e623" split="5"/>
+      <podcast:valueRecipient name="op3.dev Stats" type="node" address="03a2cb3058309f7a0355b9583fc4347d82b251ee94997aec4d4e5573b181a49657" split="1" fee="true"/>
+      <podcast:valueRecipient name="ericpp++ - Helipad Maintenance" type="lnaddress" address="ericpp@getalby.com" split="5"/>
+      <podcast:valueRecipient name="TJ Doerfel" type="node" address="031ce2f133b570edf1c776e571e27d22a715dc6ea73956f0e79f4272d81d9dc0d5" customKey="696969" customValue="1" split="40"/>
+      <podcast:valueRecipient name="Boostr Bot - Boost to Nostr" type="node" address="032870511bfa0309bab3ca1832ead69eed848a4abddbc4d50e55bb2157f9525e51" customKey="696969" customValue="273" split="1"/>
+      <podcast:valueRecipient name="Voidzero++ for all the IRC work" type="lnaddress" address="voidzero@getalby.com" split="5"/>
+    </podcast:value>
+    <podcast:liveItem status="pending" start="2026-11-16T00:00:00.000Z" end="2026-11-16T02:00:00.000Z">
+      <title>v4vmusic Show Live!</title>
+      <podcast:liveValue uri="https://ws.sirlibre.com/event?event_id=cmvck2ow60001o4018uz02dmv" protocol="socket.io"/>
+      <description><![CDATA[<p>TJ and Sir Libre talk about the v4vmusic app, the v4v music scene and play some v4v songs.</p>]]></description>
+      <enclosure length="33" type="audio/mpeg" url="https://us1.internet-radio.com/proxy/doerfelstream?mp=/live"/>
+      <guid isPermaLink="false">c1fbf44d-3e12-4c7c-a1a0-1b8fc385ee1d</guid>
+      <itunes:subtitle>v4vmusic Show Live!</itunes:subtitle>
+      <itunes:summary><![CDATA[<p>TJ and Sir Libre talk about the v4vmusic app, the v4v music scene and play some v4v songs.</p>]]></itunes:summary>
+      <podcast:contentLink href="https://v4vmusic.com/s/206">Listen Live at v4vmusic.com</podcast:contentLink>
+      <podcast:value type="lightning" method="keysend" suggested="0.00000005000">
+        <podcast:valueRecipient name="SirLibre Node" type="node" address="03460a453d13c98ff06b36b3b6a8c06a7b48328ad5f983dacc3a7b0991b841bc57" split="40"/>
+        <podcast:valueRecipient type="lnaddress" name="StevenB++" address="steven@getalby.com" split="4"/>
+        <podcast:valueRecipient name="IPFS Podcasting - Cameron++" type="node" address="028eb5be336f7fdf2a4e40c57ff55d3d5d71277bb4197ea14957f756bff249e623" split="5"/>
+        <podcast:valueRecipient name="op3.dev Stats" type="node" address="03a2cb3058309f7a0355b9583fc4347d82b251ee94997aec4d4e5573b181a49657" split="1" fee="true"/>
+        <podcast:valueRecipient name="ericpp++ - Helipad Maintenance" type="lnaddress" address="ericpp@getalby.com" split="5"/>
+        <podcast:valueRecipient name="TJ Doerfel" type="node" address="031ce2f133b570edf1c776e571e27d22a715dc6ea73956f0e79f4272d81d9dc0d5" customKey="696969" customValue="1" split="40"/>
+        <podcast:valueRecipient name="Boostr Bot - Boost to Nostr" type="node" address="032870511bfa0309bab3ca1832ead69eed848a4abddbc4d50e55bb2157f9525e51" customKey="696969" customValue="273" split="1"/>
+        <podcast:valueRecipient name="Voidzero for all the IRC work" type="lnaddress" address="voidzero@getalby.com" split="5"/>
+      </podcast:value>
+      <podcast:chat server="irc.zeronode.net" protocol="irc" accountId="SirLibre" space="SirLibre" embedUrl="https://trollroom.io"/>
+      <itunes:image href="https://cdn.kolomona.com/podcasts/v4vmusic/v4vmusic-logo-1000.jpg"/>
+      <author>Sir TJ and Sir Libre</author>
+      <itunes:author>Sir TJ and Sir Libre</itunes:author>
+      <link>https://v4vmusic.com/s/206</link>
+      <itunes:keywords>v4v, value for value, music, v4vmusic</itunes:keywords>
+    </podcast:liveItem>
+    <item>
+      <title>003-v4vmusic</title>
+      <description><![CDATA[<p>Sir TJ the Wrathful of the Doerfels joins me to revive this dead podcast.</p>
+<p>We have a new show format, please let us know what you think of it.</p>
+<p>&nbsp;</p>
+<p><strong>TJ's links</strong></p>
+<ul>
+<li><a href="https://doerfelverse.com">Doerfelverse.com</a></li>
+<li><a href="https://v4vmusic.com/s/78">TJ's publisher page</a></li>
+<li><a href="https://www.paypal.com/donate/?hosted_button_id=ATL9BD9EQRSNN">TJ's Paypal</a></li>
+</ul>
+<p>&nbsp;</p>
+<p><strong>Sir Libre's links</strong></p>
+<ul>
+<li><a href="https://sirlibre.com">SirLibre.com</a></li>
+<li><a href="https://www.paypal.com/donate/?hosted_button_id=W6CTLWQDQ4D9C">Sir Libre's Paypal</a></li>
+<li><a href="https://sirlibre.com/donate/">Sir Libre's Donation page</a></li>
+</ul>]]></description>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/cdn.kolomona.com/podcasts/v4vmusic/003/003-v4vmusic.mp3" length="88997582" type="audio/mpeg"/>
+      <podcast:chapters url="https://cdn.kolomona.com/podcasts/v4vmusic/003/003-v4vmusic.json" type="application/json"/>
+      <podcast:value type="lightning" method="keysend" suggested="0.00000005000">
+        <podcast:valueRecipient name="SirLibre Node" type="node" address="03460a453d13c98ff06b36b3b6a8c06a7b48328ad5f983dacc3a7b0991b841bc57" split="40"/>
+        <podcast:valueRecipient type="lnaddress" name="StevenB++" address="steven@getalby.com" split="4"/>
+        <podcast:valueRecipient name="IPFS Podcasting - Cameron++" type="node" address="028eb5be336f7fdf2a4e40c57ff55d3d5d71277bb4197ea14957f756bff249e623" split="5"/>
+        <podcast:valueRecipient name="op3.dev Stats" type="node" address="03a2cb3058309f7a0355b9583fc4347d82b251ee94997aec4d4e5573b181a49657" split="1" fee="true"/>
+        <podcast:valueRecipient name="ericpp++ - Helipad Maintenance" type="lnaddress" address="ericpp@getalby.com" split="5"/>
+        <podcast:valueRecipient name="TJ Doerfel" type="node" address="031ce2f133b570edf1c776e571e27d22a715dc6ea73956f0e79f4272d81d9dc0d5" customKey="696969" customValue="1" split="40"/>
+        <podcast:valueRecipient name="Boostr Bot - Boost to Nostr" type="node" address="032870511bfa0309bab3ca1832ead69eed848a4abddbc4d50e55bb2157f9525e51" customKey="696969" customValue="273" split="1"/>
+        <podcast:valueRecipient name="Voidzero++ for all the IRC work" type="lnaddress" address="voidzero@getalby.com" split="5"/>
+        <podcast:valueTimeSplit startTime="152.94" duration="290.09" remotePercentage="100">
+          <podcast:remoteItem feedGuid="c7c663de-22c5-5e28-aa95-59784431544a" itemGuid="a17f92e2-e5bf-44bf-9f60-9b71f3c9ad16"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="453.09" duration="152.91" remotePercentage="100">
+          <podcast:remoteItem feedGuid="75078ec0-e0ab-5873-ad66-3908a0eebf30" itemGuid="5f365d87-f277-4ba3-9b71-b4dd55423ff8"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="1136.52" duration="320.77" remotePercentage="100">
+          <podcast:remoteItem feedGuid="d9bdd845-750f-5cc3-a3cd-36edcde2671a" itemGuid="8428c78d-dedc-495f-a74e-b241d56d49fb"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="1529.22" duration="188.90" remotePercentage="100">
+          <podcast:remoteItem feedGuid="537df90e-0cc4-535b-84d0-dcb3ca87f1f8" itemGuid="7ad63686-68ca-49fb-b5f3-a5426f1e87c9"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="2849.87" duration="191.82" remotePercentage="100">
+          <podcast:remoteItem feedGuid="fd0b5de1-9593-5d58-bdf0-63793720ca46" itemGuid="360db16d-8c5d-41f9-9b8a-b6d4f96f9b7a"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="3139.16" duration="219.34" remotePercentage="100">
+          <podcast:remoteItem feedGuid="e88a4a67-877c-5e03-b8fd-a70cebc821af" itemGuid="9287595a-72b1-40ec-bded-30fe4f0fec1a"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="3563.88" duration="240.56" remotePercentage="100">
+          <podcast:remoteItem feedGuid="ad6bfff9-4d5e-54ef-b5d3-dcc6eaf26e3b" itemGuid="001af25f-8475-40d9-a7b4-11f0f3b25dae"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="4299.12" duration="209.87" remotePercentage="100">
+          <podcast:remoteItem feedGuid="a2d2e313-9cbd-5169-b89c-ab07b33ecc33" itemGuid="9ff8f18b-cc79-474c-a3e9-2948113b8bf5"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="4594.16" duration="190.02" remotePercentage="100">
+          <podcast:remoteItem feedGuid="63d0caef-4b57-576e-8b7d-150082b21775" itemGuid="835325bb-ef2d-5a59-890b-dc9c689610a6"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="5346.69" duration="189.94" remotePercentage="100">
+          <podcast:remoteItem feedGuid="82235f8b-da8c-52a5-ba6b-1f11c199f526" itemGuid="f147613a-f3cb-4a01-817f-c9c2f0560868"/>
+        </podcast:valueTimeSplit>
+      </podcast:value>
+      <guid isPermaLink="false">dec6a433-d307-4df0-b248-1f34fa85748d</guid>
+      <itunes:subtitle>003-v4vmusic</itunes:subtitle>
+      <itunes:duration>5557</itunes:duration>
+      <link>https://v4vmusic.com</link>
+      <pubDate>Mon, 19 Oct 2026 19:34:56 +0000</pubDate>
+      <author>Kolomona aka Sir Libre</author>
+      <itunes:author>Kolomona aka Sir Libre</itunes:author>
+      <itunes:keywords>v4v, v4vmusic, music, sovereignty, DeMu, Valueverse</itunes:keywords>
+      <itunes:summary><![CDATA[<p>Sir TJ the Wrathful of the Doerfels joins me to revive this dead podcast.</p>
+<p>We have a new show format, please let us know what you think of it.</p>
+<p>&nbsp;</p>
+<p><strong>TJ's links</strong></p>
+<ul>
+<li><a href="https://doerfelverse.com">Doerfelverse.com</a></li>
+<li><a href="https://v4vmusic.com/s/78">TJ's publisher page</a></li>
+<li><a href="https://www.paypal.com/donate/?hosted_button_id=ATL9BD9EQRSNN">TJ's Paypal</a></li>
+</ul>
+<p>&nbsp;</p>
+<p><strong>Sir Libre's links</strong></p>
+<ul>
+<li><a href="https://sirlibre.com">SirLibre.com</a></li>
+<li><a href="https://www.paypal.com/donate/?hosted_button_id=W6CTLWQDQ4D9C">Sir Libre's Paypal</a></li>
+<li><a href="https://sirlibre.com/donate/">Sir Libre's Donation page</a></li>
+</ul>]]></itunes:summary>
+    </item>
+    <item>
+      <title>002-v4vmusic</title>
+      <description><![CDATA[<p><a href="https://v4vmusic.com">v4vmusic.com</a> - The worlds first v4v music app app solely dedicated to all the RSS based v4v music.<br /><a href="https://t.me/+HCAcbqYDn0VhYTFh">v4vmusic Telegram group - </a>For bug reporting<br /><br /></p>
+<p>Intro Song</p>
+<ul>
+<li><a href="https://v4vmusic.com/?song=cme2glou904hlli1xxpqbiqqc">Temples - Cosmodrome</a></li>
+</ul>
+<p>Songs Played</p>
+<ul>
+<li><a href="https://v4vmusic.com/?song=cme2gst1m05wnli1xrpxzq2et">CHARLEY T - The Dogs Keep Barking</a></li>
+<li><a href="https://v4vmusic.com/?song=cme39w9op014ip81x0qgafyqk">The Velvicks - Hit Me Like Sugar</a></li>
+</ul>
+<p>&nbsp;</p>
+<p>Support v4vmusic<br /><br /></p>
+<p><a href="https://www.paypal.com/donate/?hosted_button_id=W6CTLWQDQ4D9C">Paypal</a></p>
+<p><a href="https://sirlibre.com/donate/">Sir Libre's Donation page</a></p>]]></description>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/cdn.kolomona.com/podcasts/v4vmusic/002/002-v4vmusic.mp3" length="51535112" type="audio/mpeg"/>
+      <podcast:person group="cast" role="host">Sir Libre</podcast:person>
+      <podcast:chapters url="https://cdn.kolomona.com/podcasts/v4vmusic/002/002-v4vmusic.json" type="application/json"/>
+      <podcast:value type="lightning" method="keysend" suggested="0.00000005000">
+        <podcast:valueRecipient name="SirLibre Node" type="node" address="03460a453d13c98ff06b36b3b6a8c06a7b48328ad5f983dacc3a7b0991b841bc57" split="85"/>
+        <podcast:valueRecipient type="lnaddress" name="StevenB++" address="steven@getalby.com" split="5"/>
+        <podcast:valueRecipient name="IPFS Podcasting - Cameron++" type="node" address="028eb5be336f7fdf2a4e40c57ff55d3d5d71277bb4197ea14957f756bff249e623" split="5"/>
+        <podcast:valueRecipient name="op3.dev Stats" type="node" address="03a2cb3058309f7a0355b9583fc4347d82b251ee94997aec4d4e5573b181a49657" split="1" fee="true"/>
+        <podcast:valueRecipient name="ericpp++ - Helipat Maintenance" type="lnaddress" address="ericpp@getalby.com" split="5"/>
+        <podcast:valueTimeSplit startTime="16.360000" duration="13.793129" remotePercentage="80">
+          <podcast:remoteItem feedGuid="962b4cdd-1d7e-521a-a6cf-9df4b88c870a" itemGuid="a0ca1eb6-e984-44e8-acd0-33d8b32ef51c"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="1468.990433" duration="260.324040" remotePercentage="80">
+          <podcast:remoteItem feedGuid="c49ec2b5-94da-5780-870a-5101f15cde95" itemGuid="9092ea7f-49d2-4bae-82bd-76cea96adc66"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="2876.809105" duration="186.709122" remotePercentage="80">
+          <podcast:remoteItem feedGuid="63d0caef-4b57-576e-8b7d-150082b21775" itemGuid="835325bb-ef2d-5a59-890b-dc9c689610a6"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="3067.400745" duration="148.821295" remotePercentage="80">
+          <podcast:remoteItem feedGuid="07b65561-a11e-5f18-a5fe-6e0586871b7e" itemGuid="c64b27fe-23d1-5691-9e2e-3f57e1d66b9f"/>
+        </podcast:valueTimeSplit>
+      </podcast:value>
+      <guid isPermaLink="false">df05038f-277d-400b-ab1b-6742d701abed</guid>
+      <itunes:subtitle>002-v4vmusic</itunes:subtitle>
+      <itunes:duration>3216</itunes:duration>
+      <link>https://v4vmusic.com</link>
+      <pubDate>Thu, 18 Dec 2025 15:46:48 +0000</pubDate>
+      <author>Kolomona aka Sir Libre</author>
+      <itunes:author>Kolomona aka Sir Libre</itunes:author>
+      <itunes:keywords>v4v, v4vmusic, music, sovereignty, DeMu, Valueverse</itunes:keywords>
+      <itunes:summary><![CDATA[<p><a href="https://v4vmusic.com">v4vmusic.com</a> - The worlds first v4v music app app solely dedicated to all the RSS based v4v music.<br /><a href="https://t.me/+HCAcbqYDn0VhYTFh">v4vmusic Telegram group - </a>For bug reporting<br /><br /></p>
+<p>Intro Song</p>
+<ul>
+<li><a href="https://v4vmusic.com/?song=cme2glou904hlli1xxpqbiqqc">Temples - Cosmodrome</a></li>
+</ul>
+<p>Songs Played</p>
+<ul>
+<li><a href="https://v4vmusic.com/?song=cme2gst1m05wnli1xrpxzq2et">CHARLEY T - The Dogs Keep Barking</a></li>
+<li><a href="https://v4vmusic.com/?song=cme39w9op014ip81x0qgafyqk">The Velvicks - Hit Me Like Sugar</a></li>
+</ul>
+<p>&nbsp;</p>
+<p>Support v4vmusic<br /><br /></p>
+<p><a href="https://www.paypal.com/donate/?hosted_button_id=W6CTLWQDQ4D9C">Paypal</a></p>
+<p><a href="https://sirlibre.com/donate/">Sir Libre's Donation page</a></p>]]></itunes:summary>
+    </item>
+    <item>
+      <title>001-v4vmusic</title>
+      <description><![CDATA[<p>Introduction to v4vmusic<br /><br />I talk a lot about the features of the app<br /><br /><a href="https://v4vmusic.com">v4vmusic.com</a> - The worlds first v4v music app app solely dedicated to all the RSS based v4v music.<br /><a href="https://t.me/+HCAcbqYDn0VhYTFh">v4vmusic Telegram group - </a>For bug reporting<br /><br /></p>
+<p>Intro Song</p>
+<p><a href="https://v4vmusic.com/?song=cmhn308ye000vod0ivbkeopde">Sweet Time - Jimmy V</a></p>
+<p>Songs Played</p>
+<p><a href="https://v4vmusic.com/?album=cmihm207m0mldod0iv2l5d2iq">Hear My Roar - I'm Alive</a><br /><a href="https://v4vmusic.com/?song=cmhn308ye000yod0i20r5bnj9">Jimmy V - Real World</a></p>]]></description>
+      <enclosure url="https://op3.dev/e/ipfspodcasting.net/e/cdn.kolomona.com/podcasts/v4vmusic/001/001-v4vmusic.mp3" length="50099000" type="audio/mpeg"/>
+      <podcast:person group="cast" role="host">Sir Libre</podcast:person>
+      <podcast:chapters url="https://cdn.kolomona.com/podcasts/v4vmusic/001/001-v4vmusic.json" type="application/json"/>
+      <podcast:value type="lightning" method="keysend" suggested="0.00000005000">
+        <podcast:valueRecipient name="SirLibre Node" type="node" address="03460a453d13c98ff06b36b3b6a8c06a7b48328ad5f983dacc3a7b0991b841bc57" split="90"/>
+        <podcast:valueRecipient type="lnaddress" name="StevenB++" address="steven@getalby.com" split="5"/>
+        <podcast:valueRecipient name="IPFS Podcasting" type="node" address="028eb5be336f7fdf2a4e40c57ff55d3d5d71277bb4197ea14957f756bff249e623" split="5"/>
+        <podcast:valueRecipient name="op3.dev Stats" type="node" address="03a2cb3058309f7a0355b9583fc4347d82b251ee94997aec4d4e5573b181a49657" split="1" fee="true"/>
+        <podcast:valueTimeSplit startTime="0.000000" duration="22.788231" remotePercentage="80">
+          <podcast:remoteItem feedGuid="dbad52b9-6253-4a9b-bfab-246b9e839815" itemGuid="bc80fa46-9563-48f0-b6df-5f9c847c7642"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="2454.197274" duration="349.830685" remotePercentage="80">
+          <podcast:remoteItem feedGuid="fbd96f01-fc53-577d-a71c-a97994fa646a" itemGuid="5d3ad3a9-961c-40d5-a462-f7e0b16618e9"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="2809.499999" duration="281.009125" remotePercentage="80">
+          <podcast:remoteItem feedGuid="dbad52b9-6253-4a9b-bfab-246b9e839815" itemGuid="0b6a3889-87ee-432b-a7ee-f6bef65ca3c4"/>
+        </podcast:valueTimeSplit>
+      </podcast:value>
+      <guid isPermaLink="false">d784a96c-7ad4-4d26-9f76-b52061c3f5e8</guid>
+      <itunes:subtitle>001 - v4vmusic</itunes:subtitle>
+      <itunes:duration>3126</itunes:duration>
+      <link>https://v4vmusic.com</link>
+      <pubDate>Mon, 08 Dec 2025 21:53:22 +0000</pubDate>
+      <author>Kolomona aka Sir Libre</author>
+      <itunes:author>Kolomona aka Sir Libre</itunes:author>
+      <itunes:keywords>v4v, v4vmusic, music, sovereignty, DeMu, Valueverse</itunes:keywords>
+      <itunes:summary><![CDATA[<p>Introduction to v4vmusic<br /><br />I talk a lot about the features of the app<br /><br /><a href="https://v4vmusic.com">v4vmusic.com</a> - The worlds first v4v music app app solely dedicated to all the RSS based v4v music.<br /><a href="https://t.me/+HCAcbqYDn0VhYTFh">v4vmusic Telegram group - </a>For bug reporting<br /><br /></p>
+<p>Intro Song</p>
+<p><a href="https://v4vmusic.com/?song=cmhn308ye000vod0ivbkeopde">Sweet Time - Jimmy V</a></p>
+<p>Songs Played</p>
+<p><a href="https://v4vmusic.com/?album=cmihm207m0mldod0iv2l5d2iq">Hear My Roar - I'm Alive</a><br /><a href="https://v4vmusic.com/?song=cmhn308ye000yod0i20r5bnj9">Jimmy V - Real World</a></p>]]></itunes:summary>
+    </item>
+  </channel>
+</rss>

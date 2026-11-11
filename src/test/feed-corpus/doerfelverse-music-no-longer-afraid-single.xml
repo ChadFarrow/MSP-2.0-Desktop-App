@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+    <channel>
+        <title>No Longer Afraid - Single</title>
+        <itunes:author>Middle Season</itunes:author>
+        <description>
+            Based in Nashville TN, currently overcoming laziness and drinking a lot of coffee to finish the songs
+        </description>
+        <link>https://www.facebook.com/middleseasonmusic/</link>
+        <language>en</language>
+        <generator>MSP 2.0 - Music Side Project Studio</generator>
+        <pubDate>Thu, 17 Sep 2026 04:22:32 GMT</pubDate>
+        <lastBuildDate>Thu, 17 Sep 2026 04:54:54 GMT</lastBuildDate>
+        <podcast:guid>c690112f-e347-463b-a9a8-9d61b3a5ddc7</podcast:guid>
+        <itunes:category text="Music" />
+        <itunes:keywords>middle, season, music, rock</itunes:keywords>
+        <image>
+            <url>https://www.doerfelverse.com/artists/middleseason/nolongerafraid.png</url>
+            <title>No Longer Afraid art by Middle Season</title>
+            <link>https://www.facebook.com/middleseasonmusic/</link>
+        </image>
+        <itunes:image href="https://www.doerfelverse.com/artists/middleseason/nolongerafraid.png" />
+        <podcast:medium>music</podcast:medium>
+        <itunes:explicit>false</itunes:explicit>
+        <itunes:owner>
+            <itunes:name>Middle Season</itunes:name>
+        </itunes:owner>
+        <podcast:person href="https://www.facebook.com/middleseasonmusic/" img="https://www.doerfelverse.com/artists/middleseason/msphoto.jpg" group="music" role="band">Middle Season</podcast:person>
+        <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+            <podcast:valueRecipient name="Middle Season" address="middleseasonmusic@fountain.fm" split="90" type="lnaddress" />
+            <podcast:valueRecipient name="MSP 2.0" address="chadf@getalby.com" split="4" type="lnaddress" />
+            <podcast:valueRecipient name="Podcastindex.org" address="podcastindex@getalby.com" split="1" type="lnaddress" />
+            <podcast:valueRecipient name="DV Media" address="sirtjthewrathful@getalby.com" split="4" type="lnaddress" />
+            <podcast:valueRecipient name="v4vmusic.com" address="03460a453d13c98ff06b36b3b6a8c06a7b48328ad5f983dacc3a7b0991b841bc57" split="1" type="node" />
+        </podcast:value>
+        <podcast:publisher>
+            <podcast:remoteItem medium="publisher" feedGuid="c642e00e-9f18-5d44-827c-5ac539716de4" feedUrl="https://www.doerfelverse.com/artists/middleseason/mspubfeed.xml" />
+        </podcast:publisher>
+        <item>
+            <title>No Longer Afraid</title>
+            <description>There&apos;s so much pain in you
+And even when you&apos;re not
+Around me
+You just want
+Breaking me down
+There&apos;s so much hate in you
+And you&apos;ve got no reason
+To mess me up
+Tearing me down
+You have gotten used to
+To be like that
+And somehow
+I&apos;ve decided
+To fight back
+
+Hey
+Don&apos;t bring me down
+Hey
+I&apos;m no longer afraid
+And now
+I&apos;m not alone
+Hey
+Don&apos;t bring me down
+I&apos;m no longer afraid
+
+There&apos;s so much pain in you
+And even when you&apos;re not
+Around me
+You just want to
+Bring me down
+There&apos;s so much hate in you
+And you&apos;ve got no reason
+To get on my nerves
+And breaking me down
+You have gotten used to
+To be like that
+And Somehow
+I feel stronger
+To fight back
+
+Hey
+Don&apos;t bring me down
+Hey
+I&apos;m no longer afraid
+Now
+I&apos;m not alone
+Hey
+Don&apos;t bring me down
+I&apos;m no longer
+
+This is the new me
+And I won&apos;t turn back
+This is the new me
+And I&apos;m here
+Now I&apos;m here
+Just back off
+Back off
+
+Hey
+This is the new me
+And I&apos;m here
+Now I&apos;m here
+Just back off
+Back off
+Hey
+Don&apos;t bring me
+Don&apos;t bring me down
+I&apos;m no longer afraid</description>
+            <pubDate>Thu, 17 Sep 2026 04:22:32 GMT</pubDate>
+            <guid isPermaLink="false">02d7867a-7420-40bc-814c-eeb90c6b899d</guid>
+            <itunes:image href="https://www.doerfelverse.com/artists/middleseason/nolongerafraid.png" />
+            <enclosure url="https://www.doerfelverse.com/artists/middleseason/no-longer-afraid.mp3" length="5000000" type="audio/mpeg"/>
+            <itunes:duration>00:03:29</itunes:duration>
+            <podcast:season>1</podcast:season>
+            <podcast:episode>1</podcast:episode>
+            <itunes:explicit>false</itunes:explicit>
+            <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+                <podcast:valueRecipient name="Middle Season" address="middleseasonmusic@fountain.fm" split="90" type="lnaddress" />
+                <podcast:valueRecipient name="MSP 2.0" address="chadf@getalby.com" split="4" type="lnaddress" />
+                <podcast:valueRecipient name="Podcastindex.org" address="podcastindex@getalby.com" split="1" type="lnaddress" />
+                <podcast:valueRecipient name="DV Media" address="sirtjthewrathful@getalby.com" split="4" type="lnaddress" />
+                <podcast:valueRecipient name="v4vmusic.com" address="03460a453d13c98ff06b36b3b6a8c06a7b48328ad5f983dacc3a7b0991b841bc57" split="1" type="node" />
+            </podcast:value>
+        </item>
+    </channel>
+</rss>
