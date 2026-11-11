@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:podcast="https://podcastindex.org/namespace/1.0">
+  <channel>
+    <atom:link href="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj" rel="self" type="application/rss+xml"/>
+    <description>&lt;p&gt;Feast of Hammers is the second studio album by English progressive rock band Birdeatsbaby, first released on 20 February 2012, through the band's own label, Dead Round Eyes.&lt;/p&gt;</description>
+    <generator>Fountain</generator>
+    <lastBuildDate>Tue, 20 Oct 2026 07:06:32 GMT</lastBuildDate>
+    <language>en</language>
+    <link>https://fountain.fm/album/TnjEzQIHCsE8tw0IsoVV</link>
+    <title>Feast of Hammers</title>
+    <itunes:author>Mishkin Fitzgerald</itunes:author>
+    <itunes:explicit>false</itunes:explicit>
+    <itunes:image href="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj/files/COVER_ART---DEFAULT---6bab308f-5c77-419f-b4b6-ce0410b8f3d7.jpg"/>
+    <podcast:guid>20e84e84-db1b-5187-a315-f683a1d519c1</podcast:guid>
+    <podcast:medium>music</podcast:medium>
+    <podcast:value type="lightning" method="lnaddress">
+      <podcast:valueRecipient name="mishkinfitzgerald@fountain.fm" split="88" type="lnaddress" address="mishkinfitzgerald@fountain.fm"/>
+      <podcast:valueRecipient name="Phantom Power" split="2" type="lnaddress" address="phantompower@strike.me"/>
+      <podcast:valueRecipient name="Fountain" split="10" type="lnaddress" address="boostbot@fountain.fm"/>
+    </podcast:value>
+    <podcast:publisher>
+      <podcast:remoteItem feedGuid="389932ae-b38c-5a34-b9f1-0e8ddf665e67" feedUrl="https://feeds.fountain.fm/XMaAEXsuE0geYb9y64oc" medium="publisher" title="Mishkin Fitzgerald"/>
+    </podcast:publisher>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj/items/fuXRjrTjQhec9XLr7W1w/files/AUDIO---DEFAULT---a8516401-d35e-4cc9-8027-18f973e97726.wav" length="41581054" type="audio/wav"/>
+      <itunes:duration>236</itunes:duration>
+      <guid isPermaLink="false">2bebb6db-dfff-4443-9eeb-5272ae849e37</guid>
+      <pubDate>Tue, 20 Oct 2026 07:06:28 GMT</pubDate>
+      <title>Victoria</title>
+      <link>https://fountain.fm/track/MjAwCyawaUorD12azZ2z</link>
+      <podcast:contentLink href="https://fountain.fm/track/MjAwCyawaUorD12azZ2z">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>12</podcast:episode>
+      <itunes:episode>12</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj/items/GtWCBcEUART4nssQN5lF/files/AUDIO---DEFAULT---8d3b5ca0-1feb-4431-87b5-df3f4c65800d.wav" length="44699806" type="audio/wav"/>
+      <itunes:duration>253</itunes:duration>
+      <guid isPermaLink="false">af19a008-3e14-4cdd-a404-39b57e736cac</guid>
+      <pubDate>Tue, 20 Oct 2026 07:06:28 GMT</pubDate>
+      <title>Feast of Hammers</title>
+      <link>https://fountain.fm/track/OuHWGkCJl278VmWmUOJR</link>
+      <podcast:contentLink href="https://fountain.fm/track/OuHWGkCJl278VmWmUOJR">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>5</podcast:episode>
+      <itunes:episode>5</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj/items/LAw0jpiia9IYdNjBvKtH/files/AUDIO---DEFAULT---fdf5abd5-0554-43af-86c4-d918fb637c05.wav" length="51109006" type="audio/wav"/>
+      <itunes:duration>290</itunes:duration>
+      <guid isPermaLink="false">5ae0e51e-7076-4936-b1a7-f17d72b6eefa</guid>
+      <pubDate>Tue, 20 Oct 2026 07:06:28 GMT</pubDate>
+      <title>Incitatus</title>
+      <link>https://fountain.fm/track/0Q6mUQnDaGP3Rv09kHJI</link>
+      <podcast:contentLink href="https://fountain.fm/track/0Q6mUQnDaGP3Rv09kHJI">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>7</podcast:episode>
+      <itunes:episode>7</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj/items/SICdivcZ0plR2lCWw7Iq/files/AUDIO---DEFAULT---bb1e9881-02c3-4f82-8639-c7a53c383a42.wav" length="47209390" type="audio/wav"/>
+      <itunes:duration>268</itunes:duration>
+      <guid isPermaLink="false">b8bf4066-e03b-493a-99b2-cee87148d872</guid>
+      <pubDate>Tue, 20 Oct 2026 07:06:28 GMT</pubDate>
+      <title>Double Nine</title>
+      <link>https://fountain.fm/track/0t80S8JmKv03qrZJ7FEd</link>
+      <podcast:contentLink href="https://fountain.fm/track/0t80S8JmKv03qrZJ7FEd">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>9</podcast:episode>
+      <itunes:episode>9</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj/items/37Oi7npyNqZJCpOKDJPx/files/AUDIO---DEFAULT---72fe5f38-f963-40b0-abcd-96181f02c94c.wav" length="31173454" type="audio/wav"/>
+      <itunes:duration>177</itunes:duration>
+      <guid isPermaLink="false">0108fbf9-887b-4eea-a0ae-3f3ce7e2d4aa</guid>
+      <pubDate>Tue, 20 Oct 2026 07:06:28 GMT</pubDate>
+      <title>What The Water Gave Me</title>
+      <link>https://fountain.fm/track/EVUWLDzlKbIiEgh1kYv2</link>
+      <podcast:contentLink href="https://fountain.fm/track/EVUWLDzlKbIiEgh1kYv2">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>4</podcast:episode>
+      <itunes:episode>4</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj/items/EJAguENJ6n7zP4XdgMGn/files/AUDIO---DEFAULT---ccc83816-d8a4-4b1f-911f-6b727a28f892.wav" length="44036542" type="audio/wav"/>
+      <itunes:duration>250</itunes:duration>
+      <guid isPermaLink="false">e8b1b7f0-c7e7-4b1b-8135-8c76138ec75f</guid>
+      <pubDate>Tue, 20 Oct 2026 07:06:28 GMT</pubDate>
+      <title>Anchor</title>
+      <link>https://fountain.fm/track/yAfc7JnGtLL9RV6Vx70t</link>
+      <podcast:contentLink href="https://fountain.fm/track/yAfc7JnGtLL9RV6Vx70t">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>3</podcast:episode>
+      <itunes:episode>3</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj/items/wMyGW9XOSIAH6g2RR15Q/files/AUDIO---DEFAULT---ec0c3df1-89ba-49ad-aa3e-76e4a9224977.wav" length="32911582" type="audio/wav"/>
+      <itunes:duration>187</itunes:duration>
+      <guid isPermaLink="false">76890971-e463-442a-843e-560ea3f89ef4</guid>
+      <pubDate>Tue, 20 Oct 2026 07:06:28 GMT</pubDate>
+      <title>Sailor's Wife</title>
+      <link>https://fountain.fm/track/2CXgC9Qft43xdLrGogHF</link>
+      <podcast:contentLink href="https://fountain.fm/track/2CXgC9Qft43xdLrGogHF">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>6</podcast:episode>
+      <itunes:episode>6</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj/items/Vlt4qDKmhzHtho2cm0mM/files/AUDIO---DEFAULT---1580049c-6585-45c5-9038-c6999a46ad5d.wav" length="40640254" type="audio/wav"/>
+      <itunes:duration>230</itunes:duration>
+      <guid isPermaLink="false">ed8de523-1a55-4f51-bd53-173779da99a3</guid>
+      <pubDate>Tue, 20 Oct 2026 07:06:28 GMT</pubDate>
+      <title>Tastes Like Sympathy</title>
+      <link>https://fountain.fm/track/ErJbLX1RHt6fOlAt7PQ1</link>
+      <podcast:contentLink href="https://fountain.fm/track/ErJbLX1RHt6fOlAt7PQ1">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>11</podcast:episode>
+      <itunes:episode>11</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj/items/dbEANwTVym2iOuFJOnQM/files/AUDIO---DEFAULT---e82f145a-b35b-45cc-8d8c-eef772693f22.wav" length="9078766" type="audio/wav"/>
+      <itunes:duration>51</itunes:duration>
+      <guid isPermaLink="false">ed57ce48-b191-473b-b07a-3e01223a40ac</guid>
+      <pubDate>Tue, 20 Oct 2026 07:06:28 GMT</pubDate>
+      <title>Interlude</title>
+      <link>https://fountain.fm/track/dU2k8iG38FQMlm8lG7zy</link>
+      <podcast:contentLink href="https://fountain.fm/track/dU2k8iG38FQMlm8lG7zy">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>8</podcast:episode>
+      <itunes:episode>8</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj/items/YMsHNrZYwRdpKHi4F7T7/files/AUDIO---DEFAULT---3cdc0367-34ab-44f1-92bd-895b125c487c.wav" length="4840462" type="audio/wav"/>
+      <itunes:duration>27</itunes:duration>
+      <guid isPermaLink="false">41504b68-d73d-4c94-a012-c7811861fd69</guid>
+      <pubDate>Tue, 20 Oct 2026 07:06:28 GMT</pubDate>
+      <title>Intro</title>
+      <link>https://fountain.fm/track/pGTqRooca9rGVwZWIdSM</link>
+      <podcast:contentLink href="https://fountain.fm/track/pGTqRooca9rGVwZWIdSM">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>1</podcast:episode>
+      <itunes:episode>1</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj/items/URNvjTffpby9KZ7byVGW/files/AUDIO---DEFAULT---d8e69b1d-f9c3-4f6e-824b-30087ce1e5ae.wav" length="24848926" type="audio/wav"/>
+      <itunes:duration>141</itunes:duration>
+      <guid isPermaLink="false">337d9ff6-dfee-4ab4-8968-8cbdeaab936c</guid>
+      <pubDate>Tue, 20 Oct 2026 07:06:28 GMT</pubDate>
+      <title>inale</title>
+      <link>https://fountain.fm/track/t25fECHQ3UhR4blRhexP</link>
+      <podcast:contentLink href="https://fountain.fm/track/t25fECHQ3UhR4blRhexP">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>13</podcast:episode>
+      <itunes:episode>13</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj/items/5TkW7rUbHZaUp31QbToB/files/AUDIO---DEFAULT---9ec87d5f-386b-4f43-a876-25ccdbd333b7.wav" length="34113454" type="audio/wav"/>
+      <itunes:duration>193</itunes:duration>
+      <guid isPermaLink="false">516707da-efd6-4bbb-8af2-63a98942a57b</guid>
+      <pubDate>Tue, 20 Oct 2026 07:06:28 GMT</pubDate>
+      <title>Through Ten Walls</title>
+      <link>https://fountain.fm/track/2XqfppCuiAaYrX7zfrYf</link>
+      <podcast:contentLink href="https://fountain.fm/track/2XqfppCuiAaYrX7zfrYf">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>10</podcast:episode>
+      <itunes:episode>10</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj/items/coxAF6nUcK8XDGaNxTKN/files/AUDIO---DEFAULT---171fc9aa-9dcd-4da0-bb6c-a2d6f2008fd6.wav" length="34101694" type="audio/wav"/>
+      <itunes:duration>193</itunes:duration>
+      <guid isPermaLink="false">250bf6e2-35be-4437-895d-2881950d34b3</guid>
+      <pubDate>Tue, 20 Oct 2026 07:06:28 GMT</pubDate>
+      <title>Love Will Bring You Nothing</title>
+      <link>https://fountain.fm/track/yXMnq25w3qkFCVtZQpK7</link>
+      <podcast:contentLink href="https://fountain.fm/track/yXMnq25w3qkFCVtZQpK7">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>2</podcast:episode>
+      <itunes:episode>2</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+  </channel>
+</rss>

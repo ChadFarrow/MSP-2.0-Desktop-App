@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:podcast="https://podcastindex.org/namespace/1.0">
+  <channel>
+    <atom:link href="https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi" rel="self" type="application/rss+xml"/>
+    <description>&lt;p&gt;The Bullet Within is the third studio album by English progressive rock band Birdeatsbaby, released on 14 July 2014 through the band's own label, Dead Round Eyes. Production of the album was largely funded via the crowdfunding platform Kickstarter.&lt;/p&gt;</description>
+    <generator>Fountain</generator>
+    <lastBuildDate>Tue, 20 Oct 2026 07:02:18 GMT</lastBuildDate>
+    <language>en</language>
+    <link>https://fountain.fm/album/0GwipiZDK5Mgg3esn5R5</link>
+    <title>The Bullet Within</title>
+    <itunes:author>Birdeatsbaby (Mishkin Fitzgerald)</itunes:author>
+    <itunes:explicit>false</itunes:explicit>
+    <itunes:image href="https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi/files/COVER_ART---DEFAULT---6e28d794-ef2b-48f6-86ad-387ad11fbca6.jpg"/>
+    <podcast:guid>01f2e29a-7b54-5d42-94e0-9bec0bd851d3</podcast:guid>
+    <podcast:medium>music</podcast:medium>
+    <podcast:value type="lightning" method="lnaddress">
+      <podcast:valueRecipient name="mishkinfitzgerald@fountain.fm" split="88" type="lnaddress" address="mishkinfitzgerald@fountain.fm"/>
+      <podcast:valueRecipient name="Phantom Power" split="2" type="lnaddress" address="phantompower@strike.me"/>
+      <podcast:valueRecipient name="Fountain" split="10" type="lnaddress" address="boostbot@fountain.fm"/>
+    </podcast:value>
+    <podcast:publisher>
+      <podcast:remoteItem feedGuid="389932ae-b38c-5a34-b9f1-0e8ddf665e67" feedUrl="https://feeds.fountain.fm/XMaAEXsuE0geYb9y64oc" medium="publisher" title="Mishkin Fitzgerald"/>
+    </podcast:publisher>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi/items/Nml9KEA1QzkkFBxolzbf/files/AUDIO---DEFAULT---49768c97-e669-43ad-8868-c966bed78766.wav" length="36258812" type="audio/wav"/>
+      <itunes:duration>205</itunes:duration>
+      <guid isPermaLink="false">5a60f5b4-daec-4548-ade5-c8abd0102065</guid>
+      <pubDate>Tue, 20 Oct 2026 07:02:14 GMT</pubDate>
+      <title>Hands Of Orlac</title>
+      <link>https://fountain.fm/track/YnQjIvGfcpsk7wqDS4vi</link>
+      <podcast:contentLink href="https://fountain.fm/track/YnQjIvGfcpsk7wqDS4vi">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>5</podcast:episode>
+      <itunes:episode>5</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi/items/IrCHqfWPduDEOOBJJJ8s/files/AUDIO---DEFAULT---00f3a335-9eaf-40be-ac2f-b91dc514ae65.wav" length="36507514" type="audio/wav"/>
+      <itunes:duration>207</itunes:duration>
+      <guid isPermaLink="false">dfe4f888-4fd8-425b-b386-06c191414fd0</guid>
+      <pubDate>Tue, 20 Oct 2026 07:02:14 GMT</pubDate>
+      <title>Tenterhooks</title>
+      <link>https://fountain.fm/track/Pbbw9sukwaEwTbkxhPr1</link>
+      <podcast:contentLink href="https://fountain.fm/track/Pbbw9sukwaEwTbkxhPr1">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>8</podcast:episode>
+      <itunes:episode>8</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi/items/1ry8MfGsMiRspawfIzb9/files/AUDIO---DEFAULT---d848fb70-4afc-4fc6-bf1e-a49fa88c7738.wav" length="43616320" type="audio/wav"/>
+      <itunes:duration>247</itunes:duration>
+      <guid isPermaLink="false">8cd513d4-f8b8-43cc-8502-e85edbd66553</guid>
+      <pubDate>Tue, 20 Oct 2026 07:02:14 GMT</pubDate>
+      <title>The Bullet</title>
+      <link>https://fountain.fm/track/bYIqMx5ft9dyGIN0ymYu</link>
+      <podcast:contentLink href="https://fountain.fm/track/bYIqMx5ft9dyGIN0ymYu">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>1</podcast:episode>
+      <itunes:episode>1</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi/items/G2zwUlcAgzQUeTbEY0r7/files/AUDIO---DEFAULT---2d3f5602-1ad1-4eeb-8462-97294acfd9a9.wav" length="41833812" type="audio/wav"/>
+      <itunes:duration>237</itunes:duration>
+      <guid isPermaLink="false">7630b89c-3933-4a0f-9ca3-623b8ea8444e</guid>
+      <pubDate>Tue, 20 Oct 2026 07:02:14 GMT</pubDate>
+      <title>The Lighthouse</title>
+      <link>https://fountain.fm/track/lLXuDKmgd1PknzTTJ0is</link>
+      <podcast:contentLink href="https://fountain.fm/track/lLXuDKmgd1PknzTTJ0is">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>9</podcast:episode>
+      <itunes:episode>9</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi/items/UGkUGHOt2SiUTx0DBGiB/files/AUDIO---DEFAULT---ea672198-47e2-4987-ab61-657c899da829.wav" length="39187894" type="audio/wav"/>
+      <itunes:duration>222</itunes:duration>
+      <guid isPermaLink="false">32920795-2003-4658-8be4-9a2ab171ced6</guid>
+      <pubDate>Tue, 20 Oct 2026 07:02:14 GMT</pubDate>
+      <title>My Arms</title>
+      <link>https://fountain.fm/track/ejynVgNlDx3rghQDTpzY</link>
+      <podcast:contentLink href="https://fountain.fm/track/ejynVgNlDx3rghQDTpzY">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>10</podcast:episode>
+      <itunes:episode>10</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi/items/eSXdBesfb8RP5H7pm9NL/files/AUDIO---DEFAULT---cc30aef4-a6a7-41c6-85b1-1b85a2d96b89.wav" length="44707106" type="audio/wav"/>
+      <itunes:duration>253</itunes:duration>
+      <guid isPermaLink="false">2567a731-f83f-4f57-8b31-82ef1f6eed31</guid>
+      <pubDate>Tue, 20 Oct 2026 07:02:14 GMT</pubDate>
+      <title>Silence</title>
+      <link>https://fountain.fm/track/bEAZAHey3ZlM50fcK4gO</link>
+      <podcast:contentLink href="https://fountain.fm/track/bEAZAHey3ZlM50fcK4gO">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>11</podcast:episode>
+      <itunes:episode>11</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi/items/KsjOV1vyGw7DvlAMekBS/files/AUDIO---DEFAULT---56610d12-44c3-468e-bb1a-04277d32d0d0.wav" length="12147352" type="audio/wav"/>
+      <itunes:duration>69</itunes:duration>
+      <guid isPermaLink="false">e2ef463f-ee6a-4ee1-be0e-2ad9901c60d4</guid>
+      <pubDate>Tue, 20 Oct 2026 07:02:14 GMT</pubDate>
+      <title>Into The Black</title>
+      <link>https://fountain.fm/track/4u4bQXYs9ZFFEb1ErMhV</link>
+      <podcast:contentLink href="https://fountain.fm/track/4u4bQXYs9ZFFEb1ErMhV">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>6</podcast:episode>
+      <itunes:episode>6</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi/items/Isnmk1yRXpnphvwTHGEu/files/AUDIO---DEFAULT---6a0a760e-1b99-4d25-a4ee-6704364fb787.wav" length="62496800" type="audio/wav"/>
+      <itunes:duration>354</itunes:duration>
+      <guid isPermaLink="false">b9eb1b91-6bff-49b6-a1b6-ea4a231b96e5</guid>
+      <pubDate>Tue, 20 Oct 2026 07:02:14 GMT</pubDate>
+      <title>Enemies Like Me</title>
+      <link>https://fountain.fm/track/uU3Bjia2HzvLhALlOwFl</link>
+      <podcast:contentLink href="https://fountain.fm/track/uU3Bjia2HzvLhALlOwFl">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>3</podcast:episode>
+      <itunes:episode>3</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi/items/zstRgBnzUnwxDgK2V5QT/files/AUDIO---DEFAULT---8b5a447f-da84-40ed-ac1e-5b74cbf33f89.wav" length="10129588" type="audio/wav"/>
+      <itunes:duration>57</itunes:duration>
+      <guid isPermaLink="false">5d1060d9-af16-4a1e-afe3-bc379c6129d7</guid>
+      <pubDate>Tue, 20 Oct 2026 07:02:14 GMT</pubDate>
+      <title>Interlude</title>
+      <link>https://fountain.fm/track/qcL5iUV3DFZZ8vEp2F1z</link>
+      <podcast:contentLink href="https://fountain.fm/track/qcL5iUV3DFZZ8vEp2F1z">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>7</podcast:episode>
+      <itunes:episode>7</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi/items/IAqH4XhydYDGeFTfDauE/files/AUDIO---DEFAULT---cda40e2c-1db1-4196-a2ae-10a47ee5a847.wav" length="36964024" type="audio/wav"/>
+      <itunes:duration>209</itunes:duration>
+      <guid isPermaLink="false">662df72a-0983-4773-9223-6eba03401cfe</guid>
+      <pubDate>Tue, 20 Oct 2026 07:02:14 GMT</pubDate>
+      <title>Ghosts</title>
+      <link>https://fountain.fm/track/6mgYhfwafQJKYXizlfti</link>
+      <podcast:contentLink href="https://fountain.fm/track/6mgYhfwafQJKYXizlfti">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>4</podcast:episode>
+      <itunes:episode>4</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <enclosure url="https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi/items/SDZbgh5ApOvLCoNlIXKs/files/AUDIO---DEFAULT---5ba9096b-68d6-49d4-9552-433f17e1d931.wav" length="39435254" type="audio/wav"/>
+      <itunes:duration>224</itunes:duration>
+      <guid isPermaLink="false">0bf1b3f9-de2a-436f-a4d1-fb7ba77f69ad</guid>
+      <pubDate>Tue, 20 Oct 2026 07:02:14 GMT</pubDate>
+      <title>Drinking In The Day</title>
+      <link>https://fountain.fm/track/pIuLcnlC7L95oGI6hxmz</link>
+      <podcast:contentLink href="https://fountain.fm/track/pIuLcnlC7L95oGI6hxmz">Listen on Fountain!</podcast:contentLink>
+      <podcast:episode>2</podcast:episode>
+      <itunes:episode>2</itunes:episode>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+  </channel>
+</rss>

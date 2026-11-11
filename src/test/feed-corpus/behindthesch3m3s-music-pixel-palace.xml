@@ -1,0 +1,299 @@
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:podcast="https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/1.0.md" version="2.0">
+  <channel>
+    <title>Pixel Palace</title>
+    <description>A interactive backyard campfire party! Live from Pixel Palace October 17th!!</description>
+    <language>en</language>
+    <itunes:image href="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/pixel%20palace%20show%20art.gif"/>
+    <link>https://www.pixelpalace.party</link>
+    <generator>Sovereign Feeds</generator>
+    <image>
+      <url>https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/pixel%20palace%20show%20art.gif</url>
+      <link>https://www.pixelpalace.party</link>
+      <title>Pixel Palace</title>
+      <description>A interactive backyard campfire party! Live from Pixel Palace October 17th!!</description>
+      <width>144</width>
+      <height>144</height>
+    </image>
+    <itunes:category text="Music"/>
+    <podcast:medium>music</podcast:medium>
+    <podcast:value type="lightning" method="keysend" suggested="0.00000005000">
+      <podcast:valueRecipient name="werehere@fountain.fm" type="lnaddress" address="werehere@fountain.fm" split="11"/>
+      <podcast:valueRecipient name="unknwnmusi@fountain.fm" type="lnaddress" address="unknwnmusi@fountain.fm" split="11"/>
+      <podcast:valueRecipient name="samlofthus@fountain.fm" type="lnaddress" address="samlofthus@fountain.fm" split="11"/>
+      <podcast:valueRecipient name="frankiepaint@fountain.fm" type="lnaddress" address="frankiepaint@fountain.fm" split="12"/>
+      <podcast:valueRecipient name="missionmommy@fountain.fm" type="lnaddress" address="missionmommy@fountain.fm" split="11"/>
+      <podcast:valueRecipient name="boobury@fountain.fm" type="lnaddress" address="boobury@fountain.fm" split="11"/>
+      <podcast:valueRecipient name="ericpp@getalby.com" type="lnaddress" address="ericpp@getalby.com" split="11"/>
+      <podcast:valueRecipient name="jorbear@fountain.fm" type="lnaddress" address="jorbear@fountain.fm" split="11"/>
+      <podcast:valueRecipient name="chadf@getalby.com" type="lnaddress" address="chadf@getalby.com" split="11"/>
+    </podcast:value>
+    <podcast:complete>no</podcast:complete>
+    <podcast:block>no</podcast:block>
+    <itunes:owner>
+      <itunes:name>boo-bury</itunes:name>
+      <itunes:email>thunderroadmusic@proton.me</itunes:email>
+    </itunes:owner>
+    <podcast:funding url="https://www.paypal.com/donate/?cmd=_donations&amp;business=behindthesch3m3s%40protonmail.com&amp;item_name=Jorfest+2026&amp;currency_code=USD">Support the Show</podcast:funding>
+    <itunes:author>Thunder Road Media</itunes:author>
+    <pubDate>Sat, 24 Oct 2026 22:47:45 +0000</pubDate>
+    <lastBuildDate>Sat, 24 Oct 2026 22:47:45 +0000</lastBuildDate>
+    <category>Music</category>
+    <podcast:guid>d1dca4bb-1966-59d7-9aff-c1eda9f31fb7</podcast:guid>
+    <podcast:podroll>
+      <podcast:remoteItem feedGuid="e0ac9365-689c-5043-8804-15b9dfcc545a" feedUrl="https://www.feed.behindthesch3m3s.com/feed.xml"/>
+      <podcast:remoteItem feedGuid="f38e27af-fb9e-46ef-9ed9-5d8046d094a9" feedUrl="https://music.behindthesch3m3s.com/b4ts%20feed/feed.xml"/>
+      <podcast:remoteItem feedGuid="c5e5322c-0144-498b-b8d9-a4eb958cf98a" feedUrl="https://serve.podhome.fm/rss/c5e5322c-0144-498b-b8d9-a4eb958cf98a"/>
+      <podcast:remoteItem feedGuid="b39fc3b2-2742-5944-a800-e87c42a093a3" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Sat_Skirmish/the_satellite_skirmish_album.xml" medium="music"/>
+      <podcast:remoteItem feedGuid="2a3a5f81-8325-521b-b168-07ff09b15435" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Sat_Skirmish/polarembrace/rss/videofeed/feed.xml" medium="music"/>
+      <podcast:remoteItem feedGuid="c56eedf3-de69-5a8c-b0fd-b8720afba0b3" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Sat_Skirmish/autumnrust/rss/feed.xml"/>
+      <podcast:remoteItem feedGuid="9e3cea98-d04d-5190-88b3-46ee6030d4ea" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Sat_Skirmish/sproutingsymphonies/rss/satspotlightsymphony.xml" medium="music"/>
+      <podcast:remoteItem feedGuid="c74210ce-da31-59c8-a671-fd74a7cb3ed2" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/tso%20big/as%20if%20boost%20beach/feed/as%20if_%20lit%20at%20boost%20beach.xml" medium="music"/>
+      <podcast:remoteItem feedGuid="fe36cad5-121c-5eed-a762-69da9da4f5c8" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/12%20Rods/12%20Rods%20April%206/12%20Rods/feed.xml"/>
+    </podcast:podroll>
+    <podcast:liveItem status="ended" start="2026-10-18T00:00:00.000Z" end="2026-10-18T03:54:19.000Z">
+      <title>Jorfest 2026</title>
+      <podcast:liveValue uri="https://curiohoster.com/event?event_id=c530c8eb-5e42-4daa-b00a-e31169935537" protocol="socket.io"/>
+      <description><![CDATA[<p>Somewhere around 7 PM Central on Saturday, the lights along Jorbear&rsquo;s roofline are going to change color, and if you watch closely you&rsquo;ll notice they&rsquo;re not lights at all. They&rsquo;re pixels. They always were. The house is a sprite. The yard is a level. We&rsquo;re Here, Sam Lofthus and NoName are about to take the decks, and you are invited to watch in the glow and admit, finally, that this is new.</p>
+<p>The value lies within splits. Every sat you send gets divided eight ways, evenly, among the people building the world in front of you. No landlord. No platform skimming off the top. Just a bunch of humans passing energy around a circle. That&rsquo;s not a business model, that&rsquo;s a campfire.</p>
+<p>Pixel Palace: Jorfest 2026<br />Saturday, October 17 &middot; 7&ndash;10 PM CT &middot; 00:00&ndash;03:00 UTC (Oct 18)<br />DJs: We&rsquo;re Here, Sam Lofthus, NoName<br />Reporter on the ground: Frankiepaint</p>
+<p>Boost, and the last digit summons one of ten stuffed animals. Milestone art appears as the sat count crosses 25k, 50k and 100k.</p>
+<p>ericpp&rsquo;s scripts turn the producer&rsquo;s split kit input into OSC commands for Jorbear&rsquo;s grandMA3 and Onyx consoles and boo-bury&rsquo;s video switcher. When the split changes, the camera cuts and that zone&rsquo;s lighting comes up with it. No boost required.</p>
+<p>Watch: <a href="https://www.pixelpalace.party/">https://www.pixelpalace.party/</a><br />Also live on Nostr: https://primal.net/p/nprofile1qqsr5qnsn6medetj3vexljqqvy99gfdrgsp7hs9f52kdvrryz6gwkrsxg6l7w</p>]]></description>
+      <enclosure length="33" type="application/x-mpegURL" url="https://customer-dlnbepb8zpz7h846.cloudflarestream.com/2808e81961ee6303b543bf3f74dccc34/manifest/video.m3u8?protocol=llhlsbeta"/>
+      <guid isPermaLink="false">e39fdf0f-4c69-4cbd-aa98-25481fc1edca</guid>
+      <itunes:image href="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/pixel%20palace%20show%20art.gif"/>
+      <itunes:subtitle>Jorfest 2026</itunes:subtitle>
+      <itunes:summary><![CDATA[<p>Somewhere around 7 PM Central on Saturday, the lights along Jorbear&rsquo;s roofline are going to change color, and if you watch closely you&rsquo;ll notice they&rsquo;re not lights at all. They&rsquo;re pixels. They always were. The house is a sprite. The yard is a level. We&rsquo;re Here, Sam Lofthus and NoName are about to take the decks, and you are invited to watch in the glow and admit, finally, that this is new.</p>
+<p>The value lies within splits. Every sat you send gets divided eight ways, evenly, among the people building the world in front of you. No landlord. No platform skimming off the top. Just a bunch of humans passing energy around a circle. That&rsquo;s not a business model, that&rsquo;s a campfire.</p>
+<p>Pixel Palace: Jorfest 2026<br />Saturday, October 17 &middot; 7&ndash;10 PM CT &middot; 00:00&ndash;03:00 UTC (Oct 18)<br />DJs: We&rsquo;re Here, Sam Lofthus, NoName<br />Reporter on the ground: Frankiepaint</p>
+<p>Boost, and the last digit summons one of ten stuffed animals. Milestone art appears as the sat count crosses 25k, 50k and 100k.</p>
+<p>ericpp&rsquo;s scripts turn the producer&rsquo;s split kit input into OSC commands for Jorbear&rsquo;s grandMA3 and Onyx consoles and boo-bury&rsquo;s video switcher. When the split changes, the camera cuts and that zone&rsquo;s lighting comes up with it. No boost required.</p>
+<p>Watch: <a href="https://www.pixelpalace.party/">https://www.pixelpalace.party/</a><br />Also live on Nostr: https://primal.net/p/nprofile1qqsr5qnsn6medetj3vexljqqvy99gfdrgsp7hs9f52kdvrryz6gwkrsxg6l7w</p>]]></itunes:summary>
+      <link>https://www.pixelpalace.party/</link>
+      <podcast:value type="lightning" method="keysend" suggested="0.00000005000">
+        <podcast:valueRecipient name="werehere@fountain.fm" type="lnaddress" address="werehere@fountain.fm" split="11"/>
+        <podcast:valueRecipient name="unknwnmusi@fountain.fm" type="lnaddress" address="unknwnmusi@fountain.fm" split="11"/>
+        <podcast:valueRecipient name="samlofthus@fountain.fm" type="lnaddress" address="samlofthus@fountain.fm" split="11"/>
+        <podcast:valueRecipient name="frankiepaint@fountain.fm" type="lnaddress" address="frankiepaint@fountain.fm" split="12"/>
+        <podcast:valueRecipient name="missionmommy@fountain.fm" type="lnaddress" address="missionmommy@fountain.fm" split="11"/>
+        <podcast:valueRecipient name="boobury@fountain.fm" type="lnaddress" address="boobury@fountain.fm" split="11"/>
+        <podcast:valueRecipient name="ericpp@getalby.com" type="lnaddress" address="ericpp@getalby.com" split="11"/>
+        <podcast:valueRecipient name="jorbear@fountain.fm" type="lnaddress" address="jorbear@fountain.fm" split="11"/>
+        <podcast:valueRecipient name="chadf@getalby.com" type="lnaddress" address="chadf@getalby.com" split="11"/>
+      </podcast:value>
+      <podcast:chat server="https://chat.behindthesch3m3s.com/#/connect" protocol="irc" space="#greenroom" embedUrl="https://chat.behindthesch3m3s.com/#/connect"/>
+      <itunes:explicit>true</itunes:explicit>
+    </podcast:liveItem>
+    <item>
+      <title>Jorfest 2026</title>
+      <description><![CDATA[<p>Check out the behind the scenes pictures: <a href="https://zososcorner.substack.com/p/pixel-palace-jorfest-2026">https://zososcorner.substack.com/p/pixel-palace-jorfest-2026</a></p>
+<p>Somewhere around 7 PM Central on Saturday, the lights along Jorbear&rsquo;s roofline are going to change color, and if you watch closely you&rsquo;ll notice they&rsquo;re not lights at all. They&rsquo;re pixels. They always were. The house is a sprite. The yard is a level. We&rsquo;re Here, Sam Lofthus and NoName are about to take the decks, and you are invited to watch in the glow and admit, finally, that this is new.</p>
+<p>The value lies within splits. Every sat you send gets divided eight ways, evenly, among the people building the world in front of you. No landlord. No platform skimming off the top. Just a bunch of humans passing energy around a circle. That&rsquo;s not a business model, that&rsquo;s a campfire.</p>
+<p>Pixel Palace: Jorfest 2026<br />Saturday, October 17 &middot; 7&ndash;10 PM CT &middot; 00:00&ndash;03:00 UTC (Oct 18)<br />DJs: We&rsquo;re Here, Sam Lofthus, NoName<br />Reporter on the ground: Frankiepaint</p>
+<p>Boost, and the last digit summons one of ten stuffed animals. Milestone art appears as the sat count crosses 25k, 50k and 100k.</p>
+<p>ericpp&rsquo;s scripts turn the producer&rsquo;s split kit input into OSC commands for Jorbear&rsquo;s grandMA3 and Onyx consoles and boo-bury&rsquo;s video switcher. When the split changes, the camera cuts and that zone&rsquo;s lighting comes up with it. No boost required.</p>
+<p>Watch: <a href="https://www.pixelpalace.party/">https://www.pixelpalace.party/</a><br />Also live on Nostr: https://primal.net/p/nprofile1qqsr5qnsn6medetj3vexljqqvy99gfdrgsp7hs9f52kdvrryz6gwkrsxg6l7w</p>]]></description>
+      <enclosure url="https://customer-dlnbepb8zpz7h846.cloudflarestream.com/650bda20548b439db189e04863acbcb2/manifest/video.m3u8" type="application/x-mpegURL" length="0"/>
+      <guid isPermaLink="false">ac06ffb0-8425-4d00-b94f-580d41c2a18d</guid>
+      <pubDate>Sun, 18 Oct 2026 00:00:00 +0000</pubDate>
+      <itunes:image href="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/pixel%20palace%20show%20art.gif"/>
+      <itunes:subtitle>Jorfest 2026</itunes:subtitle>
+      <itunes:summary><![CDATA[<p>Check out the behind the scenes pictures: <a href="https://zososcorner.substack.com/p/pixel-palace-jorfest-2026">https://zososcorner.substack.com/p/pixel-palace-jorfest-2026</a></p>
+<p>Somewhere around 7 PM Central on Saturday, the lights along Jorbear&rsquo;s roofline are going to change color, and if you watch closely you&rsquo;ll notice they&rsquo;re not lights at all. They&rsquo;re pixels. They always were. The house is a sprite. The yard is a level. We&rsquo;re Here, Sam Lofthus and NoName are about to take the decks, and you are invited to watch in the glow and admit, finally, that this is new.</p>
+<p>The value lies within splits. Every sat you send gets divided eight ways, evenly, among the people building the world in front of you. No landlord. No platform skimming off the top. Just a bunch of humans passing energy around a circle. That&rsquo;s not a business model, that&rsquo;s a campfire.</p>
+<p>Pixel Palace: Jorfest 2026<br />Saturday, October 17 &middot; 7&ndash;10 PM CT &middot; 00:00&ndash;03:00 UTC (Oct 18)<br />DJs: We&rsquo;re Here, Sam Lofthus, NoName<br />Reporter on the ground: Frankiepaint</p>
+<p>Boost, and the last digit summons one of ten stuffed animals. Milestone art appears as the sat count crosses 25k, 50k and 100k.</p>
+<p>ericpp&rsquo;s scripts turn the producer&rsquo;s split kit input into OSC commands for Jorbear&rsquo;s grandMA3 and Onyx consoles and boo-bury&rsquo;s video switcher. When the split changes, the camera cuts and that zone&rsquo;s lighting comes up with it. No boost required.</p>
+<p>Watch: <a href="https://www.pixelpalace.party/">https://www.pixelpalace.party/</a><br />Also live on Nostr: https://primal.net/p/nprofile1qqsr5qnsn6medetj3vexljqqvy99gfdrgsp7hs9f52kdvrryz6gwkrsxg6l7w</p>]]></itunes:summary>
+      <link>https://www.pixelpalace.party/</link>
+      <itunes:duration>15901</itunes:duration>
+      <podcast:chapters url="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/jorfest26.json" type="application/json+chapters"/>
+      <podcast:soundbite startTime="15588.559" duration="22.191">The Blacklight Tunnel</podcast:soundbite>
+      <podcast:socialInteract uri="https://mk.spook.social/notes/asgfandnft" protocol="activitypub" accountId="@boobury@mk.spook.social" accountUrl="https://mk.spook.social/@boobury" priority="1"/>
+      <podcast:person role="executive producer" group="creative direction" img="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/image.jpeg" href="https://www.instagram.com/frankiepain.t/">Frankiepaint</podcast:person>
+      <podcast:person role="executive producer" group="creative direction" img="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/IMG_4343.jpeg" href="https://fountain.fm/jorbear">Jorbear</podcast:person>
+      <podcast:person role="executive producer" group="creative direction" img="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/image%20%281%29.jpeg">Mission Mommy</podcast:person>
+      <podcast:person role="music production" group="audio post-production" img="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/werehere.png">
+<![CDATA[We're Here]]>      </podcast:person>
+      <podcast:person role="music production" group="audio post-production" img="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/samLoft.png">Sam Lofthus</podcast:person>
+      <podcast:person role="music production" group="audio post-production" img="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/nonameclose.png" href="https://fountain.fm/unknwnmusi">NoName</podcast:person>
+      <podcast:person role="creative director" group="creative direction" img="https://music.behindthesch3m3s.com/wp-content/uploads/Sat_Skirmish/art/Shy%20Moth%201.gif" href="https://behindthesch3m3s.com/">boo-bury</podcast:person>
+      <podcast:person role="boost technician" group="audio production" img="https://music.behindthesch3m3s.com/wp-content/uploads/Sat_Skirmish/art/brave_IEnEUYzqjH.png" href="https://boostboard.vercel.app/terminal">ericpp</podcast:person>
+      <podcast:person role="chatroom" group="community" img="https://music.behindthesch3m3s.com/wp-content/uploads/Sat_Skirmish/art/17_09_024_jarrell.jpg" href="https://isobot.dev/">cottongin</podcast:person>
+      <podcast:person role="music contributor" group="audio post-production" img="https://stream.wiirdo.com/GFR/audio/cover.jpg" href="https://fedpill.folder.me/">Bit H4x0r Battalion</podcast:person>
+      <podcast:person role="production company" group="creative direction" img="https://behindthesch3m3s.com/wp-content/uploads/2022/09/BTS-Love-Is-Lit-Hermit.gif" href="https://liveislit.com/">Thunder Road Media</podcast:person>
+      <podcast:person role="production company" group="creative direction" img="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/image%20%282%29.jpeg">Lightning Lighting</podcast:person>
+      <podcast:person role="producer" group="creative direction">Lacey</podcast:person>
+      <podcast:person role="producer" group="creative direction">Mamapaint</podcast:person>
+      <podcast:person role="producer" group="creative direction" img="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/2skull1.gif.webp" href="https://zososcorner.substack.com/">lavish</podcast:person>
+      <podcast:person role="producer" group="creative direction" img="https://podtards.com/5f9cbc7c25c4d1df2734e61678d5421964a20e92e136d49a56a695e30554cab9" href="https://fountain.fm/chadf">ChadF</podcast:person>
+      <podcast:person role="producer" group="creative direction" img="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/3e63d917f9fe787c.jpg" href="https://v4vmusic.com/">Sir Libre</podcast:person>
+      <podcast:person role="producer" group="creative direction" img="https://music.behindthesch3m3s.com/wp-content/uploads/Sat_Skirmish/art/heycitizen%20his%201600.png" href="https://podcastindex.org/podcast/6650997">HeyCitizen</podcast:person>
+      <podcast:person role="producer" group="creative direction" img="https://f4.bcbits.com/img/0031448958_25.jpg" href="https://fountain.fm/mattfinlay">Matt Finlay</podcast:person>
+      <podcast:person role="producer" group="creative direction" img="https://music.behindthesch3m3s.com/wp-content/uploads/Sat_Skirmish/art/mouth%20open%20eyes%20open.png" href="https://bowlafterbowl.com/">DuhLaurien</podcast:person>
+      <podcast:person role="producer" group="creative direction" img="https://music.behindthesch3m3s.com/wp-content/uploads/Sat_Skirmish/art/eyes%20open%20mouth%20open.png" href="https://homegrownhits.xyz/">MaryKate Ultra</podcast:person>
+      <podcast:person role="producer" group="creative direction" img="https://blossom.primal.net/b37ee3f8819367fe62b415a11ed6252a7c01846a176e091b517799d526151391.jpg" href="https://fountain.fm/sirtjthewrathful">Sir TJ The Wrathful</podcast:person>
+      <podcast:person img="https://podcastindex.social/@NetNed@noauthority.social" group="creative direction" role="producer">NetNed</podcast:person>
+      <podcast:value type="lightning" method="keysend" suggested="0.00000005000">
+        <podcast:valueRecipient name="werehere@fountain.fm" type="lnaddress" address="werehere@fountain.fm" split="11"/>
+        <podcast:valueRecipient name="unknwnmusi@fountain.fm" type="lnaddress" address="unknwnmusi@fountain.fm" split="11"/>
+        <podcast:valueRecipient name="samlofthus@fountain.fm" type="lnaddress" address="samlofthus@fountain.fm" split="11"/>
+        <podcast:valueRecipient name="frankiepaint@fountain.fm" type="lnaddress" address="frankiepaint@fountain.fm" split="12"/>
+        <podcast:valueRecipient name="missionmommy@fountain.fm" type="lnaddress" address="missionmommy@fountain.fm" split="11"/>
+        <podcast:valueRecipient name="boobury@fountain.fm" type="lnaddress" address="boobury@fountain.fm" split="11"/>
+        <podcast:valueRecipient name="ericpp@getalby.com" type="lnaddress" address="ericpp@getalby.com" split="11"/>
+        <podcast:valueRecipient name="jorbear@fountain.fm" type="lnaddress" address="jorbear@fountain.fm" split="11"/>
+        <podcast:valueRecipient name="chadf@getalby.com" type="lnaddress" address="chadf@getalby.com" split="11"/>
+        <podcast:valueTimeSplit startTime="11.573" duration="291.395" remotePercentage="95">
+          <podcast:remoteItem feedGuid="24eb56be-74dd-479d-aa6a-4b3a7afb8894" itemGuid="78c08056-7cb6-4741-8889-a32d2c08802e"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="302.969" duration="237.439" remotePercentage="95">
+          <podcast:remoteItem feedGuid="a2d2e313-9cbd-5169-b89c-ab07b33ecc33" itemGuid="4e83fc9e-6878-4af5-a299-9dce2415eb16"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="540.409" duration="195.637" remotePercentage="95">
+          <podcast:remoteItem feedGuid="75f0b434-19dc-5959-9920-0fb5304be61b" itemGuid="ec031ad7-9245-4e1a-8447-f10eacee65c9"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="736.046" duration="246.561" remotePercentage="95">
+          <podcast:remoteItem feedGuid="35efa869-9a59-5882-8967-d365b883ec6d" itemGuid="gfr-b1e97e05b2f29ef7"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="982.608" duration="173.807" remotePercentage="95">
+          <podcast:remoteItem feedGuid="353bc37b-1c94-5997-97a0-3c28f2a45604" itemGuid="759e54c9-ecbe-4bb4-9543-a39b6150cea4"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="1156.416" duration="165.964" remotePercentage="95">
+          <podcast:remoteItem feedGuid="57676ff4-82f4-589f-b8e7-d20e50e2dff9" itemGuid="98446e33-2090-46c5-b884-f488fe749ef5"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="1322.38" duration="282.061" remotePercentage="95">
+          <podcast:remoteItem feedGuid="b18d2139-63ae-42e9-88bb-578b40a1bc98" itemGuid="b64a45e7-0c31-47cd-81f0-e8d7321d89aa"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="1604.442" duration="237.557" remotePercentage="95">
+          <podcast:remoteItem feedGuid="2c49f6b7-65bc-5f03-b69d-bbef10f46d2f" itemGuid="4fdc8eb5-4dab-4908-b41d-1100d4320851"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="1842" duration="33" remotePercentage="100">
+          <podcast:valueRecipient name="werehere@fountain.fm" type="lnaddress" address="werehere@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="unknwnmusi@fountain.fm" type="lnaddress" address="unknwnmusi@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="samlofthus@fountain.fm" type="lnaddress" address="samlofthus@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="frankiepaint@fountain.fm" type="lnaddress" address="frankiepaint@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="missionmommy@fountain.fm" type="lnaddress" address="missionmommy@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="boobury@fountain.fm" type="lnaddress" address="boobury@fountain.fm" split="555"/>
+          <podcast:valueRecipient name="ericpp@getalby.com" type="lnaddress" address="ericpp@getalby.com" split="555"/>
+          <podcast:valueRecipient name="jorbear@fountain.fm" type="lnaddress" address="jorbear@fountain.fm" split="555"/>
+          <podcast:valueRecipient name="chadf@getalby.com" type="lnaddress" address="chadf@getalby.com" split="555"/>
+          <podcast:valueRecipient name="lavish@fountain.fm" type="lnaddress" address="lavish@fountain.fm" split="5000"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="1875" duration="4718.568" remotePercentage="100">
+          <podcast:valueRecipient name="werehere@fountain.fm" type="lnaddress" address="werehere@fountain.fm" split="9000"/>
+          <podcast:valueRecipient name="frankiepaint@fountain.fm" type="lnaddress" address="frankiepaint@fountain.fm" split="167"/>
+          <podcast:valueRecipient name="missionmommy@fountain.fm" type="lnaddress" address="missionmommy@fountain.fm" split="167"/>
+          <podcast:valueRecipient name="boobury@fountain.fm" type="lnaddress" address="boobury@fountain.fm" split="167"/>
+          <podcast:valueRecipient name="ericpp@getalby.com" type="lnaddress" address="ericpp@getalby.com" split="167"/>
+          <podcast:valueRecipient name="jorbear@fountain.fm" type="lnaddress" address="jorbear@fountain.fm" split="166"/>
+          <podcast:valueRecipient name="chadf@getalby.com" type="lnaddress" address="chadf@getalby.com" split="166"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="6593.568" duration="151.687" remotePercentage="100">
+          <podcast:valueRecipient name="werehere@fountain.fm" type="lnaddress" address="werehere@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="unknwnmusi@fountain.fm" type="lnaddress" address="unknwnmusi@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="samlofthus@fountain.fm" type="lnaddress" address="samlofthus@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="frankiepaint@fountain.fm" type="lnaddress" address="frankiepaint@fountain.fm" split="17"/>
+          <podcast:valueRecipient name="missionmommy@fountain.fm" type="lnaddress" address="missionmommy@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="boobury@fountain.fm" type="lnaddress" address="boobury@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="ericpp@getalby.com" type="lnaddress" address="ericpp@getalby.com" split="1"/>
+          <podcast:valueRecipient name="jorbear@fountain.fm" type="lnaddress" address="jorbear@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="chadf@getalby.com" type="lnaddress" address="chadf@getalby.com" split="1"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="6745.255" duration="4867.823" remotePercentage="100">
+          <podcast:valueRecipient name="samlofthus@fountain.fm" type="lnaddress" address="samlofthus@fountain.fm" split="9000"/>
+          <podcast:valueRecipient name="frankiepaint@fountain.fm" type="lnaddress" address="frankiepaint@fountain.fm" split="167"/>
+          <podcast:valueRecipient name="missionmommy@fountain.fm" type="lnaddress" address="missionmommy@fountain.fm" split="167"/>
+          <podcast:valueRecipient name="boobury@fountain.fm" type="lnaddress" address="boobury@fountain.fm" split="167"/>
+          <podcast:valueRecipient name="ericpp@getalby.com" type="lnaddress" address="ericpp@getalby.com" split="167"/>
+          <podcast:valueRecipient name="jorbear@fountain.fm" type="lnaddress" address="jorbear@fountain.fm" split="166"/>
+          <podcast:valueRecipient name="chadf@getalby.com" type="lnaddress" address="chadf@getalby.com" split="166"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="11613.079" duration="176.92" remotePercentage="100">
+          <podcast:valueRecipient name="werehere@fountain.fm" type="lnaddress" address="werehere@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="unknwnmusi@fountain.fm" type="lnaddress" address="unknwnmusi@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="samlofthus@fountain.fm" type="lnaddress" address="samlofthus@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="frankiepaint@fountain.fm" type="lnaddress" address="frankiepaint@fountain.fm" split="17"/>
+          <podcast:valueRecipient name="missionmommy@fountain.fm" type="lnaddress" address="missionmommy@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="boobury@fountain.fm" type="lnaddress" address="boobury@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="ericpp@getalby.com" type="lnaddress" address="ericpp@getalby.com" split="1"/>
+          <podcast:valueRecipient name="jorbear@fountain.fm" type="lnaddress" address="jorbear@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="chadf@getalby.com" type="lnaddress" address="chadf@getalby.com" split="1"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="11790" duration="3785.799" remotePercentage="100">
+          <podcast:valueRecipient name="unknwnmusi@fountain.fm" type="lnaddress" address="unknwnmusi@fountain.fm" split="9000"/>
+          <podcast:valueRecipient name="frankiepaint@fountain.fm" type="lnaddress" address="frankiepaint@fountain.fm" split="167"/>
+          <podcast:valueRecipient name="missionmommy@fountain.fm" type="lnaddress" address="missionmommy@fountain.fm" split="167"/>
+          <podcast:valueRecipient name="boobury@fountain.fm" type="lnaddress" address="boobury@fountain.fm" split="167"/>
+          <podcast:valueRecipient name="ericpp@getalby.com" type="lnaddress" address="ericpp@getalby.com" split="167"/>
+          <podcast:valueRecipient name="jorbear@fountain.fm" type="lnaddress" address="jorbear@fountain.fm" split="166"/>
+          <podcast:valueRecipient name="chadf@getalby.com" type="lnaddress" address="chadf@getalby.com" split="166"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="15575.799" duration="87.728" remotePercentage="100">
+          <podcast:valueRecipient name="werehere@fountain.fm" type="lnaddress" address="werehere@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="unknwnmusi@fountain.fm" type="lnaddress" address="unknwnmusi@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="samlofthus@fountain.fm" type="lnaddress" address="samlofthus@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="frankiepaint@fountain.fm" type="lnaddress" address="frankiepaint@fountain.fm" split="17"/>
+          <podcast:valueRecipient name="missionmommy@fountain.fm" type="lnaddress" address="missionmommy@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="boobury@fountain.fm" type="lnaddress" address="boobury@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="ericpp@getalby.com" type="lnaddress" address="ericpp@getalby.com" split="1"/>
+          <podcast:valueRecipient name="jorbear@fountain.fm" type="lnaddress" address="jorbear@fountain.fm" split="1"/>
+          <podcast:valueRecipient name="chadf@getalby.com" type="lnaddress" address="chadf@getalby.com" split="1"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="15663.527" duration="213.286" remotePercentage="100">
+          <podcast:valueRecipient name="werehere@fountain.fm" type="lnaddress" address="werehere@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="unknwnmusi@fountain.fm" type="lnaddress" address="unknwnmusi@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="samlofthus@fountain.fm" type="lnaddress" address="samlofthus@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="frankiepaint@fountain.fm" type="lnaddress" address="frankiepaint@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="missionmommy@fountain.fm" type="lnaddress" address="missionmommy@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="boobury@fountain.fm" type="lnaddress" address="boobury@fountain.fm" split="555"/>
+          <podcast:valueRecipient name="ericpp@getalby.com" type="lnaddress" address="ericpp@getalby.com" split="555"/>
+          <podcast:valueRecipient name="jorbear@fountain.fm" type="lnaddress" address="jorbear@fountain.fm" split="555"/>
+          <podcast:valueRecipient name="chadf@getalby.com" type="lnaddress" address="chadf@getalby.com" split="555"/>
+          <podcast:valueRecipient name="radi0sack" type="lnaddress" address="cutclover723@walletofsatoshi.com" split="5000"/>
+        </podcast:valueTimeSplit>
+        <podcast:valueTimeSplit startTime="15876.813" duration="24.019" remotePercentage="100">
+          <podcast:valueRecipient name="werehere@fountain.fm" type="lnaddress" address="werehere@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="unknwnmusi@fountain.fm" type="lnaddress" address="unknwnmusi@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="samlofthus@fountain.fm" type="lnaddress" address="samlofthus@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="frankiepaint@fountain.fm" type="lnaddress" address="frankiepaint@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="missionmommy@fountain.fm" type="lnaddress" address="missionmommy@fountain.fm" split="556"/>
+          <podcast:valueRecipient name="boobury@fountain.fm" type="lnaddress" address="boobury@fountain.fm" split="555"/>
+          <podcast:valueRecipient name="ericpp@getalby.com" type="lnaddress" address="ericpp@getalby.com" split="555"/>
+          <podcast:valueRecipient name="jorbear@fountain.fm" type="lnaddress" address="jorbear@fountain.fm" split="555"/>
+          <podcast:valueRecipient name="chadf@getalby.com" type="lnaddress" address="chadf@getalby.com" split="555"/>
+          <podcast:valueRecipient name="lavish@fountain.fm" type="lnaddress" address="lavish@fountain.fm" split="5000"/>
+        </podcast:valueTimeSplit>
+      </podcast:value>
+      <itunes:explicit>true</itunes:explicit>
+    </item>
+    <item>
+      <title>Pixel Palace: Jorfest 2026 Trailer</title>
+      <description><![CDATA[<p>Tune in October 17th starting 7:00pm cst for some fun, Pixelpalace.party is the place to be!!</p>
+<p>&nbsp;</p>
+<p>Song:</p>
+<p>"Disco Lasers" by The Synthesatsers</p>]]></description>
+      <itunes:image href="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/pp%20tech%20map.png"/>
+      <enclosure url="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/Pixel%20Palace%20trailer.mp3" length="0" type="audio/mpeg"/>
+      <podcast:person role="editor" group="video post-production" img="https://music.behindthesch3m3s.com/wp-content/uploads/Sat_Skirmish/art/Shy%20Moth%201.gif" href="https://behindthesch3m3s.com/">boo-bury</podcast:person>
+      <podcast:person role="editor" group="video post-production" img="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/image.jpeg" href="https://www.instagram.com/frankiepain.t/">Frankiepaint</podcast:person>
+      <podcast:person role="editor" group="video post-production" img="https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/nonameclose.png" href="https://fountain.fm/unknwnmusi">NoName</podcast:person>
+      <podcast:person role="editor" group="video post-production">L-Wook</podcast:person>
+      <podcast:value type="lightning" method="keysend" suggested="0.00000005000">
+        <podcast:valueRecipient name="unknwnmusi@fountain.fm" type="lnaddress" address="unknwnmusi@fountain.fm" split="25"/>
+        <podcast:valueRecipient name="Zephyr Knight" type="node" address="0219665f869cf7d915aff3293dcc9a99d7ab86ccd9ebb1cebd028fc67040a5ef73" split="25"/>
+        <podcast:valueRecipient name="Frankiepaint" type="node" address="038464f83bb693f4f3d0fd37e928ffab1899d0dbb6d8b34a0a09fc9883002f636f" split="25"/>
+        <podcast:valueRecipient name="ThunderRoad" type="node" address="03589f3ddb81f3802f3fc9aaa359b684ed19840b55db88f7c9c2cc671e74ac93e2" split="25"/>
+      </podcast:value>
+      <guid isPermaLink="false">47eff238-cf87-473a-86d9-749a45787a4d</guid>
+      <itunes:subtitle>Pixel Palace: Jorfest 2026 Trailer</itunes:subtitle>
+      <pubDate>Thu, 08 Oct 2026 23:45:58 +0000</pubDate>
+      <itunes:explicit>false</itunes:explicit>
+      <itunes:summary><![CDATA[<p>Tune in October 17th starting 7:00pm cst for some fun, Pixelpalace.party is the place to be!!</p>
+<p>&nbsp;</p>
+<p>Song:</p>
+<p>"Disco Lasers" by The Synthesatsers</p>]]></itunes:summary>
+      <itunes:duration>87</itunes:duration>
+    </item>
+  </channel>
+</rss>

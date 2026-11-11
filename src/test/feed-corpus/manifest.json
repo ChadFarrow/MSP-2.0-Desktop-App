@@ -1,0 +1,203 @@
+{
+  "feeds": [
+    {
+      "file": "fountain-music-feast-of-hammers.xml",
+      "kind": "music",
+      "url": "https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj",
+      "final_url": "https://feeds.fountain.fm/9XXsBdcc61EpaFgI05tj",
+      "fetched_at": "2026-11-11T01:06:18.394Z",
+      "bytes": 11615,
+      "sha256": "c6d1458d1dab30d5722281d578ba6aa694db9ee22f274dfda6ce72d598ed5792"
+    },
+    {
+      "file": "fountain-music-the-bullet-within.xml",
+      "kind": "music",
+      "url": "https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi",
+      "final_url": "https://feeds.fountain.fm/H5A1PlNhFWi1IB2tFQTi",
+      "fetched_at": "2026-11-11T01:06:18.550Z",
+      "bytes": 10182,
+      "sha256": "089ff4b60a1cc25d2777842df4d25f508071bf8ae345d088d1dd1bfbb0b1e01b"
+    },
+    {
+      "file": "wavlake-music-okok.xml",
+      "kind": "music",
+      "url": "https://wavlake.com/feed/music/5693dc1f-f21a-4241-8630-56032ab5f47c",
+      "final_url": "https://wavlake.com/feed/music/5693dc1f-f21a-4241-8630-56032ab5f47c",
+      "fetched_at": "2026-11-11T01:06:19.026Z",
+      "bytes": 2852,
+      "sha256": "860ad40c69bbfedea314e1b6242e6d13a2368b8f0eec7db430180d1e3a7072dd"
+    },
+    {
+      "file": "wavlake-music-kyndell.xml",
+      "kind": "music",
+      "url": "https://wavlake.com/feed/music/495c42a0-388c-4d9a-a5eb-3616b222bbaf",
+      "final_url": "https://wavlake.com/feed/music/495c42a0-388c-4d9a-a5eb-3616b222bbaf",
+      "fetched_at": "2026-11-11T01:06:19.217Z",
+      "bytes": 2861,
+      "sha256": "a34dd852fc7838c2504ac33f4d6a942164443e3acd74bf007a4b53582e9ce465"
+    },
+    {
+      "file": "wavlake-music-cream.xml",
+      "kind": "music",
+      "url": "https://wavlake.com/feed/music/47816196-5543-4fd6-8c2f-fdc6f52b1a09",
+      "final_url": "https://wavlake.com/feed/music/47816196-5543-4fd6-8c2f-fdc6f52b1a09",
+      "fetched_at": "2026-11-11T01:06:19.334Z",
+      "bytes": 2855,
+      "sha256": "3e26fe20794e973be0c5614d2306cdeb1c293b9131fe401a5d2939d8b3a4a536"
+    },
+    {
+      "file": "behindthesch3m3s-music-pixel-palace.xml",
+      "kind": "music",
+      "url": "https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/pixelpalace.xml",
+      "final_url": "https://music.behindthesch3m3s.com/wp-content/uploads/pixel_palace/pixelpalace.xml",
+      "fetched_at": "2026-11-11T01:06:19.829Z",
+      "bytes": 36248,
+      "sha256": "0c09658af20925a19b897f0232ee892535a48b34c0aed69ff93c2338f8030ea1"
+    },
+    {
+      "file": "wiirdo-music-global-fedpilled-industrial-comp.xml",
+      "kind": "music",
+      "url": "https://stream.wiirdo.com/GFR/feed.xml",
+      "final_url": "https://stream.wiirdo.com/GFR/feed.xml",
+      "fetched_at": "2026-11-11T01:06:20.459Z",
+      "bytes": 481156,
+      "sha256": "ab33f8fb7c5f6bb639d69b234f9a4182c9a6566414322e829d82649d3bd26c57"
+    },
+    {
+      "file": "jimmyv4v-music-jimmy-v-music.xml",
+      "kind": "music",
+      "url": "https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/jimmy_v-jimmy_v_collection-rss.xml",
+      "final_url": "https://music.jimmyv4v.com/bands/jimmy-v/jimmy-v-collection/jimmy_v-jimmy_v_collection-rss.xml",
+      "fetched_at": "2026-11-11T01:06:20.716Z",
+      "bytes": 29889,
+      "sha256": "4f55e89e970014f09fc88eceb0064194a383702db3ccfc5be1d9e33ab48b54ca"
+    },
+    {
+      "file": "phafe-music-the-singles.xml",
+      "kind": "music",
+      "url": "https://phafe.com/wp-content/uploads/rssfeed/music/fentlay/take-a-break/Take_A_Break.xml",
+      "final_url": "https://phafe.com/wp-content/uploads/rssfeed/music/fentlay/take-a-break/Take_A_Break.xml",
+      "fetched_at": "2026-11-11T01:06:21.765Z",
+      "bytes": 5186,
+      "sha256": "f4a33e67c1ad67398553d28b82ab9e680beba362e4c350d6a7b277b79e8dad54"
+    },
+    {
+      "file": "musicsideproject-music-b-sides-the-sch3m3s.xml",
+      "kind": "music",
+      "url": "https://musicsideproject.com/api/hosted/23c2d5df-52e2-4e9a-b562-54e0e0123511.xml",
+      "final_url": "https://musicsideproject.com/api/hosted/23c2d5df-52e2-4e9a-b562-54e0e0123511.xml",
+      "fetched_at": "2026-11-11T01:06:22.143Z",
+      "bytes": 12793,
+      "sha256": "0de945d6f9b14d91cdee50cce6d18942fe0b1b300644e67daaaaeec2f3d3df82"
+    },
+    {
+      "file": "doerfelverse-music-no-longer-afraid-single.xml",
+      "kind": "music",
+      "url": "https://www.doerfelverse.com/artists/middleseason/no-longer-afraid.xml",
+      "final_url": "https://www.doerfelverse.com/artists/middleseason/no-longer-afraid.xml",
+      "fetched_at": "2026-11-11T01:06:22.433Z",
+      "bytes": 5293,
+      "sha256": "c9bf55ad7bea90ab267ef4d20da4f21ce49d854617643218bf33b0726cb25e95"
+    },
+    {
+      "file": "thunderroad-publisher-master-s-scroll.xml",
+      "kind": "publisher",
+      "url": "https://thunderroad.media/msp/masters%20scroll/pubfeed.xml",
+      "final_url": "https://thunderroad.media/msp/masters%20scroll/pubfeed.xml",
+      "fetched_at": "2026-11-11T01:06:22.705Z",
+      "bytes": 21233,
+      "sha256": "30b88fcfd8895362b8facfdb930b34e5edda2c9040b2111b9fb63a62c1bac077"
+    },
+    {
+      "file": "wavlake-publisher-nancy-loeffler-caro.xml",
+      "kind": "publisher",
+      "url": "https://wavlake.com/feed/artist/ffb54fb4-12ee-4223-ab69-bd971e9a128b",
+      "final_url": "https://wavlake.com/feed/artist/ffb54fb4-12ee-4223-ab69-bd971e9a128b",
+      "fetched_at": "2026-11-11T01:06:22.873Z",
+      "bytes": 1511,
+      "sha256": "4c99d4c2e73f546f5ce29b149f932e7956d16e75884c6f7bde7e66a8f5d92a20"
+    },
+    {
+      "file": "headstarts-publisher-james-goulding.xml",
+      "kind": "publisher",
+      "url": "https://headstarts.uk/msp/publisher-feeds/James_Goulding_James_Goulding.xml",
+      "final_url": "https://headstarts.uk/msp/publisher-feeds/James_Goulding_James_Goulding.xml",
+      "fetched_at": "2026-11-11T01:06:23.629Z",
+      "bytes": 2962,
+      "sha256": "486c027d038fe0e0b348d0bb5c23efab10a2cc2b845e799f299e2f5eae314a53"
+    },
+    {
+      "file": "wavlake-publisher-olamide.xml",
+      "kind": "publisher",
+      "url": "https://wavlake.com/feed/artist/ff6c8ef7-e3d5-47bf-9cfb-e50c51597424",
+      "final_url": "https://wavlake.com/feed/artist/ff6c8ef7-e3d5-47bf-9cfb-e50c51597424",
+      "fetched_at": "2026-11-11T01:06:23.787Z",
+      "bytes": 9802,
+      "sha256": "cb7d71190a9838a9533ed7b376d46933edcff40ae411e9a71023d819c2f2efbe"
+    },
+    {
+      "file": "fountain-publisher-darrar211.xml",
+      "kind": "publisher",
+      "url": "https://feeds.fountain.fm/fQkiKpFLnEBpcENT4GUG",
+      "final_url": "https://feeds.fountain.fm/fQkiKpFLnEBpcENT4GUG",
+      "fetched_at": "2026-11-11T01:06:24.275Z",
+      "bytes": 2350,
+      "sha256": "8c1ad7b5d46ea55f53347e8e08882700eca1ac7ea625de98679cfcde4c03037d"
+    },
+    {
+      "file": "musicsideproject-publisher-strange-love.xml",
+      "kind": "publisher",
+      "url": "https://musicsideproject.com/api/hosted/e3e2e758-6c83-41e3-87f2-d3c64d3011f8.xml",
+      "final_url": "https://musicsideproject.com/api/hosted/e3e2e758-6c83-41e3-87f2-d3c64d3011f8.xml",
+      "fetched_at": "2026-11-11T01:06:24.670Z",
+      "bytes": 2805,
+      "sha256": "06141f72c326874beee8f6230a7aa4672baaafeb8b7c5ffdf4d16bac92b8a656"
+    },
+    {
+      "file": "github-musicl-death-of-the-close-minded-playli.xml",
+      "kind": "musicL",
+      "url": "https://ericpp.github.io/rss/jackphemister_death_of_the_close_minded.xml",
+      "final_url": "https://ericpp.github.io/rss/jackphemister_death_of_the_close_minded.xml",
+      "fetched_at": "2026-11-11T01:06:25.561Z",
+      "bytes": 3401,
+      "sha256": "e5e914e1ad0007b108733da0db4324a1c9fa6765ec2c655de98f71d6966751b8"
+    },
+    {
+      "file": "thinkandactlocally-musicl-local-theory-full-catalog.xml",
+      "kind": "musicL",
+      "url": "https://music.thinkandactlocally.com/local-theory/feed.xml",
+      "final_url": "https://music.thinkandactlocally.com/local-theory/feed.xml",
+      "fetched_at": "2026-11-11T01:06:25.966Z",
+      "bytes": 4290,
+      "sha256": "fb05bedd09b15177ae2b8063f23affcd77202ac7988f9a93d825a9590a1c490a"
+    },
+    {
+      "file": "podhome-podcast-satellite-skirmish.xml",
+      "kind": "podcast",
+      "url": "https://serve.podhome.fm/rss/b39fc3b2-2742-5944-a800-e87c42a093a3",
+      "final_url": "https://serve.podhome.fm/rss/b39fc3b2-2742-5944-a800-e87c42a093a3",
+      "fetched_at": "2026-11-11T01:06:26.426Z",
+      "bytes": 11868,
+      "sha256": "941db278c15b05cba17e094be9988746c41d11f8294b88b20200313b10cf2933"
+    },
+    {
+      "file": "kolomona-podcast-v4vmusic-live.xml",
+      "kind": "podcast",
+      "url": "https://cdn.kolomona.com/podcasts/v4vmusic/v4vmusic-rss.xml",
+      "final_url": "https://cdn.kolomona.com/podcasts/v4vmusic/v4vmusic-rss.xml",
+      "fetched_at": "2026-11-11T01:06:26.691Z",
+      "bytes": 24081,
+      "sha256": "d8184545284bc858ff513793cbd18703cb73c7fd715e11619c235e3d7492d41f"
+    },
+    {
+      "file": "namespace-fixture-example.xml",
+      "kind": "fixture",
+      "url": "https://raw.githubusercontent.com/Podcastindex-org/podcast-namespace/d4036dcb1047ad654682e1142734e3acf2c13f37/example.xml",
+      "note": "podcast-namespace repository example.xml (CC0-1.0), pinned to a commit. Not a published feed.",
+      "final_url": "https://raw.githubusercontent.com/Podcastindex-org/podcast-namespace/d4036dcb1047ad654682e1142734e3acf2c13f37/example.xml",
+      "fetched_at": "2026-11-11T01:06:26.961Z",
+      "bytes": 17169,
+      "sha256": "2e7b592890691d5c999abc4fd20dd8ca4fec616c64a91a60c8353b36574889bd"
+    }
+  ]
+}

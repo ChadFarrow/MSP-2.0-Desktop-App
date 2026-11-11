@@ -1,0 +1,125 @@
+<rss version="2.0" endcoding="UTF-8" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:podcast="https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/1.0.md">
+  <channel>
+    <image>
+      <url>https://thunderroad.media/art/missed%20your%20cue.png</url>
+    </image>
+    <description><![CDATA[Proof of a warrior's weapon mastery. Allows the bearer to attack four times per turn.]]></description>
+    <podcast:value type="lightning" method="keysend" suggested="0.00000005000">
+      <podcast:valueRecipient name="ThunderRoad" address="03589f3ddb81f3802f3fc9aaa359b684ed19840b55db88f7c9c2cc671e74ac93e2" type="node" customKey="" customValue="" split="100"></podcast:valueRecipient>
+    </podcast:value>
+    <podcast:medium>publisher</podcast:medium>
+    <itunes:author>Boo Bury</itunes:author>
+    <podcast:guid>13059599-002b-4893-976b-fa1e3a58f536</podcast:guid>
+    <generator>The Split Kit</generator>
+    <itunes:keywords></itunes:keywords>
+    <itunes:explicit>yes</itunes:explicit>
+    <title><![CDATA[Master's Scroll]]></title>
+    <link>https://behindthesch3m3s.com/</link>
+    <podcast:remoteItem medium="podcast" feedGuid="e0ac9365-689c-5043-8804-15b9dfcc545a" feedUrl="https://www.feed.behindthesch3m3s.com/feed.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="video" feedGuid="726eee5c-8db3-5d76-b671-f0c132c88769" feedUrl="https://noagendatube.com/feeds/podcast/videos.xml?videoChannelId=1497"></podcast:remoteItem>
+    <podcast:remoteItem medium="podcast" feedGuid="20c5fd7e-adb4-557f-ae36-4904cf9b4321" feedUrl="https://www.podserve.fm/series/rss/2605/cast-revue.rss"></podcast:remoteItem>
+    <podcast:remoteItem medium="podcast" feedGuid="8b02bcd5-4ebb-5290-b0e7-ab9100d12a99" feedUrl="https://www.feed.behindthesch3m3s.com/bbfeed.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="podcast" feedGuid="ca4a9179-1cf2-5f57-aab8-25e799dab5ae" feedUrl="https://www.nc17.behindthesch3m3s.com/feed.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="podcast" feedGuid="f38e27af-fb9e-46ef-9ed9-5d8046d094a9" feedUrl="https://music.behindthesch3m3s.com/b4ts feed/feed.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="podcast" feedGuid="8a1c2e55-11ee-5c1d-9702-96baef165759" feedUrl="https://feed.thunderroad.media/feed.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="podcast" feedGuid="5e430670-ed98-57e6-92f1-610112221356" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/12 Rods/12 Rods April 6/Taylor Sound/feed.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="5d904e7c-cdec-5bd4-950d-11a68cad5750" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/2023/07/Tempest [4-Tracks].xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="podcast" feedGuid="fe36cad5-121c-5eed-a762-69da9da4f5c8" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/12 Rods/12 Rods April 6/12 Rods/feed.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="fb469712-af8e-57c9-b533-ddaebd452ab2" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/12 Rods/gay/gay_.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="d67ffeaa-d4cc-5c76-9616-f839aa1b48f3" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/12 Rods/If We Stayed Alive/if we stayed alive.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="5d904e7c-cdec-5bd4-950d-11a68cad5750" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/2023/07/Tempest [4-Tracks].xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="618f9e01-0ebb-5d59-b334-b428f7ebcc78" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/2023/07/Tempest.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="7ddfdfb9-cc41-5c27-b1b7-cef7cf40071b" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/2023/07/Rainmaker.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="5f2f5073-feef-5db6-aa95-1e842f103309" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/2023/07/Legend.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="6122bf47-4691-5600-ab0b-7c85516c7f26" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/2023/07/Xtasy.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="e0956f26-8f56-5166-8892-4ce4635862e3" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/2023/07/Minus-4.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="976f3e29-ec97-52e8-bf0e-e167901775e2" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/2023/07/Damzel.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="9b5fd385-f87d-5173-a641-5cdc3982d92e" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Mike_Epting/32 Track Super Jam/32 track super jam.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="2d3bb7af-65fe-5704-bb6e-0e6dde51e748" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Mike_Epting/Scarf Joint/scarf joint.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="5774ac21-df76-55f1-b8f6-23c683de8012" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Mike_Epting/Penis In The Ocean/penis in the ocean.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="471d1db8-40d3-5dec-8eca-6e654b3b05e5" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Mike_Epting/JunkPunk/junk punk.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="d4bd6713-ce91-5420-97d9-f6cbb68687c6" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Mike_Epting/TheVirusTakes/the virus takes.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="4f0d0066-557a-53a9-8e35-9efa70f5655f" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Mike_Epting/meat grease.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="700d1414-c005-5f43-8488-68c80d09bf6a" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Mike_Epting/The Dorian Sessions/the dorian sessions.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="0d6c245c-4b25-571c-8c7d-6a7e0d219427" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Sista Fista/At Your Cervix/at your cervix.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="29397cc2-4bd3-583e-93b8-9f5aebc3d22b" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Sista Fista/Pap Smears Are For Pussies/pap smears are for pussies.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="99a14604-f38b-5e9d-8679-9314d1207cd4" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Mike_Epting/$2Holla/pony up daddy.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="a70ea2cd-72e7-5a1d-930a-1b0c94dd69a7" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/2023/07/Dusty%20Old%20Man.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="b328828c-9ba0-5b1d-be33-4cce51968ae1" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/2023/07/Boost Them All.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="970cd229-dd92-5ba9-9356-00cd23c261f4" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/1point3/Midwestern_Apathy/midwestern_apathy.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="5f3654c3-8cf5-5189-8d96-2602df1a367e" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/1point3/broken_arms_race/broken_arms_race.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="f21daf71-4c7b-5fe1-82c6-3a1c2a48c764" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Fucktown_Power_Boys_No_No/Coke_Dick_Titties_Sarcasm/coke_dick_titties_sarcasm.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="7ce9b349-b641-5a5e-8354-9d7ea6fa42e1" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Battle Axe/Voyage Quest/voyage_quest.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="9e2c9377-40d6-5e26-a019-4052910936f6" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/THEM TEETH/zstdemo/st demo.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="1df430e3-20f6-595e-9af2-8f9d5123c19b" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/THEM TEETH/The Knuckledragger/the knuckledragger.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="30329c4e-9558-5f6e-b903-6d477824d20d" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/THEM TEETH/Dead Run/dead run.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="de171540-e748-500a-9368-b2abd8bdf292" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/THEM TEETH/Buried Alive Lemonheads cover/buried alive lemonheads cover.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="79eb039f-974a-556c-8349-6a59d1f10a97" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/THEM TEETH/Succumb To Life/succumb to life.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="4ebbe8cb-8b26-5de8-92f0-3d8ef9e9ce0f" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/THEM TEETH/tired/tired.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="19835a35-b7d1-5fee-8d67-a89d996098e1" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Dave&#39;s Not Here/The Ultimate Album/the utlimate album.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="bedc43eb-bace-5d9d-902c-ea444897d6fa" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Dave&#39;s Not Here/We Likes To Party/we likes to party.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="f2fbe36c-c244-5274-9ca4-3d1e7d001d27" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Dave&#39;s Not Here/Crackin The Dongle/crackin the dongle.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="86f9ba78-7c4a-5bd2-a382-c6a88e9a96a0" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Andy A/Johnson City/Early Demos I/early demos i.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="799caf0c-6777-5aa0-856e-370635a6000b" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Andy A/Johnson City/Film Music/film music.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="55e08e3a-4b9f-5579-a976-0997b06470ee" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Andy A/Johnson City/Crazy Cloud/crazy cloud.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="9c4017a3-5a53-5b3d-b2bd-783fbf2afae9" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Andy A/Johnson City/Himalaya/himalaya.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="b95514f8-0087-5777-a4a8-e0e44cb0233d" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Andy A/Johnson City/Fierce Kitten/fierce kitten.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="b9c92d07-c0ab-5712-b8e1-05f5e4992e3e" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Mellow Cassette/Damn Good Haunting/damn good haunting.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="2468a04c-fa24-56f5-8e45-59b45de92871" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Dire_Descent/sweet hollow.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="08991139-d42a-56c0-a3f3-274b1dcc68a3" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Dire_Descent/in hell there is a sea of wasted loads.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="cb4a4182-44bb-579d-b208-4aba073f64cf" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Dire_Descent/call to arms.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="cc058294-98af-5bf8-8512-9cc8e584f26a" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Dire_Descent/martyrs.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="e0b445a5-b6e5-5eae-9110-02535157ccad" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Dire_Descent/devoured.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="66162162-76b3-54c2-b519-096ccd887a6f" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Empath Eyes/East To West/east to west.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="db3d5116-4b47-56e4-acd3-ec56109c7f0e" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Empath Eyes/Etheral/ethereal.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="84971935-1bbe-5b4b-9ce2-7de5008b9f30" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Empath Eyes/giving up the ghost/giving up the ghost.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="bd3985d4-89ea-506f-82a2-82e98835025b" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Empath Eyes/Echo Chamber/echo_chamber.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="82cbf41e-dffa-5b43-a339-b0af58471dae" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Sir Seat Sitter/gone.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="2c608f19-802f-561b-a6f7-6f091b2676e7" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Sir Seat Sitter/gay and long.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="d3b9a1b6-9767-5289-9a60-b0ac80d2cae2" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Sir Seat Sitter/Waitin on Alex/waitin on alex.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="cb086537-5673-57a8-9c78-72542da2a7d4" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Sir Seat Sitter/that_duck.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="ac3e102d-5cb8-58d0-b37a-3f7cb2d47094" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Phil_Owens/Choreboy/good_clean_fun_my_ass.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="065db8dc-7311-5ca0-abb6-85f2b0c6a8a0" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Phil_Owens/Skatenigs/Waspzilla/waspzilla.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="a8240fe1-0900-5931-98fe-07f60c7eb9c9" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Phil_Owens/Skatenigs/Unintended Consequences/unintended consequences.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="72f2cafd-0535-5089-a2ff-6a54e396d30e" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Phil_Owens/Skatenigs/What_Could_Go_Wrong/what_could_go_wrong.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="81b3b7c7-cac4-5f94-b9e5-b06fc2455271" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Phil_Owens/Skatenigs/Self Medicated/self medicated.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="1f53e56a-691a-5417-b442-06ce365d9db6" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Phil_Owens/Skatenigs/again_feed/show me where they touched you again.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="a22aefb0-fd07-5bba-862b-ceb35ea04146" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Phil_Owens/Skatenigs/Show Me Where They Touched You/show me where they touched you.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="01e0e305-48db-555d-96cc-bde6027cd114" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Phil_Owens/Skatenigs/This is Entertainment Chemical Imbalance Remixes/this is entertainment chemical imbalance remixes.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="8495efa9-543a-5c50-b856-f09d3d57872b" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Empath Eyes/Goofball Bucket/Now That&#39;s What I Call Goofball Bucket Vol 1/now that&#39;s what i call goofball bucket vol 1.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="15ef0e58-49e5-500c-92d6-8e4802599314" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Empath Eyes/Goofball Bucket/Goofball Bucket/goofball_bucket.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="75d02f1d-604c-5d31-a9e6-5a3da0ae591e" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/OC Rippers/Happy Hours Air Travel Club 2023/happy hours air travel club.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="0d5a8efb-e132-5f1b-9ab4-3fd0644dbb30" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Denim Cobra/Leather_Diamond/leather_diamond.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="3d92b2f6-4aac-5f24-bffe-2536eb579286" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Dane Ray Coleman/Lionhead/lionhead.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="76e1f55c-1a5b-55a0-b1da-039e2aa72f6a" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Matt_B/matt_bigelow.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="49ebeec4-a99a-5c9d-bb1b-477570341b1a" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Matt_B/matty_b_and_the_black_river_band.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="61676a69-5bab-57a9-8326-7fe68a572649" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Matt_B/The_Matty_B_Sides/Wild_Thumbprints/wild_thumbprints.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="826666ad-c321-5431-987f-5921d90d1b2f" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Sir Seat Sitter/Mister Roane County/mister roane county.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="2f533010-f90f-5f99-a270-ea50f7a1868f" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Sir Seat Sitter/Mister Roane County (Full Song)/mister roane county_fullsong.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="dafd411f-b0fb-5b24-bdfb-3ae0575ec413" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Namo Maitri/namo maitri.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="57676ff4-82f4-589f-b8e7-d20e50e2dff9" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/c_kostra/now i feel it.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="3c87f137-9507-5bc6-858f-825eeb3988cd" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/The_Cooper_Friendly_Feel_Good_Group/On_My_Way/on my way.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="680882f9-f371-5eeb-bd90-6767d528854f" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Andy A/Panzee/panzee.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="bf99e8c3-1f97-558d-bc1d-a4bda04027f7" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Mike_Epting/LedBetter/Red Wings/red wings.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="483dde8e-7e94-59a7-8eb0-2b0dc64a87bd" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/2023/08/Somebody.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="c1a77b15-2e9c-5c88-9332-57d709a864c6" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/Matt The Tall/The Stables/the stables.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="c73b1a23-1c28-5edb-94c3-10d1745d0877" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/2023/08/The-Death-of-Rock-and-Roll.xml"></podcast:remoteItem>
+    <podcast:remoteItem medium="music" feedGuid="e4127b7b-7048-520b-a50c-59ebddbbe2fc" feedUrl="https://music.behindthesch3m3s.com/wp-content/uploads/boo-bury/These People/these people.xml"></podcast:remoteItem>
+    <item>
+<title>Trailer</title>
+<description>
+<![CDATA[ <p>Feed Pending</p> ]]>
+</description>
+<itunes:image href="http://thunderroad.media/wp-content/uploads/2024/03/shits-fucked.png"/>
+<enclosure url="http://thunderroad.media/wp-content/uploads/2024/03/Elevator-Music.mp3" length="33" type="audio/mpeg"/>
+<guid isPermaLink="false">bc27b54d-f6bd-419a-87aa-8d51317abe2a</guid>
+<itunes:subtitle>Trailer</itunes:subtitle>
+<pubDate>Sun, 19 Jan 2025 02:53:30 +0000</pubDate>
+<itunes:summary>
+<![CDATA[ <p>Feed Pending</p> ]]>
+</itunes:summary>
+<itunes:duration>46</itunes:duration>
+<podcast:aspectImages aspect-ratio="1/1" src="http://thunderroad.media/wp-content/uploads/2024/03/shits-fucked.png"/>
+</item>
+  </channel>
+</rss>

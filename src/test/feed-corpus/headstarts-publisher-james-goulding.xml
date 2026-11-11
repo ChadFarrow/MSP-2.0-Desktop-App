@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <atom:link href="https://headstarts.uk/msp/publisher-feeds/James_Goulding_James_Goulding.xml" rel="self" type="application/rss+xml" />
+        <title>James Goulding</title>
+        <itunes:author>James Goulding</itunes:author>
+        <description>
+            James Goulding Singer Songwriter from Southend on sea, UK.
+
+Published into the valueverse by New Music Nudge Unit
+
+James Goulding : Vocals, Guitars &amp; Programming/Loops
+
+“A struggling artist plumbed the depths of despair during a midlife crisis. He then finds himself at a highly prolific songwriting peak.”
+
+
+All songs written by James Anthony Goulding
+        </description>
+        <link>https://jamesgoulding.bandcamp.com/</link>
+        <language>en</language>
+        <generator>MSP 2.0 - Music Side Project Studio</generator>
+        <pubDate>Fri, 10 Apr 2026 17:34:57 GMT</pubDate>
+        <lastBuildDate>Thu, 01 Oct 2026 21:47:06 GMT</lastBuildDate>
+        <podcast:guid>ff83e8b5-7648-44d0-aa3c-4912f491066a</podcast:guid>
+        <itunes:category text="Music" />
+        <itunes:keywords>indie, music, pop, guitar</itunes:keywords>
+        <image>
+            <url>https://headstarts.uk/msp/James-Goulding/Please-Stand-By/jamesgoulding-profilepic--with-qr.jpg</url>
+            <title>James Goulding</title>
+            <link>https://jamesgoulding.bandcamp.com/</link>
+            <description>James from the side.</description>
+        </image>
+        <itunes:image href="https://headstarts.uk/msp/James-Goulding/Please-Stand-By/jamesgoulding-profilepic--with-qr.jpg" />
+        <podcast:medium>publisher</podcast:medium>
+        <itunes:explicit>false</itunes:explicit>
+        <itunes:owner>
+            <itunes:name>New Music Nudge Unit</itunes:name>
+            <itunes:email>newmusicnudgeunit@proton.me</itunes:email>
+        </itunes:owner>
+        <podcast:value type="lightning" method="lnaddress" suggested="0.000033333">
+            <podcast:valueRecipient name="James Goulding" address="jamesgoulding@fountain.fm" split="80" type="lnaddress" />
+            <podcast:valueRecipient name="MSP 2.0" address="chadf@getalby.com" split="1" type="lnaddress" />
+            <podcast:valueRecipient name="Podcastindex.org" address="podcastindex@getalby.com" split="1" type="lnaddress" />
+            <podcast:valueRecipient name="nmnu" address="nmnu@fountain.fm" split="20" type="lnaddress" />
+        </podcast:value>
+        <podcast:remoteItem feedGuid="048d73a2-5ca3-4593-8d8d-bca7d9e72d4a" feedUrl="https://headstarts.uk/msp/James-Goulding/Please-Stand-By/Please_Stand_By.xml" medium="music" title="Please Stand By" feedImg="https://headstarts.uk/msp/James-Goulding/Please-Stand-By/James-Goulding-psb-with-qr.jpeg" />
+    </channel>
+</rss>
