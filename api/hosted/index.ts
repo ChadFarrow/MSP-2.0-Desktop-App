@@ -21,9 +21,12 @@ function generateEditToken(): string {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Public: the WordPress plugin calls this from each artist's own site, so the
+  // origins can't be listed. Safe because auth is headers, never cookies.
   if (applyCors(req, res, {
     methods: 'GET, POST, OPTIONS',
-    headers: 'Content-Type, X-Edit-Token, Authorization, X-Admin-Key'
+    headers: 'Content-Type, X-Edit-Token, Authorization, X-Admin-Key, X-Email-Session',
+    public: true
   })) {
     return;
   }
