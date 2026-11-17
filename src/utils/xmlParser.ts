@@ -1,6 +1,6 @@
 // MSP 2.0 - XML Parser for importing Demu RSS Feeds
 import { XMLParser } from 'fast-xml-parser';
-import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData, PodcastImage, AlternateEnclosure, AlternateEnclosureSource } from '../types/feed';
+import type { Album, Track, Person, PersonGroup, ValueRecipient, ValueBlock, Funding, PublisherFeed, RemoteItem, PublisherReference, BaseChannelData, PodcastImage, AlternateEnclosure, AlternateEnclosureSource, ServiceBlock } from '../types/feed';
 import { createEmptyTrack, LEGACY_MSP_NODE_PUBKEY, MSP_SUPPORT_RECIPIENT, DEFAULT_TRANSCRIPT_TYPE } from '../types/feed';
 import { fromParties, samePublisher } from './publisherParties';
 import { areValueBlocksStrictEqual, arePersonsEqual } from './comparison';
@@ -48,6 +48,10 @@ const KNOWN_CHANNEL_KEYS = new Set([
   'itunes:category',
   'itunes:keywords',
   'itunes:explicit',
+  // Both block tags are modelled in full (parseBlockTags), the service-named
+  // podcast:block entries included, so none of them may also pass through.
+  'itunes:block',
+  'podcast:block',
   'itunes:owner',
   'itunes:image',
   'podcast:guid',
@@ -739,6 +743,9 @@ function parseCommonChannelElements(channel: Record<string, unknown>): Omit<Base
   // Explicit
   const explicit = parseExplicit(channel['itunes:explicit']);
 
+  // Block tags (utils/listing.ts)
+  const { itunesBlock, podcastBlock, serviceBlocks } = parseBlockTags(channel);
+
   // Owner
   const owner = channel['itunes:owner'];
   const ownerName = owner ? getText((owner as Record<string, unknown>)['itunes:name']) || '' : '';
@@ -794,6 +801,9 @@ function parseCommonChannelElements(channel: Record<string, unknown>): Omit<Base
     ...(subcategories ? { subcategories } : {}),
     keywords,
     explicit,
+    itunesBlock,
+    podcastBlock,
+    serviceBlocks,
     ownerName,
     ownerEmail,
     imageUrl,
@@ -806,6 +816,34 @@ function parseCommonChannelElements(channel: Record<string, unknown>): Omit<Base
     persons,
     value,
     funding
+  };
+}
+
+// Read both block tags in full. Apple honours only "Yes" (any case) and every
+// other value means "not blocked", so the plain tags are read as yes-or-nothing:
+// dropping a "No" changes the file but not what any directory does with it.
+// - itunesBlock: any <itunes:block> saying yes. A repeated tag arrives as an
+//   array, and getText reads an array as '' — so a direct read lost the block.
+// - podcastBlock: any <podcast:block> with no id saying yes.
+// - serviceBlocks: every <podcast:block> that names a service, verbatim. The
+//   Listing control shows these as Custom and replaces them when a choice is
+//   picked; until then they are written back as they came in.
+function parseBlockTags(channel: Record<string, unknown>): {
+  itunesBlock: boolean;
+  podcastBlock: boolean;
+  serviceBlocks: ServiceBlock[];
+} {
+  const says = (node: unknown) => getText(node).trim().toLowerCase() === 'yes';
+  const itunesNode = channel['itunes:block'];
+  const itunesArray: unknown[] = itunesNode ? (Array.isArray(itunesNode) ? itunesNode : [itunesNode]) : [];
+  const blockNode = channel['podcast:block'];
+  const blockArray: unknown[] = blockNode ? (Array.isArray(blockNode) ? blockNode : [blockNode]) : [];
+  return {
+    itunesBlock: itunesArray.some(says),
+    podcastBlock: blockArray.some(block => !getAttr(block, 'id') && says(block)),
+    serviceBlocks: blockArray
+      .filter(block => getAttr(block, 'id'))
+      .map(block => ({ id: getAttr(block, 'id'), value: getText(block).trim() })),
   };
 }
 

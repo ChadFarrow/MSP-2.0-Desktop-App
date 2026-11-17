@@ -209,6 +209,48 @@ describe('notifyPodcastIndex', () => {
     // Only the pubnotify ping went out — no add attempt.
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
+
+  it('pings but never asks PI to add a feed that asks not to be listed', async () => {
+    mockFetch.mockResolvedValueOnce(PUBNOTIFY_OK);
+
+    const { notifyPodcastIndex } = await import('./feedUtils');
+    const result = await notifyPodcastIndex('https://example.com/feed.xml', { register: false });
+
+    expect(result).toEqual({ podcastIndexId: null });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch.mock.calls[0][0]).toContain('hub/pubnotify');
+  });
+
+  it('still sends the podping for a feed that asks not to be listed', async () => {
+    process.env.PODPING_ENDPOINT_URL = 'https://podping.example/';
+    process.env.PODPING_BEARER_TOKEN = 'secret';
+    mockFetch.mockResolvedValue(PUBNOTIFY_OK);
+
+    const { notifyPodcastIndex } = await import('./feedUtils');
+    await notifyPodcastIndex('https://example.com/feed.xml', { medium: 'music', register: false });
+
+    const urls = mockFetch.mock.calls.map(call => String(call[0]));
+    expect(urls.some(url => url.startsWith('https://podping.example/'))).toBe(true);
+    expect(urls.some(url => url.includes('add/byfeedurl'))).toBe(false);
+    mockFetch.mockReset();
+  });
+});
+
+describe('hasItunesBlock', () => {
+  it('finds the tag MSP writes, in any case and with spaces', async () => {
+    const { hasItunesBlock } = await import('./feedUtils');
+    expect(hasItunesBlock('<channel><itunes:block>Yes</itunes:block></channel>')).toBe(true);
+    expect(hasItunesBlock('<itunes:block> yes </itunes:block>')).toBe(true);
+    expect(hasItunesBlock('<itunes:block>YES</itunes:block>')).toBe(true);
+  });
+
+  it('ignores "No", other values and the podcast:block tag', async () => {
+    const { hasItunesBlock } = await import('./feedUtils');
+    expect(hasItunesBlock('<itunes:block>No</itunes:block>')).toBe(false);
+    expect(hasItunesBlock('<itunes:block>true</itunes:block>')).toBe(false);
+    expect(hasItunesBlock('<podcast:block>yes</podcast:block>')).toBe(false);
+    expect(hasItunesBlock('<channel></channel>')).toBe(false);
+  });
 });
 
 describe('schedulePodping', () => {

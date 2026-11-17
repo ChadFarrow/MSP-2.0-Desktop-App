@@ -2,12 +2,19 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { list, put } from '@vercel/blob';
 import { signSession } from '../_utils/emailAuth.js';
 import { redeemMagicLink, addFeedToAccount } from '../_utils/accountStore.js';
+import { applyCors } from '../_utils/cors.js';
 
 /**
  * Redeem a magic-link token (single-use) and mint a session.
  * For a 'claim' link, also stamps ownerEmailHash onto the feed and indexes it to the account.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Public: the WordPress plugin calls this from each artist's own site, so the
+  // origins can't be listed. Safe because auth is headers, never cookies.
+  if (applyCors(req, res, { methods: 'POST, OPTIONS', public: true })) {
+    return;
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

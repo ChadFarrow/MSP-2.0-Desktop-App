@@ -196,16 +196,30 @@ export interface PodcastIndexNotifyResult {
 }
 
 /**
+ * True when the feed asks podcast directories not to list it
+ * (`<itunes:block>Yes</itunes:block>`, any case — the value Apple honours and the
+ * one MSP writes for both hidden Listing choices; see src/utils/listing.ts).
+ */
+export function hasItunesBlock(xml: string): boolean {
+  return /<itunes:block>\s*yes\s*<\/itunes:block>/i.test(xml);
+}
+
+/**
  * Submit feed to Podcast Index and return the PI ID if available.
  * Uses pubnotify to trigger re-crawl, then add/byfeedurl for new feeds.
  *
  * A missing id is not the same as a failure to try — `addResult` carries PI's
  * explanation so callers can tell the user why the feed isn't indexed instead
  * of leaving the reason buried in function logs.
+ *
+ * `register: false` is for a feed that asks not to be listed (hasItunesBlock).
+ * The pubnotify ping and the podping still go out — they are what makes a
+ * directory that already lists the feed read it again and drop it, which is the
+ * point of delisting — but add/byfeedurl, a request to list it, is skipped.
  */
 export async function notifyPodcastIndex(
   rawFeedUrl: string,
-  options: { medium?: string } = {}
+  options: { medium?: string; register?: boolean } = {}
 ): Promise<PodcastIndexNotifyResult> {
   // Same choke point as notifyPodping — hosted POST/PUT reaches here directly.
   const feedUrl = normalizeFeedUrl(rawFeedUrl);
@@ -216,6 +230,10 @@ export async function notifyPodcastIndex(
   // Broadcast feed update via self-hosted hivepinger (no-ops without PODPING_ENDPOINT_URL + PODPING_BEARER_TOKEN).
   // Not awaited so PI submission isn't blocked; it also waits for the caches to catch up.
   schedulePodping(feedUrl, { medium: options.medium });
+
+  if (options.register === false) {
+    return { podcastIndexId: null };
+  }
 
   // Then try to get PI ID via add/byfeedurl (for new feeds) or lookup
   if (!PI_API_KEY || !PI_API_SECRET) {
