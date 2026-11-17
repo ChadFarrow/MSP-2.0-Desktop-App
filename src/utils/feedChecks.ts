@@ -59,6 +59,7 @@ export type IssueCode =
   | 'publisher-items-dropped'
   // Updated by MSP when you save — the source feed (feedInspect.ts)
   | 'explicit-legacy'
+  | 'block-value'
   | 'medium-missing'
   | 'medium-changed'
   | 'podcast-images-plural'

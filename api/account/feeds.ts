@@ -2,12 +2,23 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { parseEmailAuthHeader } from '../_utils/emailAuth.js';
 import { getAccountFeedIds } from '../_utils/accountStore.js';
 import { hydrateFeedById } from '../_utils/feedHydrate.js';
+import { applyCors } from '../_utils/cors.js';
 
 /**
  * List the feeds owned by the authenticated email account.
  * Auth: X-Email-Session: Bearer <jwt>. Returns the same feed shape as the Nostr list path.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Public: the WordPress plugin calls this from each artist's own site, so the
+  // origins can't be listed. Safe because auth is headers, never cookies.
+  if (applyCors(req, res, {
+    methods: 'GET, OPTIONS',
+    headers: 'Content-Type, X-Email-Session',
+    public: true
+  })) {
+    return;
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

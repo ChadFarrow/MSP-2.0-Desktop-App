@@ -74,6 +74,16 @@ describe('regenerateAlbumGuids', () => {
     expect(src.unknownChannelElements['podcast:txt']).toBeDefined();
   });
 
+  it('starts the new feed Listed, whatever the source asked for', () => {
+    const src = sourceAlbum();
+    src.itunesBlock = true;
+    src.podcastBlock = true;
+    src.serviceBlocks = [{ id: 'spotify', value: 'yes' }];
+    const out = regenerateAlbumGuids(src);
+    expect(out).toMatchObject({ itunesBlock: false, podcastBlock: false, serviceBlocks: [] });
+    expect(src.itunesBlock).toBe(true);
+  });
+
   it('drops pins that name none of its tracks, and moves a track\'s pin to its new guid', () => {
     const src = sourceAlbum();
     src.tracks[1].pinned = true;

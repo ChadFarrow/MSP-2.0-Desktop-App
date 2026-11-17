@@ -3,6 +3,7 @@ import { LANGUAGES } from '../../../types/feed';
 import type { FeedAction } from '../../../store/feedStore';
 import { FIELD_INFO } from '../../../data/fieldInfo';
 import { InfoIcon } from '../../InfoIcon';
+import { ListingSelect } from '../../ListingSelect';
 import { Section } from '../../Section';
 import { Toggle } from '../../Toggle';
 
@@ -98,6 +99,10 @@ export function PublisherInfoSection({ publisherFeed, dispatch }: PublisherInfoS
             label="Explicit Content"
             labelSuffix={<InfoIcon text={FIELD_INFO.explicit} />}
           />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Listing<InfoIcon text={FIELD_INFO.listing} /></label>
+          <ListingSelect value={publisherFeed} onChange={flags => dispatch({ type: 'UPDATE_PUBLISHER_FEED', payload: flags })} />
         </div>
         <div className="form-group">
           <label className="form-label">Keywords<InfoIcon text={FIELD_INFO.keywords} /></label>

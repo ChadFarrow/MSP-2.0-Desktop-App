@@ -4,6 +4,7 @@ import { parseAuthHeader, parseFeedAuthHeader } from '../_utils/adminAuth.js';
 import {
   HOSTED_FEED_EDGE_TTL_S,
   notifyPodcastIndex,
+  hasItunesBlock,
   getBaseUrl,
   hashToken,
   timingSafeEqualHex,
@@ -372,7 +373,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let podcastIndexId: number | undefined;
         let addResult: PodcastIndexAddResult | undefined;
         if (!effectiveIsDraft) {
-          const piResult = await notifyPodcastIndex(stableUrl, { medium });
+          // A hidden feed (Listing) is pinged so directories re-read it and drop
+          // it, but not registered; an existing id is kept below as before.
+          const piResult = await notifyPodcastIndex(stableUrl, { medium, register: !hasItunesBlock(xml) });
           podcastIndexId = piResult.podcastIndexId || existingPodcastIndexId;
           // Only explain a failure when we ended up with no id at all — a feed that
           // was already registered keeps its existing id and needs no explanation.
