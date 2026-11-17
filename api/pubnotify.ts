@@ -5,9 +5,12 @@ import { getFeedUrlError, normalizeFeedUrl } from './_utils/urlValidation.js';
 import { guardFeedSubmission, wantsForce } from './_utils/feedReachability.js';
 import { getClientIp } from './_utils/urlSafety.js';
 import { applyCors } from './_utils/cors.js';
+import { checkRateLimit } from './_utils/rateLimiter.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (applyCors(req, res, { methods: 'GET, OPTIONS' })) {
+  // Public: the WordPress plugin calls this from each artist's own site, so the
+  // origins can't be listed. Safe because auth is headers, never cookies.
+  if (applyCors(req, res, { methods: 'GET, OPTIONS', public: true })) {
     return;
   }
 
@@ -21,7 +24,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing url parameter' });
   }
 
-  // Strip paste whitespace before validating — see the note in pubnotify.ts.
+  // Strip whitespace a copy/paste dragged along before anything looks at the URL.
+  // new URL() tolerates edge spaces, so without this the format check below passes
+  // and getFeedUrlError then rejects a URL the user sees as perfectly clean.
   const url = normalizeFeedUrl(rawUrl);
   if (!url) {
     return res.status(400).json({ error: 'Missing url parameter' });
@@ -43,6 +48,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const urlError = getFeedUrlError(url);
   if (urlError) {
     return res.status(400).json({ error: urlError });
+  }
+
+  // Rate-limited since the WordPress plugin made this endpoint callable from
+  // any origin: it spends MSP's Podcast Index credentials. Per warm lambda, like
+  // every limit here — see _utils/rateLimiter.ts.
+  const rate = checkRateLimit(`pubnotify:${getClientIp(req)}`, { limit: 60, windowMs: 3600_000 });
+  if (!rate.allowed) {
+    res.setHeader('Retry-After', Math.ceil(rate.retryAfterMs / 1000));
+    return res.status(429).json({ error: 'Too many Podcast Index notifications. Try again later.' });
   }
 
   // Don't register a feed crawlers can't fetch. Podcast Index keeps the entry

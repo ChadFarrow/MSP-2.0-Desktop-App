@@ -12,9 +12,9 @@ import {
 } from '../_utils/feedUtils.js';
 import type { PodcastIndexAddResult } from '../_utils/feedUtils.js';
 import { extractPodcastMedium, isWellFormedRss } from '../_utils/xmlUtils.js';
-import { applyCors } from '../_utils/cors.js';
 import { parseEmailAuthHeader } from '../_utils/emailAuth.js';
 import { addFeedToAccount, removeFeedFromAccount } from '../_utils/accountStore.js';
+import { applyCors } from '../_utils/cors.js';
 
 // Metadata stored in separate .meta.json blob
 interface FeedMetadata {
@@ -100,11 +100,14 @@ async function backupFeed(feedId: string, blobUrl: string): Promise<void> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Restricted CORS for state-changing methods; the GET branch below
-  // overrides with a public wildcard so feed XML stays world-fetchable.
+  // Public: the WordPress plugin calls this from each artist's own site, so the
+  // origins can't be listed. Safe because auth is headers, never cookies.
+  // Applied to every response, not only the preflight, or a browser on another
+  // origin can't read a PUT's result or an error message.
   if (applyCors(req, res, {
     methods: 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-    headers: 'Content-Type, X-Edit-Token, Authorization, X-Admin-Key, X-Email-Session'
+    headers: 'Content-Type, X-Edit-Token, Authorization, X-Admin-Key, X-Email-Session',
+    public: true
   })) {
     return;
   }

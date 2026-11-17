@@ -12,7 +12,9 @@ const RATE_LIMIT = { limit: 10, windowMs: 3600_000 };
 const RATE_LIMIT_PREFIX = 'podping:';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (applyCors(req, res, { methods: 'GET, POST, OPTIONS' })) {
+  // Public: the WordPress plugin calls this from each artist's own site, so the
+  // origins can't be listed. Safe because auth is headers, never cookies.
+  if (applyCors(req, res, { methods: 'GET, POST, OPTIONS', public: true })) {
     return;
   }
 
