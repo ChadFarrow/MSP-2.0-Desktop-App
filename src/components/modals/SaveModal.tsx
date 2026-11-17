@@ -78,6 +78,13 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   // Helper to get current feed's GUID and title based on mode
   const currentFeedGuid = isPublisherMode && publisherFeed ? publisherFeed.podcastGuid : album.podcastGuid;
   const currentFeedTitle = isPublisherMode && publisherFeed ? publisherFeed.title : album.title;
+  // Listing set to hidden (utils/listing.ts). A hosted save still pings Podcast
+  // Index so it re-reads the feed and drops it, but never asks it to add the feed
+  // (hasItunesBlock in api/_utils/feedUtils.ts). An update still gets back the id
+  // the feed had while it was listed, so the "submitted ... add manually" box
+  // below would be wrong: adding it by hand undoes the choice. Ported from
+  // MSP-2.0#150, whose own SaveModal changes the sync could not bring.
+  const feedHidden = !!(isPublisherMode && publisherFeed ? publisherFeed.itunesBlock : album.itunesBlock);
 
   // Helper function to generate XML for current feed type
   const generateCurrentFeedXml = () => {
@@ -111,7 +118,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   const [podcastIndexVerifyWarning, setPodcastIndexVerifyWarning] = useState<string | null>(null);
   const [submittingToIndex, setSubmittingToIndex] = useState(false);
   const [podcastIndexPageUrl, setPodcastIndexPageUrl] = useState<string | null>(null);
-  const [podcastIndexPending, setPodcastIndexPending] = useState(false); // True when PI notified but not yet indexed
+  const [podcastIndexPending, setPodcastIndexPending] = useState(false); // True when a hosted save notified PI (shows the Podcast Index box)
   const [isDraft, setIsDraft] = useState(false);
   const [podpingUrl, setPodpingUrl] = useState('');
   const [sendingPodping, setSendingPodping] = useState(false);
@@ -501,6 +508,9 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
             // Show PI notification result
             if (isDraft) {
               showSuccessAndClose('Feed updated as draft!');
+            } else if (feedHidden) {
+              setPodcastIndexPending(true);
+              setMessage({ type: 'success', text: 'Feed updated!' });
             } else if (updateResult.podcastIndexId) {
               setPodcastIndexPending(true);
               setMessage({ type: 'success', text: 'Feed updated! Podcast Index notified.' });
@@ -554,6 +564,9 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
               setLegacyHostedInfo(null);
               if (isDraft) {
                 showSuccessAndClose('Feed updated as draft!');
+              } else if (feedHidden) {
+                setPodcastIndexPending(true);
+                setMessage({ type: 'success', text: 'Feed updated!' });
               } else if (updateResult.podcastIndexId) {
                 setPodcastIndexPending(true);
                 setMessage({ type: 'success', text: 'Feed updated! Podcast Index notified.' });
@@ -598,7 +611,9 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                 ? 'Feed migrated to new URL and legacy URL updated!'
                 : (shouldLinkNostr ? 'Feed created and linked to your Nostr identity!' : 'Feed created!');
 
-              if (hostedResult.podcastIndexId) {
+              if (feedHidden) {
+                setPodcastIndexPending(true);
+              } else if (hostedResult.podcastIndexId) {
                 setPodcastIndexPending(true);
                 successMsg += ' Podcast Index notified.';
               }
@@ -1198,7 +1213,14 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                       <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                         Podcast Index
                       </label>
-                      {podcastIndexPageUrl ? (
+                      {/* A hidden feed gets one notice instead: there is nothing to wait for. */}
+                      {feedHidden ? (
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
+                          Listing is set to hidden, so MSP did not ask Podcast Index to add this
+                          feed. Apple Podcasts and Podcast Index stop listing it the next time they
+                          read it. The URL above still works in any podcast app.
+                        </p>
+                      ) : podcastIndexPageUrl ? (
                         <a
                           href={podcastIndexPageUrl}
                           target="_blank"
