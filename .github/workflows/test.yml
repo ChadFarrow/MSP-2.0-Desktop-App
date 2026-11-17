@@ -18,10 +18,16 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# Pinned, not ubuntu-latest. In November 2026 ubuntu-latest moved to Ubuntu 26.04,
+# and the Playwright in package-lock.json (1.60.0) refuses it: "Playwright does not
+# support chromium on ubuntu26.04-x64", so E2E failed at "Install Playwright
+# browsers" on every PR. Playwright 1.65 knows 26.04; once the lockfile is on it
+# (or later), these can go back to ubuntu-latest. All five stay on one image so
+# the jobs test the same environment.
 jobs:
   unit-tests:
     name: Unit Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
@@ -40,7 +46,7 @@ jobs:
 
   e2e-tests:
     name: E2E Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
@@ -75,7 +81,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
@@ -97,7 +103,7 @@ jobs:
 
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
@@ -116,7 +122,7 @@ jobs:
 
   audit:
     name: Dependency Audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
