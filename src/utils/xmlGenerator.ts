@@ -470,6 +470,18 @@ const generateCommonChannelElements = (data: BaseChannelData, medium: string, le
   // Explicit
   lines.push(`${indent(level)}<itunes:explicit>${data.explicit ? 'true' : 'false'}</itunes:explicit>`);
 
+  // Block tags (utils/listing.ts) — written only when set. Blocks that name one
+  // service are written back verbatim, after the plain one.
+  if (data.itunesBlock) {
+    lines.push(`${indent(level)}<itunes:block>Yes</itunes:block>`);
+  }
+  if (data.podcastBlock) {
+    lines.push(`${indent(level)}<podcast:block>yes</podcast:block>`);
+  }
+  (data.serviceBlocks || []).forEach(block => {
+    lines.push(`${indent(level)}<podcast:block id="${escapeXml(block.id)}">${escapeXml(block.value)}</podcast:block>`);
+  });
+
   // Owner
   if (data.ownerName || data.ownerEmail) {
     lines.push(`${indent(level)}<itunes:owner>`);

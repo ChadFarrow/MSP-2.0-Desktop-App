@@ -182,6 +182,22 @@ function inspectChannelCommon(channel: XmlNode, add: Add) {
       `<itunes:explicit> is "${explicitWord}", the old form. MSP writes "${LEGACY_EXPLICIT_WORDS.get(explicitWord)}" when you save.`);
   }
 
+  // The parser reads only "yes" as a block and drops every other plain block tag.
+  // "No", an empty tag, letter case and repeats lose nothing, so they get no line;
+  // a value such as "true" does — whoever wrote it most likely meant to hide the feed.
+  const blockTags: [string, string, unknown[]][] = [
+    ['<itunes:block>', 'Yes', asArray(channel['itunes:block'])],
+    ['<podcast:block>', 'yes', asArray(channel['podcast:block']).filter(node => !attr(node, 'id'))],
+  ];
+  for (const [tag, yes, nodes] of blockTags) {
+    const values = nodes.map(node => text(node).trim());
+    const odd = values.find(value => value && !['yes', 'no'].includes(value.toLowerCase()));
+    if (odd !== undefined && !values.some(value => value.toLowerCase() === 'yes')) {
+      add('outdated', 'block-value', 'feed',
+        `${tag} is "${odd}". Only "${yes}" hides a feed, so MSP drops the tag when you save — pick a Listing choice to hide the feed.`);
+    }
+  }
+
   const image = channel.image;
   if (image && typeof image === 'object' && text((image as XmlNode).url).trim()
     && !text((image as XmlNode).link).trim() && text(channel.link).trim()) {

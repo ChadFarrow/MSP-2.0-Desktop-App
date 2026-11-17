@@ -100,6 +100,11 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
   // Helper to get current feed's GUID and title based on mode
   const currentFeedGuid = isPublisherMode && publisherFeed ? publisherFeed.podcastGuid : album.podcastGuid;
   const currentFeedTitle = isPublisherMode && publisherFeed ? publisherFeed.title : album.title;
+  // Listing set to hidden (utils/listing.ts). A hosted save still pings Podcast
+  // Index so it re-reads the feed and drops it, but never asks it to add the feed
+  // (hasItunesBlock in api/_utils/feedUtils.ts) — so there is no id to wait for,
+  // and "add it manually" would undo the choice.
+  const feedHidden = !!(isPublisherMode && publisherFeed ? publisherFeed.itunesBlock : album.itunesBlock);
 
   // Helper function to generate XML for current feed type
   // Always updates lastBuildDate to current time per RSS 2.0 spec
@@ -246,7 +251,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
 
   // After an upload that came back without an id, re-check for ~90s.
   useEffect(() => {
-    if (!published || published.isDraft || published.podcastIndexId) return;
+    if (feedHidden || !published || published.isDraft || published.podcastIndexId) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
     let attempts = 0;
@@ -262,17 +267,17 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
     };
     timer = setTimeout(poll, 5000);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [published, lookUpPodcastIndex]);
+  }, [feedHidden, published, lookUpPodcastIndex]);
 
   // The poll above only runs right after an upload, so a user who closed the modal
   // before the feed landed would reopen it to no Podcast Index section at all. Check
   // once when the hosted panel opens on a feed whose id we don't already know, so
   // "your feed is in the index" is answerable at any time, not just post-save.
   useEffect(() => {
-    if (mode !== 'hosted' || published || piLookupId) return;
+    if (feedHidden || mode !== 'hosted' || published || piLookupId) return;
     if (!hostedInfo || hostedInfo.podcastIndexId) return;
     void lookUpPodcastIndex();
-  }, [mode, published, piLookupId, hostedInfo, lookUpPodcastIndex]);
+  }, [feedHidden, mode, published, piLookupId, hostedInfo, lookUpPodcastIndex]);
 
   // Close the destination dropdown when clicking outside it. The menu is
   // portaled to <body> (to escape the modal's overflow clipping), so the
@@ -506,7 +511,7 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
       setPiCheckExhausted(false);
       if (result.podcastIndexId) {
         onPodcastIndexId?.(result.podcastIndexId);
-      } else if (!result.isDraft) {
+      } else if (!result.isDraft && !feedHidden) {
         // Hand the watch to App so it survives this modal being closed.
         onPodcastIndexPending?.();
       }
@@ -607,29 +612,35 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
           if (nsiteResult.success) {
             if (nsiteResult.nsiteUrl) {
               setNsiteUrl(nsiteResult.nsiteUrl);
-              // Submit to Podcast Index
-              setNsiteProgress('Submitting to Podcast Index...');
-              try {
-                const piMedium = isPublisherMode ? publisherFeed?.medium : album.medium;
-                const piParams = new URLSearchParams({ url: nsiteResult.nsiteUrl, guid: currentFeedGuid });
-                if (piMedium) piParams.set('medium', piMedium);
-                const piRes = await fetch(`/api/pubnotify?${piParams.toString()}`);
-                const piData = await piRes.json().catch(() => ({}));
-                if (piRes.ok) {
-                  if (piData.podcastIndexUrl) setNsitePiUrl(piData.podcastIndexUrl);
-                  piNote = ' Feed submitted to Podcast Index.';
-                } else if (isGuardRefusal(piData)) {
-                  // Deliberately not retried with force: the recovery path is the
-                  // manual "Submit to PodcastIndex" mode in this same modal, which
-                  // has the override. Forcing here would disable the guard on the
-                  // riskiest path in the app.
-                  piNote = ` Not submitted to Podcast Index: ${piData.error}`;
-                } else {
+              if (feedHidden) {
+                // /api/pubnotify also asks Podcast Index to add the feed, which a
+                // hidden feed must not do.
+                piNote = ' Not submitted to Podcast Index: Listing is set to hidden.';
+              } else {
+                // Submit to Podcast Index
+                setNsiteProgress('Submitting to Podcast Index...');
+                try {
+                  const piMedium = isPublisherMode ? publisherFeed?.medium : album.medium;
+                  const piParams = new URLSearchParams({ url: nsiteResult.nsiteUrl, guid: currentFeedGuid });
+                  if (piMedium) piParams.set('medium', piMedium);
+                  const piRes = await fetch(`/api/pubnotify?${piParams.toString()}`);
+                  const piData = await piRes.json().catch(() => ({}));
+                  if (piRes.ok) {
+                    if (piData.podcastIndexUrl) setNsitePiUrl(piData.podcastIndexUrl);
+                    piNote = ' Feed submitted to Podcast Index.';
+                  } else if (isGuardRefusal(piData)) {
+                    // Deliberately not retried with force: the recovery path is the
+                    // manual "Submit to PodcastIndex" mode in this same modal, which
+                    // has the override. Forcing here would disable the guard on the
+                    // riskiest path in the app.
+                    piNote = ` Not submitted to Podcast Index: ${piData.error}`;
+                  } else {
+                    piNote = PI_RETRY_HINT;
+                  }
+                } catch {
+                  // Non-fatal — feed is already published to nsite
                   piNote = PI_RETRY_HINT;
                 }
-              } catch {
-                // Non-fatal — feed is already published to nsite
-                piNote = PI_RETRY_HINT;
               }
             }
             if (nsiteResult.blossomUrl) setNsiteBlossomUrl(nsiteResult.blossomUrl);
@@ -1475,13 +1486,20 @@ export function SaveModal({ onClose, album, publisherFeed, feedType = 'album', i
                   </div>
                   {/* Podcast Index outcome. Shown after an upload, and any time we already
                       know the feed's PI id from an earlier save. A missing id is reported
-                      honestly rather than left to look like success. */}
+                      honestly rather than left to look like success. A hidden feed gets
+                      one notice instead: there is no id to wait for. */}
                   {(podcastIndexPageId || (published && !published.isDraft)) && (
                     <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
                       <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                         Podcast Index
                       </label>
-                      {podcastIndexPageId ? (
+                      {feedHidden ? (
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
+                          Listing is set to hidden, so MSP did not ask Podcast Index to add this
+                          feed. Apple Podcasts and Podcast Index stop listing it the next time they
+                          read it. The URL above still works in any podcast app.
+                        </p>
+                      ) : podcastIndexPageId ? (
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
                           <span style={{ color: 'var(--success)' }}>✅ This feed is in Podcast Index.</span>
                           {' '}Artwork and episodes can take a few minutes to appear.

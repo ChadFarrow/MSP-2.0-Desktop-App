@@ -136,6 +136,35 @@ describe('inspectFeedXml', () => {
       expect(generateRssFeed(parseRssFeed(xml))).toMatch(/<item>[\s\S]*<itunes:explicit>false<\/itunes:explicit>/);
     });
 
+    it('a block value that is not yes or no is reported, and MSP drops the tag', () => {
+      const EXPLICIT = '<itunes:explicit>false</itunes:explicit>';
+      const itunes = edit(EXPLICIT, `${EXPLICIT}\n<itunes:block>true</itunes:block>`);
+      expect(find(itunes, 'block-value')).toMatchObject({ level: 'outdated', area: 'feed' });
+      expect(find(itunes, 'block-value')?.message).toContain('<itunes:block> is "true"');
+      expect(generateRssFeed(parseRssFeed(itunes))).not.toContain('itunes:block');
+
+      const plain = edit(EXPLICIT, `${EXPLICIT}\n<podcast:block>true</podcast:block>`);
+      expect(find(plain, 'block-value')?.message).toContain('<podcast:block> is "true"');
+      expect(generateRssFeed(parseRssFeed(plain))).not.toContain('podcast:block');
+    });
+
+    it('block tags that lose nothing are not reported', () => {
+      const EXPLICIT = '<itunes:explicit>false</itunes:explicit>';
+      const tags = [
+        '<itunes:block>No</itunes:block>',
+        '<itunes:block>Yes</itunes:block>\n<itunes:block>true</itunes:block>',
+        '<podcast:block>YES</podcast:block>',
+        '<podcast:block></podcast:block>',
+        '<podcast:block id="spotify">true</podcast:block>',
+      ];
+      for (const tag of tags) {
+        expect(codesOf(inspectFeedXml(edit(EXPLICIT, `${EXPLICIT}\n${tag}`)))).toEqual([]);
+      }
+      // The service block that was not reported is the one MSP keeps verbatim.
+      expect(generateRssFeed(parseRssFeed(edit(EXPLICIT, `${EXPLICIT}\n${tags[4]}`))))
+        .toContain('<podcast:block id="spotify">true</podcast:block>');
+    });
+
     it('a missing medium is written as music', () => {
       const xml = edit('<podcast:medium>music</podcast:medium>', '');
       expect(codesOf(inspectFeedXml(xml))).toEqual(['medium-missing']);

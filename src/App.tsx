@@ -10,6 +10,7 @@ import { createEmptyAlbum, createEmptyPublisherFeed, createEmptyVideoAlbum } fro
 import { pendingHostedStorage, hostedFeedStorage } from './utils/storage';
 import { generateTestAlbum } from './utils/testData';
 import { regenerateAlbumGuids, withoutIdentityPassthrough } from './utils/regenerateGuids';
+import { listingFlags } from './utils/listing';
 import { resolveMediaSize, hhmmssToSeconds } from './utils/audioUtils';
 import { describeImportError, inspectFeedXml } from './utils/feedInspect';
 import { NostrLoginButton } from './components/NostrLoginButton';
@@ -194,11 +195,13 @@ function AppContent() {
         }
         // Only the feed GUID is renewed for templates — remoteItems reference real
         // external feeds and must keep their feedGuids. A template is a new feed, so
-        // it must not inherit the source feed's URL, self link or verification tags either.
+        // it must not inherit the source feed's URL, self link, verification tags or
+        // listing either (it starts Listed, as regenerateAlbumGuids does).
         if (regenerateGuids) {
           publisherFeed.podcastGuid = crypto.randomUUID();
           delete publisherFeed.sourceUrl;
           publisherFeed.unknownChannelElements = withoutIdentityPassthrough(publisherFeed.unknownChannelElements);
+          Object.assign(publisherFeed, listingFlags('listed'));
         }
         dispatch({ type: 'SET_PUBLISHER_FEED', payload: publisherFeed });
         openFeedCheck();

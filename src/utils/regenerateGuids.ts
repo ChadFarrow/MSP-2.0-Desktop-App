@@ -1,5 +1,6 @@
 import type { Album, AlternateEnclosure } from '../types/feed';
 import { OP3_PREFIX_RE, stripOp3Prefix } from './xmlParser';
+import { listingFlags } from './listing';
 
 /**
  * Drop the passthrough elements that claim a feed's identity: every
@@ -59,7 +60,9 @@ function withoutOp3Prefix(enclosures: AlternateEnclosure[]): AlternateEnclosure[
  * The source's identity passthrough (verification txt tags, self link, pins that
  * name none of its tracks) goes too, and so does an OP3 prefix left on an
  * alternate source. A pinned track stays pinned, and the generator writes the
- * pin against its new guid.
+ * pin against its new guid. The source's listing goes too: a new feed starts
+ * Listed, or a template made from a delisted album would be hidden from every
+ * directory before anyone noticed.
  *
  * Does not mutate the input. Publisher feeds are handled separately — their
  * `remoteItems` reference real external feeds, so only the feed GUID is renewed.
@@ -68,6 +71,7 @@ export function regenerateAlbumGuids(album: Album): Album {
   return {
     ...album,
     podcastGuid: crypto.randomUUID(),
+    ...listingFlags('listed'),
     unknownChannelElements: withoutIdentityPassthrough(album.unknownChannelElements),
     tracks: album.tracks.map((track) => ({
       ...track,

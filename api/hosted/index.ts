@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import { parseAuthHeader, parseFeedAuthHeader } from '../_utils/adminAuth.js';
 import {
   notifyPodcastIndex,
+  hasItunesBlock,
   getBaseUrl,
   hashToken,
   isValidFeedId,
@@ -190,7 +191,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const medium = extractPodcastMedium(xml);
 
     // Only notify Podcast Index if not a draft
-    const piResult = (isDraft === true) ? null : await notifyPodcastIndex(stableUrl, { medium });
+    // A hidden feed (Listing) is pinged so directories re-read it, but not registered.
+    const piResult = (isDraft === true)
+      ? null
+      : await notifyPodcastIndex(stableUrl, { medium, register: !hasItunesBlock(xml) });
     const podcastIndexId = piResult ? piResult.podcastIndexId : undefined;
 
     // Store metadata separately (Vercel Blob doesn't support custom metadata)
