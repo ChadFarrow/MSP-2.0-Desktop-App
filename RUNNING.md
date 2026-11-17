@@ -31,7 +31,7 @@ GitHub does not show secret values again, so keep a copy of each in your passwor
 ## Moving the jobs
 
 ### The sync job
-This job is only git and the GitHub CLI. You can run it on a server with a timer. Copy the steps from `sync-upstream.yml`. The conflict step has comments that explain a special case (a file that this repo deleted). Read them before you change the step.
+This job uses git, the GitHub CLI and one Action, `peter-evans/create-pull-request`, which opens the sync PR. Copy the steps from `sync-upstream.yml`. On a server, replace that Action step with a `git push --force` to `sync-upstream` and `gh pr create`. A timer replaces only the daily run. For the run right after a web push, change `notify-desktop.yml` in `MSP-2.0` to call the server. The conflict step has comments that explain a special case (a file that this repo deleted). Read them before you change the step.
 
 ### The release job
 **Keep this job on GitHub Actions.** It builds on macOS, Windows and Linux. A Linux server cannot build the macOS and Windows apps. This repo is public, so the build minutes are free.
@@ -42,7 +42,7 @@ Also, auto-update depends on GitHub Releases. The installed apps read updates fr
 https://github.com/ChadFarrow/MSP-2.0-Desktop-App/releases/latest/download/latest.json
 ```
 
-The download URLs in `latest.json` also point to GitHub Releases. If you move the releases, the apps that people already installed continue to read the old endpoint. Only new installs get a new endpoint.
+The download URLs in `latest.json` also point to GitHub Releases. If you move the releases, installed apps continue to read the old endpoint. To move them, publish one last release at the old endpoint with the new endpoint in `tauri.conf.json`. Apps that skip that update stay on the old endpoint.
 
 ### Build one platform by hand
 ```bash
