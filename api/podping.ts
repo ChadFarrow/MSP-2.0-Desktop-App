@@ -4,6 +4,7 @@ import { checkRateLimit } from './_utils/rateLimiter.js';
 import { getFeedUrlError, normalizeFeedUrl } from './_utils/urlValidation.js';
 import { getClientIp } from './_utils/urlSafety.js';
 import { guardFeedSubmission, wantsForce } from './_utils/feedReachability.js';
+import { applyCors } from './_utils/cors.js';
 
 const RATE_LIMIT = { limit: 10, windowMs: 3600_000 };
 // The limiter is one shared Map keyed by plain strings, so every endpoint
@@ -11,6 +12,12 @@ const RATE_LIMIT = { limit: 10, windowMs: 3600_000 };
 const RATE_LIMIT_PREFIX = 'podping:';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Public: the WordPress plugin calls this from each artist's own site, so the
+  // origins can't be listed. Safe because auth is headers, never cookies.
+  if (applyCors(req, res, { methods: 'GET, POST, OPTIONS', public: true })) {
+    return;
+  }
+
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

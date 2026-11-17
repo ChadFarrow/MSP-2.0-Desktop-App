@@ -1,6 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuthHeaders } from './_utils/podcastIndex.js';
 import { isValidFeedId } from './_utils/feedUtils.js';
+import { applyCors } from './_utils/cors.js';
+import { checkRateLimit } from './_utils/rateLimiter.js';
+import { getClientIp } from './_utils/urlSafety.js';
 
 // Extract Podcast Index feed ID from URL or plain number
 function extractFeedId(input: string): string | null {
@@ -26,6 +29,12 @@ function isFeedUrl(input: string): boolean {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Public: the WordPress plugin calls this from each artist's own site, so the
+  // origins can't be listed. Safe because auth is headers, never cookies.
+  if (applyCors(req, res, { methods: 'GET, OPTIONS', public: true })) {
+    return;
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -34,6 +43,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!q || typeof q !== 'string') {
     return res.status(400).json({ error: 'Missing q parameter' });
+  }
+
+  // Rate-limited since the WordPress plugin made this endpoint callable from
+  // any origin: it spends MSP's Podcast Index credentials. Per warm lambda, like
+  // every limit here — see _utils/rateLimiter.ts.
+  const rate = checkRateLimit(`pisearch:${getClientIp(req)}`, { limit: 300, windowMs: 3600_000 });
+  if (!rate.allowed) {
+    res.setHeader('Retry-After', Math.ceil(rate.retryAfterMs / 1000));
+    return res.status(429).json({ error: 'Too many Podcast Index searches. Try again later.' });
   }
 
   const authHeaders = getAuthHeaders();

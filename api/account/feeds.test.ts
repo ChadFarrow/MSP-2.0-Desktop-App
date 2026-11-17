@@ -15,7 +15,12 @@ import { signSession } from '../_utils/emailAuth';
 
 function mockReqRes(method: string, headers: Record<string, string> = {}) {
   const req = { method, headers } as unknown as VercelRequest;
-  const res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() } as unknown as VercelResponse;
+  const res = {
+    status: vi.fn().mockReturnThis(),
+    json: vi.fn().mockReturnThis(),
+    // applyCors sets the CORS headers on every response.
+    setHeader: vi.fn().mockReturnThis(),
+  } as unknown as VercelResponse;
   return { req, res };
 }
 

@@ -3,6 +3,7 @@ import { checkRateLimit } from './_utils/rateLimiter.js';
 import { getFeedUrlError, normalizeFeedUrl } from './_utils/urlValidation.js';
 import { getClientIp } from './_utils/urlSafety.js';
 import { probeFeedUrl, VERIFY_TIMEOUT_MS } from './_utils/feedProbe.js';
+import { applyCors } from './_utils/cors.js';
 
 /**
  * Confirm a feed URL actually resolves to something feed-shaped, before MSP hands
@@ -31,6 +32,12 @@ const RATE_LIMIT = { limit: 30, windowMs: 3600_000 };
 const RATE_LIMIT_PREFIX = 'verify-feed-url:';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Public: the WordPress plugin calls this from each artist's own site, so the
+  // origins can't be listed. Safe because auth is headers, never cookies.
+  if (applyCors(req, res, { methods: 'GET, OPTIONS', public: true })) {
+    return;
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
