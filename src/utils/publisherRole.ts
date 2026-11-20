@@ -17,7 +17,13 @@ import type { RemoteItem } from '../types/feed';
 // An absent rel means "not stated". MSP never writes a default role, so an index
 // does not show a guess as a fact.
 
-/** The starting role tokens of podcast-namespace PR #793, in its order. */
+/**
+ * The role tokens MSP offers: the 8 starting tokens of podcast-namespace PR
+ * #793, in its order, then the 5 music roles that the role feed generator at
+ * phafe.com/roles-feed-generator also offers (issue #182). An album can match a
+ * role feed only when both name the same token, so these must stay spelled as
+ * that tool spells them. A person can also type a custom role (customRoleToken).
+ */
 export const ROLE_TOKENS = [
   { value: 'artist', label: 'Artist' },
   { value: 'host', label: 'Host' },
@@ -27,6 +33,11 @@ export const ROLE_TOKENS = [
   { value: 'network', label: 'Network' },
   { value: 'hosting', label: 'Hosting' },
   { value: 'sponsor', label: 'Sponsor' },
+  { value: 'songwriter', label: 'Songwriter' },
+  { value: 'composer', label: 'Composer' },
+  { value: 'musician', label: 'Musician' },
+  { value: 'studio', label: 'Studio' },
+  { value: 'engineer', label: 'Engineer' },
 ] as const;
 
 /** The choices of the one-role control that sets a whole catalog at once. */
@@ -56,6 +67,28 @@ export function roleTokens(rel: string | undefined): string[] {
     }
   }
   return [...KNOWN_TOKENS.filter(token => known.has(token)), ...unknown];
+}
+
+/** The longest custom role token MSP writes. */
+export const MAX_CUSTOM_ROLE_LENGTH = 40;
+
+/**
+ * A custom role typed by a person, as one rel token, or '' when nothing usable
+ * is left. A rel value is a space-separated set, so a role of several words
+ * ("mastering engineer") becomes one token with hyphens ("mastering-engineer");
+ * a space would split it into two roles. Letters are lowered, and only
+ * letters, digits and hyphens are kept, so the token reads the same in every
+ * feed. A known token typed in another case gives the known token.
+ */
+export function customRoleToken(input: string): string {
+  return input
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\s,_]+/g, '-')
+    .replace(/[^\p{L}\p{N}-]+/gu, '')
+    .replace(/-{2,}/g, '-')
+    .slice(0, MAX_CUSTOM_ROLE_LENGTH)
+    .replace(/^-+|-+$/g, '');
 }
 
 /** The rel value in its canonical form: roleTokens joined by spaces ('' for not stated). */

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { catalogRole, normalizeRel, roleTokens, sameRoles, withRole, withRoleToken } from './publisherRole';
+import { MAX_CUSTOM_ROLE_LENGTH, ROLE_TOKENS, catalogRole, customRoleToken, normalizeRel, roleTokens, sameRoles, withRole, withRoleToken } from './publisherRole';
 import { generateRssFeed, generatePublisherRssFeed } from './xmlGenerator';
 import { parseRssFeed, parsePublisherRssFeed } from './xmlParser';
 import { createEmptyAlbum, createEmptyPublisherFeed, createEmptyRemoteItem } from '../types/feed';
@@ -47,11 +47,11 @@ describe('roleTokens', () => {
   });
 
   it('matches a known token in any letter case, and keeps an unknown one as written', () => {
-    expect(roleTokens('Artist Composer composer')).toEqual(['artist', 'Composer']);
+    expect(roleTokens('Artist Remixer remixer')).toEqual(['artist', 'Remixer']);
   });
 
   it('gives known tokens in the order of the proposal, then unknown ones', () => {
-    expect(roleTokens('composer sponsor label')).toEqual(['label', 'sponsor', 'composer']);
+    expect(roleTokens('remixer sponsor label')).toEqual(['label', 'sponsor', 'remixer']);
   });
 
   it('is empty when no role is stated', () => {
@@ -79,6 +79,62 @@ describe('sameRoles (podcast-namespace PR #793)', () => {
   });
 });
 
+describe('ROLE_TOKENS (issue #182)', () => {
+  it('offers the 8 roles of PR #793, then the 5 music roles of the phafe role feed generator', () => {
+    expect(ROLE_TOKENS.map(role => role.value)).toEqual([
+      'artist', 'host', 'author', 'label', 'producer', 'network', 'hosting', 'sponsor',
+      'songwriter', 'composer', 'musician', 'studio', 'engineer',
+    ]);
+  });
+
+  it('reads the music roles as known tokens, in any case', () => {
+    expect(roleTokens('Engineer studio artist')).toEqual(['artist', 'studio', 'engineer']);
+    expect(normalizeRel('MUSICIAN, songwriter')).toBe('songwriter musician');
+  });
+});
+
+describe('customRoleToken (issue #182)', () => {
+  it('joins the words of a role with hyphens, so it stays one token', () => {
+    expect(customRoleToken('  Mixing Engineer ')).toBe('mixing-engineer');
+    expect(roleTokens(withRoleToken('artist', customRoleToken('Mixing Engineer'), true))).toEqual(['artist', 'mixing-engineer']);
+  });
+
+  it('treats commas and underscores as word breaks, and drops other marks', () => {
+    expect(customRoleToken('Vocals, backing')).toBe('vocals-backing');
+    expect(customRoleToken('a&r_rep')).toBe('ar-rep');
+    expect(customRoleToken('"<remixer>"')).toBe('remixer');
+  });
+
+  it('keeps letters of other scripts and digits', () => {
+    expect(customRoleToken('Gitarrist Nr 2')).toBe('gitarrist-nr-2');
+    expect(customRoleToken('Ténor')).toBe('ténor');
+  });
+
+  it('gives the known token for a known role typed in another case', () => {
+    expect(customRoleToken('Engineer')).toBe('engineer');
+  });
+
+  it('gives "" when nothing usable is left', () => {
+    expect(customRoleToken('')).toBe('');
+    expect(customRoleToken(' -- !! ')).toBe('');
+  });
+
+  it('caps the length, with no hyphen at the end', () => {
+    const token = customRoleToken('a'.repeat(39) + ' b' + 'c'.repeat(20));
+    expect(token.length).toBeLessThanOrEqual(MAX_CUSTOM_ROLE_LENGTH);
+    expect(token.endsWith('-')).toBe(false);
+  });
+
+  it('round-trips a custom role through the album feed', () => {
+    const album = createEmptyAlbum();
+    album.title = 'Album';
+    album.publisher = { feedGuid: 'p', feedUrl: 'https://example.com/p.xml', rel: withRoleToken('engineer', customRoleToken('Mastering Engineer'), true) };
+
+    expect(generateRssFeed(album)).toContain('rel="engineer mastering-engineer"');
+    expect(parseRssFeed(generateRssFeed(album)).publisher?.rel).toBe('engineer mastering-engineer');
+  });
+});
+
 describe('withRoleToken', () => {
   it('turns a token on, in the canonical order', () => {
     expect(withRoleToken('producer', 'artist', true)).toBe('artist producer');
@@ -90,7 +146,7 @@ describe('withRoleToken', () => {
   });
 
   it('turns a known or an unknown token off, and gives "" when none is left', () => {
-    expect(withRoleToken('artist Composer', 'composer', false)).toBe('artist');
+    expect(withRoleToken('artist Remixer', 'remixer', false)).toBe('artist');
     expect(withRoleToken('Artist', 'artist', false)).toBe('');
   });
 });
