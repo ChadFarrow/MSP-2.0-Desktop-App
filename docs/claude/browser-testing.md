@@ -11,9 +11,9 @@ Read before you test a UI change. This repo has no DOM tests (Vitest runs in nod
 
 Either works with the installed Chrome:
 
-- **Playwright** is not a dependency here. On the Mac mini, import it from the Desktop App checkout (`~/Vibe/MSP-2.0-Desktop-App/node_modules/playwright/index.mjs`, after `npm ci` there if `node_modules` is gone) and launch `chromium.launch({ channel: 'chrome', headless: true })`; the cached Playwright Chromium is older than that Playwright wants.
-- **Raw CDP** needs nothing installed: start headless Chrome with `--remote-debugging-port=<port>`, open a target with `PUT /json/new`, and talk to its `webSocketDebuggerUrl` with Node's global `WebSocket` (`Runtime.evaluate` with `awaitPromise` and `returnByValue`). Return plain values from `evaluate`, never a DOM node.
-- Follow the global rules for headless Chrome (session profile dir, `--disable-features=MacAppCodeSignClone`, quit with `Browser.close`, delete the profile).
+- **Playwright** is not a dependency here. On the Mac mini, import it from the Desktop App checkout (`~/Vibe/MSP-2.0-Desktop-App/node_modules/playwright/index.mjs`, after `npm ci` there if `node_modules` is gone) and launch `chromium.launch({ channel: 'chrome', headless: true, args: ['--mute-audio'] })`; the cached Playwright Chromium is older than that Playwright wants.
+- **Raw CDP** needs nothing installed: start headless Chrome with `--mute-audio --remote-debugging-port=<port>`, open a target with `PUT /json/new`, and talk to its `webSocketDebuggerUrl` with Node's global `WebSocket` (`Runtime.evaluate` with `awaitPromise` and `returnByValue`). Return plain values from `evaluate`, never a DOM node.
+- Follow the global rules for headless Chrome (session profile dir, `--mute-audio`, `--disable-features=MacAppCodeSignClone`, quit with `Browser.close`, delete the profile).
 - Keep test scripts in a scratch directory: `scripts/` is gitignored and `tools/` is for committed tooling.
 
 ## Handles
