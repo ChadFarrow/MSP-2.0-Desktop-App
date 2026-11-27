@@ -1,5 +1,6 @@
 // Shared Podcast Index API authentication
 import crypto from 'crypto';
+import { USER_AGENT } from './userAgent.js';
 
 const API_KEY = process.env.PODCASTINDEX_API_KEY;
 const API_SECRET = process.env.PODCASTINDEX_API_SECRET;
@@ -17,6 +18,6 @@ export function getAuthHeaders(): Record<string, string> | null {
     'X-Auth-Key': API_KEY,
     'X-Auth-Date': apiHeaderTime.toString(),
     'Authorization': hash,
-    'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)'
+    'User-Agent': USER_AGENT
   };
 }

@@ -1,6 +1,8 @@
 // Thin Resend email sender for magic-link auth. Send-only (no inbound/MX needed).
 // No-ops with a console.warn when unconfigured, mirroring the isPodpingConfigured() gate
 // in feedUtils.ts so local dev without keys doesn't throw.
+import { USER_AGENT } from './userAgent.js';
+
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
 export interface SendEmailResult {
@@ -63,7 +65,8 @@ export async function sendMagicLinkEmail(
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'User-Agent': USER_AGENT
       },
       body: JSON.stringify({
         from: process.env.MSP_EMAIL_FROM,

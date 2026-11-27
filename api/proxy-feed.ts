@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getClientIp } from './_utils/urlSafety.js';
+import { USER_AGENT } from './_utils/userAgent.js';
 import { checkRateLimit } from './_utils/rateLimiter.js';
 import { normalizeFeedUrl } from './_utils/urlValidation.js';
 import { safeFetchFollow, readCapped, looksLikeFeedText } from './_utils/safeFetch.js';
@@ -78,7 +79,7 @@ export const SNIFF_WINDOW = 64 * 1024;
 /** Fixed. The client's own headers are never forwarded upstream. */
 const OUTBOUND_HEADERS = {
   Accept: 'application/rss+xml, application/xml, text/xml, */*',
-  'User-Agent': 'MSP-FeedProxy/1.0'
+  'User-Agent': USER_AGENT
 };
 
 /** Mirrored by CODE_MESSAGES in src/utils/xmlParser.ts — keep the names in step. */

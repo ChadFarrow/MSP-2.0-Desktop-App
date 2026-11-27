@@ -15,6 +15,7 @@
 // let response content reach a caller from here.
 import { assertPublicHttpUrl } from './urlSafety.js';
 import { safeFetchFollow, readCapped, looksLikeFeedText } from './safeFetch.js';
+import { USER_AGENT } from './userAgent.js';
 
 /**
  * Exactly the JSON /api/verify-feed-url returns. Do NOT add fields — the handler
@@ -64,7 +65,6 @@ export const GUARD_TIMEOUT_MS = 4_000;
 /** Enough to see the opening tag of any real feed without buffering a podcast. */
 const MAX_SNIFF_BYTES = 64 * 1024;
 const RANGE_BYTES = 2048;
-const USER_AGENT = 'MSP-FeedVerifier/1.0';
 const ACCEPT = 'application/rss+xml, application/xml, text/xml, */*';
 
 /** Which kind of problem an HTTP status represents. */

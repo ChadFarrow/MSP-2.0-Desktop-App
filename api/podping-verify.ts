@@ -3,6 +3,7 @@ import { checkRateLimit } from './_utils/rateLimiter.js';
 import { getFeedUrlError, normalizeFeedUrl } from './_utils/urlValidation.js';
 import { getClientIp } from './_utils/urlSafety.js';
 import { applyCors } from './_utils/cors.js';
+import { USER_AGENT } from './_utils/userAgent.js';
 
 /**
  * Check whether a podping for a feed URL actually landed on the Hive blockchain.
@@ -62,7 +63,7 @@ function getRpcNodes(): string[] {
 async function fetchAccountHistory(node: string, account: string): Promise<unknown[]> {
   const response = await fetch(node, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'User-Agent': USER_AGENT },
     body: JSON.stringify({
       jsonrpc: '2.0',
       method: 'condenser_api.get_account_history',
