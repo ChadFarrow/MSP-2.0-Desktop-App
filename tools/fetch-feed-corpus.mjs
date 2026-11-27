@@ -27,6 +27,7 @@ import { createHash } from 'node:crypto';
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { USER_AGENT } from '../api/_utils/userAgent.ts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CORPUS_DIR = join(ROOT, 'src/test/feed-corpus');
@@ -34,7 +35,6 @@ const MANIFEST = join(CORPUS_DIR, 'manifest.json');
 
 const TIMEOUT_MS = 30_000;
 const MAX_BYTES = 5 * 1024 * 1024;
-const USER_AGENT = 'MSP-2.0-feed-corpus/1.0';
 const FILE_NAME = /^[a-z0-9][a-z0-9.-]*\.xml$/;
 
 async function readManifest() {

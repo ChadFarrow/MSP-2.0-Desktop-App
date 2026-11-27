@@ -24,6 +24,7 @@ import { describe, it, expect } from 'vitest';
 import { isPrivateHost } from './urlSafety.js';
 import { looksLikeFeedText, FEED_MARKERS } from './safeFetch.js';
 import { MAX_BODY_BYTES, SNIFF_WINDOW, MAX_REDIRECTS } from '../proxy-feed.js';
+import { USER_AGENT } from './userAgent.js';
 
 const ENABLED = process.env.MSP_FEED_CORPUS === '1';
 const suite = ENABLED ? describe : describe.skip;
@@ -97,7 +98,7 @@ async function probe(url: string): Promise<Probe> {
       redirect: 'manual',
       headers: {
         Accept: 'application/rss+xml, application/xml, text/xml, */*',
-        'User-Agent': 'MSP-FeedProxy/1.0'
+        'User-Agent': USER_AGENT
       }
     });
     if (response.status >= 300 && response.status < 400) {

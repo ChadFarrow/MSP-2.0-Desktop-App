@@ -11,6 +11,7 @@ const mockLookup = vi.fn();
 vi.mock('node:dns/promises', () => ({ lookup: (...args: unknown[]) => mockLookup(...args) }));
 
 import { __resetRateLimiterForTests } from './_utils/rateLimiter.js';
+import { USER_AGENT } from './_utils/userAgent.js';
 
 const PUBLIC_V4 = [{ address: '93.184.216.34', family: 4 }];
 const RSS = '<?xml version="1.0"?><rss version="2.0"><channel><title>x</title></channel></rss>';
@@ -353,7 +354,7 @@ describe('/api/proxy-feed', () => {
 
       expect(mockFetch.mock.calls[0][1].headers).toEqual({
         Accept: 'application/rss+xml, application/xml, text/xml, */*',
-        'User-Agent': 'MSP-FeedProxy/1.0'
+        'User-Agent': USER_AGENT
       });
     });
 

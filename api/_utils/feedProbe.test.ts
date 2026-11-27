@@ -7,6 +7,7 @@ const mockLookup = vi.fn();
 vi.mock('node:dns/promises', () => ({ lookup: (...args: unknown[]) => mockLookup(...args) }));
 
 import { probeFeedUrl, classifyStatus } from './feedProbe.js';
+import { USER_AGENT } from './userAgent.js';
 
 const PUBLIC_V4 = [{ address: '93.184.216.34', family: 4 }];
 const FEED_URL = 'https://example.com/feed.xml';
@@ -94,7 +95,7 @@ describe('probeFeedUrl', () => {
     // scores request shape, so two identical probes would be one sample.
     const bare = mockFetch.mock.calls.find((c) => !c[1]?.headers?.Range);
     expect(bare?.[1].headers.Range).toBeUndefined();
-    expect(bare?.[1].headers['User-Agent']).toBe('MSP-FeedVerifier/1.0');
+    expect(bare?.[1].headers['User-Agent']).toBe(USER_AGENT);
   });
 
   it('lets a block on the ranged probe win over a success on the bare one', async () => {
