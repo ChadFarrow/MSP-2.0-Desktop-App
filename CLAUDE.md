@@ -190,6 +190,8 @@ Login is handled by `NostrConnectModal.tsx` which supports all flows (nsec, remo
 
 The Rust backend (`src-tauri/src/main.rs`) exposes Tauri commands for Nostr auth, feed storage, and Blossom operations, using `nostr-sdk` and thread-safe `Mutex<Option<T>>` state.
 
+Every HTTP request from Rust takes its client from `http_client(&app)` in `main.rs`, never `reqwest::Client::new()` (reqwest sends no User-Agent by default). It sends `MSPStudio/<version> (+https://github.com/ChadFarrow/MSP-2.0-Desktop-App)`, with the version from `tauri.conf.json` (the release workflow writes it there). The `user_agent_tests` in `main.rs` check it: `cd src-tauri && cargo test user_agent` (CI runs no Rust tests). The updater plugin sends its own `tauri-plugin-updater/<version>`. The synced `api/_utils/userAgent.ts` names the web app, because `api/` is web server code: the packaged app calls musicsideproject.com's API.
+
 ### Local Feed Storage (Desktop-only)
 Feeds are stored as plain XML files in the app data directory (`com.podtards.msp-studio/feeds/`). No metadata sidecars — title and feed type are extracted directly from XML content, timestamps come from file modification time.
 

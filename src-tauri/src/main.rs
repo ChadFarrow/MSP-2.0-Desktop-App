@@ -27,6 +27,29 @@ const DEFAULT_RELAYS: &[&str] = &[
     "wss://relay.nostr.band",
 ];
 
+/// The app's own HTTP requests (Blossom) send `<AppName>/<version> (+<link>)`:
+/// the product name without its space, the version that the release workflow
+/// writes into tauri.conf.json, and the public repo page, where the app is
+/// downloaded. No email, no browser imitation. reqwest sends no User-Agent by
+/// default, so every client comes from `http_client()`.
+const APP_NAME: &str = "MSPStudio";
+const APP_URL: &str = "https://github.com/ChadFarrow/MSP-2.0-Desktop-App";
+
+fn user_agent_for(version: &str) -> String {
+    format!("{}/{} (+{})", APP_NAME, version, APP_URL)
+}
+
+fn http_client_for(version: &str) -> Result<reqwest::Client, String> {
+    reqwest::Client::builder()
+        .user_agent(user_agent_for(version))
+        .build()
+        .map_err(|e| format!("HTTP client error: {}", e))
+}
+
+fn http_client(app: &tauri::AppHandle) -> Result<reqwest::Client, String> {
+    http_client_for(&app.package_info().version.to_string())
+}
+
 // Store for the Nostr client and keys
 struct NostrState {
     keys: Mutex<Option<Keys>>,
@@ -452,6 +475,7 @@ fn create_blossom_auth(
 
 /// Shared implementation for Blossom uploads
 async fn perform_blossom_upload(
+    app: &tauri::AppHandle,
     content_bytes: Vec<u8>,
     keys: &Keys,
     server_url: &str,
@@ -470,7 +494,7 @@ async fn perform_blossom_upload(
     let auth_base64 = BASE64.encode(&auth_json);
 
     // Upload to Blossom server
-    let client = reqwest::Client::new();
+    let client = http_client(app)?;
     let base_url = normalize_server_url(server_url);
     let upload_url = format!("{}/upload", base_url);
 
@@ -501,6 +525,7 @@ async fn perform_blossom_upload(
 /// Upload content to a Blossom server
 #[tauri::command]
 async fn blossom_upload(
+    app: tauri::AppHandle,
     server_url: String,
     content: String,
     content_type: Option<String>,
@@ -515,12 +540,13 @@ async fn blossom_upload(
 
     let mime_type = content_type.unwrap_or_else(|| "application/xml".to_string());
 
-    perform_blossom_upload(content.into_bytes(), &keys, &server_url, &mime_type).await
+    perform_blossom_upload(&app, content.into_bytes(), &keys, &server_url, &mime_type).await
 }
 
 /// Upload a file from disk to Blossom
 #[tauri::command]
 async fn blossom_upload_file(
+    app: tauri::AppHandle,
     server_url: String,
     file_path: String,
     state: State<'_, NostrState>,
@@ -549,12 +575,13 @@ async fn blossom_upload_file(
         _ => "application/octet-stream",
     };
 
-    perform_blossom_upload(content_bytes, &keys, &server_url, mime_type).await
+    perform_blossom_upload(&app, content_bytes, &keys, &server_url, mime_type).await
 }
 
 /// Delete a blob from a Blossom server
 #[tauri::command]
 async fn blossom_delete(
+    app: tauri::AppHandle,
     server_url: String,
     sha256: String,
     state: State<'_, NostrState>,
@@ -570,7 +597,7 @@ async fn blossom_delete(
     let auth_json = serde_json::to_string(&auth_event).map_err(|e| e.to_string())?;
     let auth_base64 = BASE64.encode(&auth_json);
 
-    let client = reqwest::Client::new();
+    let client = http_client(&app)?;
     let delete_url = format!("{}/{}", normalize_server_url(&server_url), sha256);
 
     let response = client
@@ -592,6 +619,7 @@ async fn blossom_delete(
 /// List blobs on a Blossom server for the logged-in user
 #[tauri::command]
 async fn blossom_list(
+    app: tauri::AppHandle,
     server_url: String,
     state: State<'_, NostrState>,
 ) -> Result<Vec<serde_json::Value>, String> {
@@ -604,7 +632,7 @@ async fn blossom_list(
 
     let pubkey = keys.public_key().to_hex();
 
-    let client = reqwest::Client::new();
+    let client = http_client(&app)?;
     let list_url = format!("{}/list/{}", normalize_server_url(&server_url), pubkey);
 
     let response = client
@@ -1302,4 +1330,61 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod user_agent_tests {
+    use super::*;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+
+    #[test]
+    fn user_agent_has_the_standard_form() {
+        let ua = user_agent_for("0.1.121");
+        assert_eq!(
+            ua,
+            "MSPStudio/0.1.121 (+https://github.com/ChadFarrow/MSP-2.0-Desktop-App)"
+        );
+        assert!(!ua.contains('@'));
+        assert!(!ua.to_lowercase().contains("mozilla"));
+    }
+
+    #[test]
+    fn version_comes_from_tauri_conf() {
+        let conf: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let version = conf["version"].as_str().unwrap();
+        assert_eq!(version.split('.').count(), 3, "tauri.conf.json version: {}", version);
+        assert_eq!(conf["productName"].as_str().unwrap().replace(' ', ""), APP_NAME);
+    }
+
+    #[test]
+    fn client_sends_the_user_agent() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut buf = [0u8; 4096];
+            let n = stream.read(&mut buf).unwrap();
+            stream
+                .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                .unwrap();
+            String::from_utf8_lossy(&buf[..n]).to_string()
+        });
+
+        let client = http_client_for("9.8.7").unwrap();
+        let status = tauri::async_runtime::block_on(async move {
+            client.get(format!("http://{}/list/x", addr)).send().await.unwrap().status()
+        });
+        assert!(status.is_success());
+
+        let request = server.join().unwrap().to_lowercase();
+        assert!(
+            request.contains(
+                "user-agent: mspstudio/9.8.7 (+https://github.com/chadfarrow/msp-2.0-desktop-app)"
+            ),
+            "request was: {}",
+            request
+        );
+    }
 }
