@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { USER_AGENT } from './_utils/userAgent.js';
 
 /**
  * Check if OP3 has stats for a given podcast GUID.
@@ -31,7 +32,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const response = await fetch(`https://op3.dev/show/${guid}`, {
       method: 'HEAD',
-      redirect: 'follow'
+      redirect: 'follow',
+      headers: { 'User-Agent': USER_AGENT }
     });
 
     res.setHeader('Access-Control-Allow-Origin', '*');

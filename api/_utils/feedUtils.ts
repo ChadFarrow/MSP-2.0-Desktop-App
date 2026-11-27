@@ -3,10 +3,10 @@ import { createHash, timingSafeEqual } from 'crypto';
 import { getAuthHeaders } from './podcastIndex.js';
 import { normalizeFeedUrl } from './urlValidation.js';
 import { isMspHostedUrl } from './feedReachability.js';
+import { USER_AGENT } from './userAgent.js';
 
 const PI_API_KEY = process.env.PODCASTINDEX_API_KEY;
 const PI_API_SECRET = process.env.PODCASTINDEX_API_SECRET;
-const PODPING_USER_AGENT = 'MSP2.0/1.0 (Music Side Project Studio)';
 
 /** Edge cache on a hosted feed GET, in seconds. See HOSTED_FEED_SETTLE_MS. */
 export const HOSTED_FEED_EDGE_TTL_S = 30;
@@ -83,7 +83,7 @@ export async function notifyPodping(
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
-        'User-Agent': PODPING_USER_AGENT
+        'User-Agent': USER_AGENT
       }
     });
 
@@ -120,7 +120,7 @@ async function sendPubnotify(feedUrl: string): Promise<void> {
     await fetch(
       `https://api.podcastindex.org/api/1.0/hub/pubnotify?url=${encodeURIComponent(feedUrl)}`,
       {
-        headers: { 'User-Agent': PODPING_USER_AGENT }
+        headers: { 'User-Agent': USER_AGENT }
       }
     );
   } catch (err) {

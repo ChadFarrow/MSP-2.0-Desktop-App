@@ -6,6 +6,7 @@ import { guardFeedSubmission, wantsForce } from './_utils/feedReachability.js';
 import { getClientIp } from './_utils/urlSafety.js';
 import { applyCors } from './_utils/cors.js';
 import { checkRateLimit } from './_utils/rateLimiter.js';
+import { USER_AGENT } from './_utils/userAgent.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Public: the WordPress plugin calls this from each artist's own site, so the
@@ -73,7 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const pubnotifyUrl = `https://api.podcastindex.org/api/1.0/hub/pubnotify?url=${encodeURIComponent(url)}`;
     const notifyResponse = await fetch(pubnotifyUrl, {
       headers: {
-        'User-Agent': 'MSP2.0/1.0 (Music Side Project Studio)'
+        'User-Agent': USER_AGENT
       }
     });
 
